@@ -337,7 +337,7 @@ const ActionMenu = memo<ActionMenuProps>(({
 
           {/* Mobile: Drawer */}
           <Drawer open={isDrawerOpen} onOpenChange={handleDrawerOpenChange}>
-            <DrawerContent className={styles.drawerContent}>
+            <DrawerContent className={styles.drawerContent} compact>
               <DrawerHeader className={styles.drawerHeader}>
                 <DrawerTitle className={styles.drawerTitle}>Acciones de Tarea</DrawerTitle>
               </DrawerHeader>

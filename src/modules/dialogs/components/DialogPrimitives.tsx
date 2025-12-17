@@ -488,6 +488,8 @@ export interface ResponsiveDialogContentProps {
   showCloseButton?: boolean;
   closeOnOverlayClick?: boolean;
   closeOnEscape?: boolean;
+  /** When true, drawer adapts to content height instead of full height (mobile only) */
+  compact?: boolean;
   onEscapeKeyDown?: (event: KeyboardEvent) => void;
   onPointerDownOutside?: (event: { preventDefault: () => void }) => void;
   onInteractOutside?: (event: { preventDefault: () => void }) => void;
@@ -562,6 +564,7 @@ export const ResponsiveDialogContent = forwardRef<HTMLDivElement, ResponsiveDial
       showCloseButton = true,
       closeOnOverlayClick = true,
       closeOnEscape = true,
+      compact = false,
       onEscapeKeyDown,
       onPointerDownOutside,
       onInteractOutside,
@@ -572,7 +575,7 @@ export const ResponsiveDialogContent = forwardRef<HTMLDivElement, ResponsiveDial
 
     if (isMobile) {
       return (
-        <DrawerContent ref={ref} className={className}>
+        <DrawerContent ref={ref} className={className} compact={compact}>
           {children}
         </DrawerContent>
       );

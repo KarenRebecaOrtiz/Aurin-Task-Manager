@@ -9,6 +9,7 @@ import { CirclePlus, Bot, ClipboardList, Users } from 'lucide-react';
 import { Unplug } from '@/components/animate-ui/icons/unplug';
 import { useTasksPageStore } from '@/stores/tasksPageStore';
 import { useChatbotControl } from '@/modules/n8n-chatbot';
+import { useAuth } from '@/contexts/AuthContext';
 import styles from './MobileViewSwitcher.module.scss';
 
 // Route mapping for prefetch
@@ -56,6 +57,7 @@ export const MobileViewSwitcher: React.FC<MobileViewSwitcherProps> = ({ currentV
   const pathname = usePathname();
   const openCreateTask = useTasksPageStore((state) => state.openCreateTask);
   const { openChat } = useChatbotControl();
+  const { isAdmin } = useAuth();
   const [mounted, setMounted] = useState(false);
 
   // Mount portal
@@ -152,12 +154,14 @@ export const MobileViewSwitcher: React.FC<MobileViewSwitcherProps> = ({ currentV
             isActive={activeView === 'archive'}
             onClick={handleArchiveClick}
           />
-          <MobileControl
-            icon={<Bot />}
-            label="AI Chat"
-            isActive={false}
-            onClick={openChat}
-          />
+          {isAdmin && (
+            <MobileControl
+              icon={<Bot />}
+              label="AI Chat"
+              isActive={false}
+              onClick={openChat}
+            />
+          )}
           <MobileControl
             icon={<CirclePlus />}
             label=""

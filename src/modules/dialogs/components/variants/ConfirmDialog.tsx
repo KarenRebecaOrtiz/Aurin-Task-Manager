@@ -8,7 +8,6 @@ import {
   ResponsiveDialogHeader,
   ResponsiveDialogTitle,
   ResponsiveDialogDescription,
-  ResponsiveDialogBody,
   ResponsiveDialogFooter
 } from '../DialogPrimitives';
 import { DialogFooter, DialogActions } from '../molecules';
@@ -81,23 +80,18 @@ export function ConfirmDialog({ config, onClose }: ConfirmDialogProps) {
     <ResponsiveDialog open={true} onOpenChange={(open) => !open && handleCancel()}>
       <ResponsiveDialogContent
         size={size}
+        compact={true}
         closeOnOverlayClick={closeOnOverlayClick}
         closeOnEscape={closeOnEscape}
         showCloseButton={showCloseButton}
       >
         {isMobile ? (
-          // Mobile: Use Drawer structure
+          // Mobile: Use Drawer structure (no body needed for confirm dialogs)
           <>
             <ResponsiveDialogHeader>
               {title && <ResponsiveDialogTitle>{title}</ResponsiveDialogTitle>}
               {description && <ResponsiveDialogDescription>{description}</ResponsiveDialogDescription>}
             </ResponsiveDialogHeader>
-
-            <ResponsiveDialogBody>
-              <div className={styles.confirmContent} onKeyDown={handleKeyDown}>
-                {/* Content area can be empty for confirm dialogs */}
-              </div>
-            </ResponsiveDialogBody>
 
             <ResponsiveDialogFooter>
               <DialogActions
@@ -119,17 +113,12 @@ export function ConfirmDialog({ config, onClose }: ConfirmDialogProps) {
               animate="visible"
               exit="exit"
               className={styles.dialogInner}
+              onKeyDown={handleKeyDown}
             >
               <ResponsiveDialogHeader>
                 {title && <ResponsiveDialogTitle>{title}</ResponsiveDialogTitle>}
                 {description && <ResponsiveDialogDescription>{description}</ResponsiveDialogDescription>}
               </ResponsiveDialogHeader>
-
-              <ResponsiveDialogBody>
-                <div className={styles.confirmContent} onKeyDown={handleKeyDown}>
-                  {/* Content area can be empty for confirm dialogs */}
-                </div>
-              </ResponsiveDialogBody>
 
               <DialogFooter>
                 <DialogActions

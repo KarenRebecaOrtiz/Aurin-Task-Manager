@@ -4,7 +4,7 @@ import 'server-only';
 import { getAdminDb } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { generateShareToken, buildShareUrl, isTokenExpired, calculateTokenExpiry } from './tokenService';
-import { sanitizeTaskForPublic, PublicTask } from '../schemas/validation.schemas';
+import { sanitizeTaskForPublic, sanitizeTeamForPublic, PublicTask, PublicTeam } from '../schemas/validation.schemas';
 import { ERROR_MESSAGES } from '../utils/constants';
 import { generateGuestToken } from './guestToken.server';
 import { canUserShareTask } from '../utils/authHelpers.server';
@@ -669,6 +669,59 @@ export async function getTeamShareInfo(
     return {
       success: false,
       error: 'Error al obtener informacion.',
+    };
+  }
+}
+
+/**
+ * Get public team by team ID (without token validation)
+ * Used for the /guest-team/[teamId] route to check if team exists and is shared
+ */
+export async function getPublicTeamByTeamId(
+  teamId: string
+): Promise<{ success: boolean; team?: PublicTeam; error?: string }> {
+  try {
+    console.log('[getPublicTeamByTeamId] Fetching team:', teamId);
+    const adminDb = getAdminDb();
+    const teamRef = adminDb.collection('teams').doc(teamId);
+    const teamDoc = await teamRef.get();
+
+    console.log('[getPublicTeamByTeamId] Team exists:', teamDoc.exists);
+
+    if (!teamDoc.exists) {
+      return { success: false, error: 'Equipo no encontrado' };
+    }
+
+    const teamData = { id: teamDoc.id, ...teamDoc.data() } as any;
+    console.log('[getPublicTeamByTeamId] Team data:', {
+      id: teamData.id,
+      name: teamData.name,
+      shared: teamData.shared,
+      keys: Object.keys(teamData)
+    });
+
+    // Verificar que el equipo esté compartido
+    if (!teamData.shared) {
+      return { success: false, error: 'Este equipo no está disponible públicamente' };
+    }
+
+    // Obtener información de miembros
+    const memberIds = teamData.memberIds || [];
+    const membersResult = await getUsersInfo(memberIds);
+    const members = membersResult.success ? membersResult.users : [];
+
+    // Sanitize team data for public consumption
+    const publicTeam = sanitizeTeamForPublic(teamData, members);
+
+    return {
+      success: true,
+      team: publicTeam,
+    };
+  } catch (error) {
+    console.error('[getPublicTeamByTeamId] Error:', error);
+    return {
+      success: false,
+      error: 'Error al cargar el equipo. Intenta de nuevo.',
     };
   }
 }

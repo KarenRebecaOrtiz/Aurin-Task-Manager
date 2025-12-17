@@ -32,6 +32,28 @@ export const PublicTaskSchema = z.object({
 export type PublicTask = z.infer<typeof PublicTaskSchema>;
 
 /**
+ * Public Team Schema
+ * Defines what fields are safe to expose publicly for teams
+ * Deliberately EXCLUDES: sensitive member details, internal settings, etc.
+ */
+export const PublicTeamSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().nullable(),
+  createdAt: z.string(),
+  // Comments enabled flag
+  commentsEnabled: z.boolean().default(false),
+  // Team members (for displaying in chat)
+  members: z.array(z.object({
+    id: z.string(),
+    name: z.string(),
+    avatar: z.string(),
+  })).default([]),
+});
+
+export type PublicTeam = z.infer<typeof PublicTeamSchema>;
+
+/**
  * Guest Comment Input Schema
  * Validates guest comment submissions
  */
@@ -260,6 +282,33 @@ function isTaskActiveNow(
   end.setHours(23, 59, 59, 999);
 
   return now >= start && now <= end;
+}
+
+/**
+ * Sanitization Function: Team to PublicTeam
+ * Removes sensitive fields and converts timestamps
+ */
+export function sanitizeTeamForPublic(team: any, members?: any[]): PublicTeam {
+  const createdAtStr = timestampToString(team.createdAt) || new Date().toISOString();
+
+  // Map members to the expected format
+  const mappedMembers = (members || []).map(m => ({
+    id: m.id,
+    name: m.displayName || m.fullName || m.name || 'Usuario Desconocido',
+    avatar: m.photoURL || m.profilePhoto || m.imageUrl || m.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.displayName || m.fullName || m.name || 'Usuario')}&background=random`,
+  }));
+
+  const sanitized = {
+    id: team.id,
+    name: team.name,
+    description: team.description || null,
+    createdAt: createdAtStr,
+    commentsEnabled: team.commentsEnabled || false,
+    members: mappedMembers,
+  };
+
+  // Validate with Zod to ensure type safety
+  return PublicTeamSchema.parse(sanitized);
 }
 
 /**

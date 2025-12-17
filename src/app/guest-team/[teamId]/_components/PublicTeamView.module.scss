@@ -1,0 +1,441 @@
+/**
+ * PublicTeamView - Estilos para la vista pública de equipo
+ *
+ * Renderiza el chat del equipo en formato "dialog centrado" como vista principal.
+ * Similar a PublicTaskView pero con header específico para equipos.
+ */
+
+@use '@/modules/chat/styles/variables' as chat;
+
+// ============================================================================
+// WRAPPER - Contenedor principal (centra el chat)
+// ============================================================================
+
+.wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 1rem;
+  position: relative;
+  z-index: 1;
+}
+
+// ============================================================================
+// CHAT CONTAINER - Panel principal (simula el dialog)
+// ============================================================================
+
+.chatContainer {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 700px;
+  height: 80vh;
+  max-height: 800px;
+  overflow: hidden;
+  background: chat.$chat-bg-light;
+  border-radius: 24px;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.05),
+    0 25px 50px -12px rgba(0, 0, 0, 0.25),
+    0 0 100px rgba(0, 0, 0, 0.1);
+
+  // Noise texture effect
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url('https://storage.googleapis.com/aurin-plattform/assets/noiseTexture.png');
+    background-repeat: repeat;
+    opacity: 0.15;
+    pointer-events: none;
+    border-radius: inherit;
+    z-index: 0;
+  }
+
+  :global(.dark) & {
+    background: chat.$chat-bg-dark;
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.08),
+      0 25px 50px -12px rgba(0, 0, 0, 0.5),
+      0 0 100px rgba(0, 0, 0, 0.3);
+
+    &::before {
+      opacity: 0.08;
+    }
+  }
+}
+
+// ============================================================================
+// HEADER
+// ============================================================================
+
+.chatHeader {
+  flex-shrink: 0;
+  padding: 1.25rem 1.5rem 1rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  position: relative;
+  z-index: 10;
+
+  :global(.dark) & {
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+  }
+}
+
+// ============================================================================
+// TEAM HEADER - Estilos específicos para equipos
+// ============================================================================
+
+.teamHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.teamIcon {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+
+  svg {
+    color: white;
+    width: 24px;
+    height: 24px;
+  }
+}
+
+.teamInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.teamName {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #18181b;
+  margin: 0;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  :global(.dark) & {
+    color: #fafafa;
+  }
+}
+
+.teamDescription {
+  font-size: 0.875rem;
+  color: #71717a;
+  margin: 0;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+
+  :global(.dark) & {
+    color: #a1a1aa;
+  }
+}
+
+.teamMeta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.memberCount {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #71717a;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+
+  :global(.dark) & {
+    color: #a1a1aa;
+  }
+}
+
+.sharedBadge {
+  font-size: 0.625rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #8b5cf6;
+  background: rgba(139, 92, 246, 0.1);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid rgba(139, 92, 246, 0.2);
+
+  :global(.dark) & {
+    background: rgba(139, 92, 246, 0.15);
+    border-color: rgba(139, 92, 246, 0.3);
+  }
+}
+
+// ============================================================================
+// BODY - Area de mensajes
+// ============================================================================
+
+.chatBody {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 1;
+}
+
+// ============================================================================
+// FOOTER - Area de input
+// ============================================================================
+
+.chatFooter {
+  flex-shrink: 0;
+  padding: 0.75rem 1rem 1rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  position: relative;
+  z-index: 10;
+
+  :global(.dark) & {
+    border-top-color: rgba(255, 255, 255, 0.06);
+  }
+}
+
+// ============================================================================
+// READ-ONLY MESSAGE
+// ============================================================================
+
+.readOnlyMessage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px;
+  background: rgba(139, 92, 246, 0.08);
+  border-radius: 12px;
+  color: #6b7280;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-align: center;
+  border: 1px solid rgba(139, 92, 246, 0.15);
+
+  :global(.dark) & {
+    background: rgba(139, 92, 246, 0.1);
+    border-color: rgba(139, 92, 246, 0.2);
+    color: #9ca3af;
+  }
+
+  svg {
+    flex-shrink: 0;
+    color: #8b5cf6;
+  }
+
+  span {
+    line-height: 1.4;
+  }
+}
+
+// ============================================================================
+// ERROR STATE
+// ============================================================================
+
+.errorContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 2rem;
+  text-align: center;
+  background: white;
+  border-radius: 24px;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.05),
+    0 25px 50px -12px rgba(0, 0, 0, 0.15);
+
+  :global(.dark) & {
+    background: #0c0c0c;
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.08),
+      0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  }
+}
+
+.errorTitle {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #dc2626;
+  margin: 0 0 0.75rem;
+
+  :global(.dark) & {
+    color: #fca5a5;
+  }
+}
+
+.errorText {
+  font-size: 1rem;
+  color: #6b7280;
+  margin: 0;
+  max-width: 400px;
+  line-height: 1.5;
+
+  :global(.dark) & {
+    color: #9ca3af;
+  }
+}
+
+// ============================================================================
+// IMAGE PREVIEW OVERLAY
+// ============================================================================
+
+.imagePreviewOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  z-index: 100002;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.imagePreview {
+  max-width: 90%;
+  max-height: 90%;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+// ============================================================================
+// RESPONSIVE - Mobile adjustments
+// ============================================================================
+
+@media (max-width: 767px) {
+  .wrapper {
+    padding: 0;
+    align-items: stretch;
+  }
+
+  .chatContainer {
+    max-width: 100%;
+    height: 100vh;
+    max-height: none;
+    border-radius: 0;
+  }
+
+  .chatHeader {
+    padding: 1rem 1rem 0.75rem;
+    // Safe area for notch
+    padding-top: calc(1rem + env(safe-area-inset-top, 0));
+  }
+
+  .teamHeader {
+    gap: 0.75rem;
+  }
+
+  .teamIcon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+
+    svg {
+      width: 20px;
+      height: 20px;
+    }
+  }
+
+  .teamName {
+    font-size: 1.125rem;
+  }
+
+  .teamDescription {
+    font-size: 0.8125rem;
+  }
+
+  .teamMeta {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .memberCount {
+    font-size: 0.6875rem;
+  }
+
+  .sharedBadge {
+    font-size: 0.5625rem;
+    padding: 0.1875rem 0.375rem;
+  }
+
+  .chatFooter {
+    padding: 0.5rem 0.75rem 0.75rem;
+    // Safe area for home bar
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0));
+  }
+
+  .readOnlyMessage {
+    padding: 12px;
+    font-size: 0.8125rem;
+  }
+
+  .errorContainer {
+    margin: 1rem;
+    border-radius: 16px;
+    padding: 2rem 1.5rem;
+  }
+
+  .errorTitle {
+    font-size: 1.25rem;
+  }
+
+  .errorText {
+    font-size: 0.9375rem;
+  }
+}
+
+// ============================================================================
+// TABLET ADJUSTMENTS
+// ============================================================================
+
+@media (min-width: 768px) and (max-width: 1024px) {
+  .chatContainer {
+    max-width: 600px;
+    height: 85vh;
+  }
+}
+
+// ============================================================================
+// LARGE SCREENS
+// ============================================================================
+
+@media (min-width: 1400px) {
+  .chatContainer {
+    max-width: 800px;
+    max-height: 900px;
+  }
+}

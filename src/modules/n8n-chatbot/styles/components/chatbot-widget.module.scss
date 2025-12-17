@@ -86,14 +86,9 @@
     max-height: 100vh;
   }
 
-  // Ocultar el ::after que crea vaul drawer en mobile y que desplaza el contenido
-  :global {
-    @media (max-width: 768px) {
-      body::after {
-        content: none !important;
-        display: none !important;
-      }
-    }
+  // Ocultar el ::after que crea vaul drawer (espacio vacío debajo del input)
+  &::after {
+    display: none !important;
   }
 }
 

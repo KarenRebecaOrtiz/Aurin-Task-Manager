@@ -11,6 +11,7 @@ import { TimerDropdown } from "../../timer/components/molecules/TimerDropdown";
 import { ShareButton } from "../atoms/ShareButton";
 import { SharedBadge } from "@/modules/shared/components/ui";
 import { useDataStore } from "@/stores/dataStore";
+import { useAuth } from "@/contexts/AuthContext";
 import styles from "../../styles/ChatHeader.module.scss";
 import type { Task, Message } from "../../types";
 
@@ -38,6 +39,9 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   isTeamChat = false, // Por defecto es chat de tarea
 }) => {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+
+  // ✅ Auth context para verificar si es admin
+  const { isAdmin } = useAuth();
 
   // ✅ Si no se pasan users como prop, obtenerlos del dataStore centralizado
   const storeUsers = useDataStore((state) => state.users);
@@ -109,15 +113,18 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
         
         {/* Action Buttons - Share & Timer (hidden on mobile, timer shown in InputChat instead) */}
         {/* Timer solo para tareas, no para equipos */}
+        {/* ShareButton solo visible para admins */}
         {!isPublicView && (
           <div className={styles.timerWrapper}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <ShareButton
-                taskId={task.id}
-                taskName={task.name}
-                className={styles.shareButton}
-                entityType={isTeamChat ? 'team' : 'task'}
-              />
+              {isAdmin && (
+                <ShareButton
+                  taskId={task.id}
+                  taskName={task.name}
+                  className={styles.shareButton}
+                  entityType={isTeamChat ? 'team' : 'task'}
+                />
+              )}
               {!isTeamChat && (
                 <TimerDropdown
                   taskId={task.id}

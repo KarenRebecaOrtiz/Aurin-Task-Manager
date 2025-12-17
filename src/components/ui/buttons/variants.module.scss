@@ -49,6 +49,13 @@
     pointer-events: none;
     flex-shrink: 0;
   }
+
+  // Inner span (for motion animations) - ensure flex layout
+  > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
 }
 
 // ============================================
