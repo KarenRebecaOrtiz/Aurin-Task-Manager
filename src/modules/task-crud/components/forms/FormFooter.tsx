@@ -12,10 +12,6 @@ interface FormFooterProps {
 export function FormFooter({ onCancel, isLoading, submitText = "Crear Tarea" }: FormFooterProps) {
   const loadingText = submitText === "Actualizar" ? "Actualizando..." : "Creando..."
 
-  const handleSubmitClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-    console.log('[FormFooter] Submit button clicked', e)
-  }
-
   return (
     <div className="flex justify-end gap-4">
       <Button
@@ -28,10 +24,10 @@ export function FormFooter({ onCancel, isLoading, submitText = "Crear Tarea" }: 
       </Button>
       <Button
         type="submit"
+        form="task-form"
         intent="primary"
         isLoading={isLoading}
         disabled={isLoading}
-        onClick={handleSubmitClick}
       >
         {isLoading ? loadingText : submitText}
       </Button>

@@ -152,7 +152,7 @@ export function TaskForm({
   const getTeamMember = (userId: string) => users.find(u => u.id === userId)
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+    <form id="task-form" onSubmit={handleSubmit} className="flex flex-col gap-6">
       <motion.div
         className="flex flex-col gap-4"
         variants={listContainerVariants}

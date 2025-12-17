@@ -28,11 +28,13 @@ export const mailConfig = {
 /**
  * Application URLs for email templates
  */
+const PROD_URL = 'https://pm.aurincloud.com';
+
 export const appConfig = {
-  url: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+  url: process.env.NEXT_PUBLIC_APP_URL || PROD_URL,
   dashboardUrl: process.env.NEXT_PUBLIC_APP_URL
     ? `${process.env.NEXT_PUBLIC_APP_URL}/dashboard`
-    : 'http://localhost:3000/dashboard',
+    : `${PROD_URL}/dashboard`,
 };
 
 /**
