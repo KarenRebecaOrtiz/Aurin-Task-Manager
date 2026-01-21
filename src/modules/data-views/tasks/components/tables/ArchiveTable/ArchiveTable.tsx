@@ -536,10 +536,7 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
             currentView="archive"
           />
 
-          <EmptyTableState
-            title="No hay tareas archivadas"
-            description="Las tareas archivadas aparecerán aquí cuando las archives"
-          />
+          <EmptyTableState type="archive" />
         </div>
       );
     }

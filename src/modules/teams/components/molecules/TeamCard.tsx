@@ -133,8 +133,8 @@ export function TeamCard({ team }: TeamCardProps) {
                   <Settings className="w-4 h-4" />
                 </button>
               </TooltipTrigger>
-              <TooltipContent>
-                <p>Editar equipo</p>
+              <TooltipContent className={styles.tooltipContent}>
+                Editar equipo
               </TooltipContent>
             </Tooltip>
           )}
@@ -215,8 +215,8 @@ export function TeamCard({ team }: TeamCardProps) {
                       <AvatarFallback className={styles.avatarFallback} />
                     </Avatar>
                   </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{member!.fullName}</p>
+                  <TooltipContent className={styles.tooltipContent}>
+                    {member!.fullName}
                   </TooltipContent>
                 </Tooltip>
               ))}

@@ -1,0 +1,123 @@
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-4xl 0px;
+  gap: $spacing-2xl;
+  min-height: calc(56px + (60px * 10)); // Same height as table with 10 rows
+  background: $color-bg-light;
+  border-radius: $radius-2xl;
+
+  :global(body.dark) & {
+    background: $color-bg-dark;
+    border: 1px solid #ffffff0d;
+  }
+
+  @media (max-width: 768px) {
+    min-height: calc(56px + (60px * 5));
+    padding: $spacing-2xl $spacing-md;
+
+    :global(body.dark) & {
+      background: #100f0f5c;
+      border: 1px solid #ffffff0d;
+    }
+  }
+
+  // Embedded variant: no background/border when inside Table component
+  &.embedded {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+
+    :global(body.dark) & {
+      background: transparent;
+      border: none;
+    }
+  }
+}
+
+.imageContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image {
+  width: auto;
+  height: auto;
+  max-width: 189px;
+  max-height: 190px;
+
+  @media (max-width: 768px) {
+    max-width: 140px;
+    max-height: 140px;
+  }
+}
+
+.textContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-sm;
+  max-width: 400px;
+  text-align: center;
+  padding: 0 $spacing-md;
+}
+
+.title {
+  font-family: $font-family-table;
+  font-size: $text-xl;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  text-align: center;
+  margin: 0;
+
+  :global(body.dark) & {
+    color: rgba(255, 255, 255, 0.733);
+  }
+}
+
+.description {
+  font-family: $font-family-table;
+  font-size: $text-base;
+  font-weight: $font-weight-normal;
+  color: $color-text-secondary;
+  text-align: center;
+  margin: 0;
+  line-height: 1.5;
+
+  :global(body.dark) & {
+    color: rgba(255, 255, 255, 0.6);
+  }
+}
+
+.actionButton {
+  margin-top: $spacing-md;
+  padding: $spacing-sm $spacing-xl;
+  background: $color-btn-primary;
+  color: white;
+  border: none;
+  border-radius: $radius-lg;
+  font-family: $font-family-table;
+  font-size: $text-sm;
+  font-weight: $font-weight-medium;
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover {
+    background: $color-btn-primary-hover;
+  }
+
+  :global(body.dark) & {
+    background: $color-btn-primary-dark;
+    color: $color-text-primary;
+
+    &:hover {
+      background: $color-btn-primary-dark-hover;
+    }
+  }
+}

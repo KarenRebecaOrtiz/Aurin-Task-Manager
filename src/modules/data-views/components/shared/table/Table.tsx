@@ -11,6 +11,7 @@ import {
 } from '@/modules/data-views/animations/entryAnimations';
 import styles from './Table.module.scss';
 import TableHeader, { Column as TableHeaderColumn } from './TableHeader';
+import { EmptyTableState, type EmptyStateType } from '../empty-states';
 
 interface HasId {
   id: string;
@@ -30,7 +31,7 @@ interface TableProps<T extends HasId> {
   onSort?: (key: string) => void;
   onRowClick?: (item: T, columnKey: string) => void;
   getRowClassName?: (item: T) => string;
-  emptyStateType?: 'tasks' | 'archive' | 'clients' | 'members' | 'team';
+  emptyStateType?: EmptyStateType;
   className?: string;
 }
 
@@ -135,64 +136,9 @@ const Table = memo(
     const handleNextPageClick = useCallback(() => handleNextPage(), [handleNextPage]);
     const handleLastPageClick = useCallback(() => handleLastPage(), [handleLastPage]);
 
-    const EmptyState = () => {
-      const getEmptyStateContent = () => {
-        switch (emptyStateType) {
-          case 'archive':
-            return {
-              title: 'No hay tareas archivadas',
-              subtitle: 'Las tareas que archives aparecerán aquí para mantener un historial organizado de tu trabajo.'
-            };
-          case 'clients':
-            return {
-              title: 'No hay cuentas registradas',
-              subtitle: 'Crea tu primera cuenta para comenzar a organizar tus proyectos y tareas.'
-            };
-          case 'members':
-            return {
-              title: 'No hay miembros en el equipo',
-              subtitle: 'Invita a tu equipo para colaborar en proyectos y tareas de manera eficiente.'
-            };
-          case 'team':
-            return {
-              title: 'No hay miembros en el equipo',
-              subtitle: 'Agrega miembros a tu equipo para mejorar la colaboración y productividad.'
-            };
-          case 'tasks':
-          default:
-            return {
-              title: 'No hay tareas asignadas',
-              subtitle: 'Crea tu primera tarea para comenzar a organizar tu trabajo y proyectos.'
-            };
-        }
-      };
-
-      const content = getEmptyStateContent();
-
-      return (
-        <motion.div
-          className={styles.emptyState}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-        >
-          <Image
-            src="/emptyStateImage.png"
-            alt="No hay datos"
-            width={189}
-            height={190}
-            className={styles.emptyStateImage}
-            style={{ width: 'auto', height: 'auto' }}
-          />
-          <div className={styles.emptyStateText}>
-            <div className={styles.emptyStateTitle}>{content.title}</div>
-            <div className={styles.emptyStateSubtitle}>
-              {content.subtitle}
-            </div>
-          </div>
-        </motion.div>
-      );
-    };
+    const renderEmptyState = () => (
+      <EmptyTableState type={emptyStateType} embedded />
+    );
 
     return (
       <motion.div
@@ -217,7 +163,7 @@ const Table = memo(
 
           {/* Table Body with AnimatePresence for row transitions */}
           {paginatedData.length === 0 ? (
-            <EmptyState />
+            renderEmptyState()
           ) : (
             <AnimatePresence mode="wait">
               <motion.div

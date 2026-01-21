@@ -161,3 +161,121 @@
     }
   }
 }
+
+// ===========================================
+// TOOLTIP STYLES
+// ===========================================
+.tooltip {
+  position: relative;
+  display: inline-flex;
+}
+
+.tooltipContent {
+  z-index: 9999;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-family: $font-family-primary;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+
+  // Light mode
+  background: rgba(255, 255, 255, 0.95);
+  color: #1f2937;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(12px);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.12),
+    0 2px 4px rgba(0, 0, 0, 0.08);
+
+  // Dark mode
+  :global(body.dark) & {
+    background: rgba(23, 23, 23, 0.95);
+    color: rgba(255, 255, 255, 0.9);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow:
+      0 4px 16px rgba(0, 0, 0, 0.4),
+      0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+
+  // Arrow indicator
+  &::before {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background: inherit;
+    border: inherit;
+    border-top: none;
+    border-left: none;
+    transform: rotate(45deg);
+  }
+
+  // Arrow position based on tooltip side
+  &[data-side='top']::before {
+    bottom: -5px;
+    left: 50%;
+    margin-left: -4px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    border-right: 1px solid rgba(0, 0, 0, 0.08);
+
+    :global(body.dark) & {
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+  }
+
+  &[data-side='bottom']::before {
+    top: -5px;
+    left: 50%;
+    margin-left: -4px;
+    transform: rotate(-135deg);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    border-right: 1px solid rgba(0, 0, 0, 0.08);
+
+    :global(body.dark) & {
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+  }
+
+  &[data-side='left']::before {
+    right: -5px;
+    top: 50%;
+    margin-top: -4px;
+    transform: rotate(-45deg);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    border-right: 1px solid rgba(0, 0, 0, 0.08);
+
+    :global(body.dark) & {
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+  }
+
+  &[data-side='right']::before {
+    left: -5px;
+    top: 50%;
+    margin-top: -4px;
+    transform: rotate(135deg);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    border-right: 1px solid rgba(0, 0, 0, 0.08);
+
+    :global(body.dark) & {
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+  }
+
+  // Animation
+  animation: tooltipFadeIn 0.15s ease-out;
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

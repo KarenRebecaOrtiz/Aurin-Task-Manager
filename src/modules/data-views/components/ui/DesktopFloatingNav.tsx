@@ -78,8 +78,8 @@ const NavButton: React.FC<NavButtonProps> = ({
     return (
       <Tooltip>
         <TooltipTrigger asChild>{buttonContent}</TooltipTrigger>
-        <TooltipContent side="top" sideOffset={12}>
-          <p>{tooltip}</p>
+        <TooltipContent side="top" sideOffset={12} className={styles.tooltipContent}>
+          {tooltip}
         </TooltipContent>
       </Tooltip>
     );
