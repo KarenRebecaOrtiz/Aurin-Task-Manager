@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { useGuestAuth } from '@/contexts/GuestAuthContext';
 import { TokenAuthForm } from './TokenAuthForm';
@@ -14,9 +15,16 @@ interface GuestTaskContentProps {
 
 export function GuestTaskContent({ taskId, task }: GuestTaskContentProps) {
   const { user, isLoaded: isUserLoaded } = useUser();
-  const { guestSession, isLoading: isGuestLoading } = useGuestAuth();
+  const { guestSession, isLoading: isGuestLoading, refreshSession } = useGuestAuth();
 
   const isLoading = !isUserLoaded || isGuestLoading;
+
+  // Refresh session permissions when page loads (in case owner changed them)
+  useEffect(() => {
+    if (!isLoading && guestSession && !user) {
+      refreshSession();
+    }
+  }, [isLoading, guestSession, user, refreshSession]);
 
   if (isLoading) {
     return (

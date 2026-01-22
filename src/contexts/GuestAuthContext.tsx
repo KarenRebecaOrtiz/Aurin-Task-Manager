@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, ReactNode, useMemo, useCallback } from 'react';
+import { validateTokenForTask } from '@/modules/shareTask/actions/tokenAuth.actions';
 
 interface GuestSession {
   taskId: string;
@@ -17,6 +18,7 @@ interface GuestAuthContextType {
   isLoading: boolean;
   setGuestSession: (session: GuestSession) => void;
   clearGuestSession: () => void;
+  refreshSession: () => Promise<void>;
 }
 
 const GuestAuthContext = createContext<GuestAuthContextType | undefined>(undefined);
@@ -73,13 +75,45 @@ export function GuestAuthProvider({ children, taskId }: GuestAuthProviderProps) 
     }
   }, []);
 
+  // Re-validate token with server to get fresh permissions
+  const refreshSession = useCallback(async () => {
+    const currentSession = guestSession;
+    if (!currentSession) return;
+
+    try {
+      const result = await validateTokenForTask(currentSession.taskId, currentSession.token);
+
+      if (result.success && result.tokenData) {
+        // Update session with fresh permissions from server
+        const updatedSession: GuestSession = {
+          ...currentSession,
+          commentsEnabled: result.tokenData.commentsEnabled ?? true,
+        };
+
+        // Only update if something changed
+        if (updatedSession.commentsEnabled !== currentSession.commentsEnabled) {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedSession));
+          setGuestSessionState(updatedSession);
+        }
+      } else {
+        // Token is no longer valid - clear session
+        console.warn('[GuestAuth] Token no longer valid, clearing session');
+        localStorage.removeItem(STORAGE_KEY);
+        setGuestSessionState(null);
+      }
+    } catch (error) {
+      console.error('[GuestAuth] Error refreshing session:', error);
+    }
+  }, [guestSession]);
+
   const contextValue = useMemo(() => ({
     guestSession,
     isGuest: !!guestSession,
     isLoading,
     setGuestSession,
     clearGuestSession,
-  }), [guestSession, isLoading, setGuestSession, clearGuestSession]);
+    refreshSession,
+  }), [guestSession, isLoading, setGuestSession, clearGuestSession, refreshSession]);
 
   return (
     <GuestAuthContext.Provider value={contextValue}>
