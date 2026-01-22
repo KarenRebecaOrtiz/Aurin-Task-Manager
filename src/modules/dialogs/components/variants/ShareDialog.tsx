@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { CheckIcon, CopyIcon, PlusCircle, Trash2, Link2, MessageSquare, AlertTriangle, Loader2, LinkIcon, Info } from 'lucide-react';
+import { CheckIcon, CopyIcon, PlusCircle, Trash2, Link2, MessageSquare, AlertTriangle, Loader2, Info } from 'lucide-react';
 import { CrudDialog } from '../organisms/CrudDialog';
 import { useDialog } from '../../hooks/useDialog';
 import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
@@ -278,11 +278,10 @@ export function ShareDialog({
     setTimeout(() => setCopiedItem(null), 2000);
   }, [success]);
 
-  const handleCopyMagicLink = useCallback((token: GuestToken) => {
-    const magicLink = `${token.shareUrl}?token=${token.token}`;
-    navigator.clipboard.writeText(magicLink);
-    setCopiedItem(`magic-${token.id}`);
-    success(`Enlace directo para "${token.tokenName || token.guestName || 'Invitado'}" copiado`);
+  const handleCopyToken = useCallback((token: GuestToken) => {
+    navigator.clipboard.writeText(token.token);
+    setCopiedItem(`token-${token.id}`);
+    success(`Token de acceso para "${token.tokenName || token.guestName || 'Invitado'}" copiado`);
     setTimeout(() => setCopiedItem(null), 2000);
   }, [success]);
 
@@ -459,9 +458,9 @@ export function ShareDialog({
                     </div>
                     <div className={styles.legendItem}>
                       <span className={styles.legendIcon}>
-                        <LinkIcon size={10} />
+                        <CopyIcon size={10} />
                       </span>
-                      Copiar enlace
+                      Copiar token
                     </div>
                     <div className={styles.legendItem}>
                       <span className={styles.legendIcon}>
@@ -513,15 +512,15 @@ export function ShareDialog({
                             <MessageSquare size={14} className={token.commentsEnabled ? styles.iconActive : undefined} />
                           </button>
                           <button
-                            onClick={() => handleCopyMagicLink(token)}
+                            onClick={() => handleCopyToken(token)}
                             className={styles.invitationActionButton}
                             disabled={isSubmitting}
-                            title="Copiar enlace directo con clave"
+                            title="Copiar token de acceso"
                           >
-                            {copiedItem === `magic-${token.id}` ? (
+                            {copiedItem === `token-${token.id}` ? (
                               <CheckIcon size={14} className={styles.iconSuccess} />
                             ) : (
-                              <LinkIcon size={14} />
+                              <CopyIcon size={14} />
                             )}
                           </button>
                           <button
