@@ -65,6 +65,9 @@ export interface InputChatProps {
   setIsSending?: React.Dispatch<React.SetStateAction<boolean>>
   disabled?: boolean
 
+  // Feature flags
+  showWebSearch?: boolean // Show web search toggle (default: false, only for AI assistant)
+
   // Users for mentions (deprecated - not used in this version)
   users?: { id: string; fullName: string }[]
 
@@ -102,6 +105,7 @@ export const InputChat: React.FC<InputChatProps> = ({
   isSending: isSendingProp = false,
   setIsSending: setIsSendingProp,
   disabled = false,
+  showWebSearch = false,
 }) => {
   // ========== STATE ==========
   const [value, setValue] = useState('')
@@ -480,41 +484,45 @@ export const InputChat: React.FC<InputChatProps> = ({
 
             {/* Toggle buttons group */}
             <div className={styles.toggleGroup}>
-              {/* Search toggle */}
-              <button
-                type="button"
-                onClick={() => handleToggleChange('search')}
-                className={`${styles.toggleBtn} ${webSearchEnabled ? styles.active : ''}`}
-              >
-                <div className={styles.iconContainer}>
-                  <motion.div
-                    animate={{ rotate: webSearchEnabled ? 360 : 0, scale: webSearchEnabled ? 1.1 : 1 }}
-                    whileHover={{
-                      rotate: webSearchEnabled ? 360 : 15,
-                      scale: 1.1,
-                      transition: { type: 'spring', stiffness: 300, damping: 10 },
-                    }}
-                    transition={{ type: 'spring', stiffness: 260, damping: 25 }}
+              {/* Search toggle - only shown for AI assistant */}
+              {showWebSearch && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleChange('search')}
+                    className={`${styles.toggleBtn} ${webSearchEnabled ? styles.active : ''}`}
                   >
-                    <Globe className="w-4 h-4" />
-                  </motion.div>
-                </div>
-                <AnimatePresence>
-                  {webSearchEnabled && (
-                    <motion.span
-                      initial={{ width: 0, opacity: 0 }}
-                      animate={{ width: 'auto', opacity: 1 }}
-                      exit={{ width: 0, opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className={styles.label}
-                    >
-                      Buscar
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-              </button>
+                    <div className={styles.iconContainer}>
+                      <motion.div
+                        animate={{ rotate: webSearchEnabled ? 360 : 0, scale: webSearchEnabled ? 1.1 : 1 }}
+                        whileHover={{
+                          rotate: webSearchEnabled ? 360 : 15,
+                          scale: 1.1,
+                          transition: { type: 'spring', stiffness: 300, damping: 10 },
+                        }}
+                        transition={{ type: 'spring', stiffness: 260, damping: 25 }}
+                      >
+                        <Globe className="w-4 h-4" />
+                      </motion.div>
+                    </div>
+                    <AnimatePresence>
+                      {webSearchEnabled && (
+                        <motion.span
+                          initial={{ width: 0, opacity: 0 }}
+                          animate={{ width: 'auto', opacity: 1 }}
+                          exit={{ width: 0, opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className={styles.label}
+                        >
+                          Buscar
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+                  </button>
 
-              <CustomDivider />
+                  <CustomDivider />
+                </>
+              )}
 
               {/* Audio toggle */}
               <motion.button

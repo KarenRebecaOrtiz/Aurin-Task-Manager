@@ -82,6 +82,7 @@ export async function validateTokenForTask(taskId: string, token: string) {
         tokenName: tokenData.tokenName || null,
         guestName: tokenData.guestName || null,
         status: tokenData.status || 'pending',
+        commentsEnabled: tokenData.commentsEnabled ?? true, // Default true for backwards compatibility
       },
     };
   } catch (error) {
@@ -164,6 +165,7 @@ export async function validateTokenForTeam(teamId: string, token: string) {
         tokenName: tokenData.tokenName || null,
         guestName: tokenData.guestName || null,
         status: tokenData.status || 'pending',
+        commentsEnabled: tokenData.commentsEnabled ?? true, // Default true for backwards compatibility
       },
     };
   } catch (error) {

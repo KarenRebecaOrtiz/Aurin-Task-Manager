@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { CheckIcon, CopyIcon, PlusCircle, Trash2, Link2, MessageSquare, AlertTriangle, Loader2, LinkIcon } from 'lucide-react';
+import { CheckIcon, CopyIcon, PlusCircle, Trash2, Link2, MessageSquare, AlertTriangle, Loader2, LinkIcon, Info } from 'lucide-react';
 import { CrudDialog } from '../organisms/CrudDialog';
 import { useDialog } from '../../hooks/useDialog';
 import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
@@ -17,6 +17,7 @@ import {
   generateGuestTokenAction,
   revokeGuestTokenAction,
   getGuestTokensAction,
+  updateTokenCommentsEnabledAction,
 } from '@/modules/shareTask/actions/guestToken.actions';
 import { TokenCountdown } from '../atoms/TokenCountdown';
 
@@ -30,6 +31,7 @@ interface GuestToken {
   expiresAt: string | null;
   shareUrl: string;
   avatar?: string;
+  commentsEnabled: boolean;
 }
 
 interface ShareDialogProps {
@@ -117,6 +119,7 @@ export function ShareDialog({
           shareUrl: token.shareUrl,
           expiresAt: token.expiresAt || null,
           avatar: token.avatar,
+          commentsEnabled: token.commentsEnabled ?? true,
         }));
         setGuestTokens(mappedTokens);
       } else if (!tokensResult.success) {
@@ -192,28 +195,34 @@ export function ShareDialog({
     setShowDisableWarning(false);
   }, []);
 
-  const handleToggleComments = useCallback(async () => {
-    setIsSubmitting(true);
-    setError(null);
-    const result = await updateCommentsEnabledAction({
+  const handleToggleTokenComments = useCallback(async (tokenId: string, currentValue: boolean, tokenName?: string) => {
+    // Optimistic update
+    setGuestTokens(prev => prev.map(t =>
+      t.id === tokenId ? { ...t, commentsEnabled: !currentValue } : t
+    ));
+
+    const result = await updateTokenCommentsEnabledAction({
       taskId,
-      enabled: !commentsEnabled,
-      entityType,
+      tokenId,
+      commentsEnabled: !currentValue,
     });
+
     if (result.success) {
-      setCommentsEnabled(!commentsEnabled);
-      if (!commentsEnabled) {
-        success(`Interacción permitida. Los invitados ahora pueden interactuar con ${entityType === 'team' ? 'el equipo' : 'la tarea'}`);
+      const displayName = tokenName || 'Invitado';
+      if (!currentValue) {
+        success(`"${displayName}" ahora puede comentar`);
       } else {
-        success(`Interacción desactivada. Los invitados solo podrán ver ${entityType === 'team' ? 'el equipo' : 'la tarea'}`);
+        success(`"${displayName}" ahora está en modo solo lectura`);
       }
     } else {
-      const errorMsg = result.error || 'Error al actualizar los comentarios.';
-      setError(errorMsg);
+      // Revert on error
+      setGuestTokens(prev => prev.map(t =>
+        t.id === tokenId ? { ...t, commentsEnabled: currentValue } : t
+      ));
+      const errorMsg = result.error || 'Error al actualizar permisos.';
       showError('Error', errorMsg);
     }
-    setIsSubmitting(false);
-  }, [taskId, commentsEnabled, success, showError, entityType]);
+  }, [taskId, success, showError]);
 
   const handleGenerateInvitation = useCallback(async () => {
     if (isAtLimit || !invitationName.trim()) {
@@ -372,39 +381,7 @@ export function ShareDialog({
               </div>
             )}
 
-            {isShared && !showDisableWarning && (
-              <>
-                {/* Toggle para comentarios */}
-                <div className={styles.shareOption}>
-                  <div className={styles.shareOptionHeader}>
-                    <MessageSquare size={18} className={styles.shareOptionIcon} />
-                    <div className={styles.shareOptionText}>
-                      <label htmlFor="comments" className={styles.shareLabel}>
-                        Permitir a invitados comentar
-                      </label>
-                      <p className={styles.shareDescription}>
-                        {commentsEnabled
-                          ? 'Los invitados pueden escribir y responder mensajes'
-                          : 'Modo solo lectura: los invitados solo pueden ver'
-                        }
-                      </p>
-                    </div>
-                  </div>
-                  <div className={styles.switchContainer}>
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={commentsEnabled}
-                      onClick={handleToggleComments}
-                      disabled={isSubmitting}
-                      className={cn(styles.switch, commentsEnabled && styles.switchActive)}
-                    >
-                      <span className={styles.switchThumb} />
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
+            {/* Labels explicativos cuando está compartido */}
           </div>
 
           {isShared && !showDisableWarning && (
@@ -457,6 +434,44 @@ export function ShareDialog({
                   </span>
                 </div>
 
+                {/* Helper tip explaining the feature */}
+                <div className={styles.shareHelpTip}>
+                  <Info size={14} className={styles.shareHelpIcon} />
+                  <p className={styles.shareHelpText}>
+                    Cada invitación tiene permisos independientes. El icono <strong>💬</strong> verde indica que puede comentar; gris indica solo lectura.
+                  </p>
+                </div>
+
+                {/* Legend for action icons */}
+                {guestTokens.length > 0 && (
+                  <div className={styles.invitationLegend}>
+                    <div className={styles.legendItem}>
+                      <span className={cn(styles.legendIcon, styles.legendIconActive)}>
+                        <MessageSquare size={10} />
+                      </span>
+                      Puede comentar
+                    </div>
+                    <div className={styles.legendItem}>
+                      <span className={styles.legendIcon}>
+                        <MessageSquare size={10} />
+                      </span>
+                      Solo lectura
+                    </div>
+                    <div className={styles.legendItem}>
+                      <span className={styles.legendIcon}>
+                        <LinkIcon size={10} />
+                      </span>
+                      Copiar enlace
+                    </div>
+                    <div className={styles.legendItem}>
+                      <span className={styles.legendIcon}>
+                        <Trash2 size={10} />
+                      </span>
+                      Revocar
+                    </div>
+                  </div>
+                )}
+
                 {/* Invitation List - Compact Table-like Rows */}
                 {guestTokens.length > 0 ? (
                   <div className={styles.invitationList}>
@@ -481,6 +496,22 @@ export function ShareDialog({
                           </code>
                         </div>
                         <div className={styles.invitationActions}>
+                          {/* Toggle para comentarios por acceso */}
+                          <button
+                            onClick={() => handleToggleTokenComments(
+                              token.id,
+                              token.commentsEnabled,
+                              token.tokenName || token.guestName || undefined
+                            )}
+                            className={cn(
+                              styles.invitationActionButton,
+                              token.commentsEnabled && styles.invitationActionActive
+                            )}
+                            disabled={isSubmitting}
+                            title={token.commentsEnabled ? 'Puede comentar (clic para desactivar)' : 'Solo lectura (clic para permitir comentar)'}
+                          >
+                            <MessageSquare size={14} className={token.commentsEnabled ? styles.iconActive : undefined} />
+                          </button>
                           <button
                             onClick={() => handleCopyMagicLink(token)}
                             className={styles.invitationActionButton}

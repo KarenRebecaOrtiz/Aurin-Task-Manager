@@ -58,6 +58,7 @@ export async function generateGuestToken(
     tokenName: tokenName || null, // Nombre del token (ej: "Token para Juan")
     guestName: null, // Se asigna cuando se redime el token
     avatar: null,
+    commentsEnabled: true, // Por defecto, el invitado puede comentar
     createdAt: FieldValue.serverTimestamp(),
     expiresAt: null, // No expiration - valid while task.shared=true
     redeemedAt: null,
@@ -72,6 +73,7 @@ export async function generateGuestToken(
       tokenName: tokenName || null,
       guestName: null,
       avatar: null,
+      commentsEnabled: true,
     },
   };
 }
@@ -133,6 +135,7 @@ export async function getGuestTokens(taskId: string, userId: string) {
       tokenName: data.tokenName || null,
       guestName: data.guestName,
       avatar: data.avatar,
+      commentsEnabled: data.commentsEnabled ?? true, // Default true para backwards compatibility
       createdAt: data.createdAt.toDate().toISOString(),
       expiresAt: data.expiresAt ? data.expiresAt.toDate().toISOString() : null,
       shareUrl: buildShareUrl(data.token),
@@ -140,6 +143,43 @@ export async function getGuestTokens(taskId: string, userId: string) {
   });
 
   return { success: true, tokens };
+}
+
+/**
+ * Update commentsEnabled for a specific token
+ */
+export async function updateTokenCommentsEnabled(
+  taskId: string,
+  userId: string,
+  tokenId: string,
+  commentsEnabled: boolean
+) {
+  const adminDb = getAdminDb();
+  const taskRef = adminDb.collection('tasks').doc(taskId);
+  const tokenRef = taskRef.collection('shareTokens').doc(tokenId);
+
+  // Authorization check
+  const taskSnap = await taskRef.get();
+  if (!taskSnap.exists) {
+    return { success: false, error: 'Tarea no encontrada' };
+  }
+  const taskData = taskSnap.data()!;
+
+  // Authorization check - admin OR involved in task
+  const canShare = await canUserShareTask(userId, taskData);
+  if (!canShare) {
+    return { success: false, error: ERROR_MESSAGES.UNAUTHORIZED };
+  }
+
+  // Check if token exists
+  const tokenSnap = await tokenRef.get();
+  if (!tokenSnap.exists) {
+    return { success: false, error: 'Token no encontrado' };
+  }
+
+  await tokenRef.update({ commentsEnabled });
+
+  return { success: true };
 }
 
 import { createGuestSession } from './session.server';

@@ -10,6 +10,7 @@ import {
   generateTeamGuestToken,
   revokeTeamGuestToken,
   getTeamGuestTokens,
+  updateTokenCommentsEnabled,
 } from '../services/guestToken.server';
 import {
   safeValidate,
@@ -135,6 +136,31 @@ export async function redeemGuestTokenAction(input: {
     return {
       success: false,
       error: 'Error al redimir el token de invitado.',
+    };
+  }
+}
+
+/**
+ * Server Action: Update commentsEnabled for a specific token
+ */
+export async function updateTokenCommentsEnabledAction(input: {
+  taskId: string;
+  tokenId: string;
+  commentsEnabled: boolean;
+}) {
+  try {
+    const { userId } = await auth();
+    if (!userId) {
+      return { success: false, error: 'No autenticado' };
+    }
+
+    const { taskId, tokenId, commentsEnabled } = input;
+    return await updateTokenCommentsEnabled(taskId, userId, tokenId, commentsEnabled);
+  } catch (error) {
+    console.error('[GuestTokenActions] Error updating token comments:', error);
+    return {
+      success: false,
+      error: 'Error al actualizar permisos de comentarios.',
     };
   }
 }

@@ -166,9 +166,20 @@
   height: 24px;
   color: $color-text-primary;
   flex-shrink: 0;
+  transition: color 0.3s ease, filter 0.3s ease;
+
+  // Invertir imágenes blancas (como PayloadIcon) en modo light
+  &:is(img) {
+    filter: invert(1);
+  }
 
   :global(body.dark) & {
     color: rgba(255, 255, 255, 0.9);
+
+    // Remover inversión en modo dark (mostrar imagen blanca original)
+    &:is(img) {
+      filter: invert(0);
+    }
   }
 }
 

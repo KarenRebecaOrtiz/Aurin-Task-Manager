@@ -9,7 +9,7 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CircleCheckBig, LoaderCircle, CheckCheck, SquarePlus } from 'lucide-react';
+import { CircleCheckBig, Check, CheckCheck, SquarePlus, Undo2 } from 'lucide-react';
 import { AnimateIcon } from '@/components/animate-ui/icons/icon';
 import { ToDoDropdownProps } from '../types';
 import { useTodos } from '../hooks/useTodos';
@@ -46,7 +46,12 @@ export const ToDoDropdown: React.FC<ToDoDropdownProps> = ({
   const [isClosing, setIsClosing] = useState(false);
   const dragStartY = useRef<number>(0);
   const isDragging = useRef<boolean>(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Undo countdown state
+  const [undoCountdown, setUndoCountdown] = useState(0);
+  const [showUndo, setShowUndo] = useState(false);
+  const undoTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Detect mobile
   useEffect(() => {
@@ -97,13 +102,19 @@ export const ToDoDropdown: React.FC<ToDoDropdownProps> = ({
     };
   }, [isOpen, onClose]);
 
-  // Handle scroll to close dropdown with animation
+  // Handle scroll to close dropdown with animation (only for external scrolls)
   useEffect(() => {
-    const handleScroll = () => {
+    const handleScroll = (e: Event) => {
       if (isOpen && !isClosing) {
-        // Start close animation
+        // Ignore scroll events from inside the dropdown (textarea, todo list, etc.)
+        const target = e.target as HTMLElement;
+        const dropdown = document.querySelector('[data-todo-dropdown]');
+        if (dropdown && dropdown.contains(target)) {
+          return; // Don't close for internal scrolls
+        }
+
+        // Start close animation for external scrolls
         setIsClosing(true);
-        // Wait for animation to complete before closing
         setTimeout(() => {
           onClose();
           setIsClosing(false);
@@ -168,20 +179,78 @@ export const ToDoDropdown: React.FC<ToDoDropdownProps> = ({
 
   // Handle input key press
   const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleAddTodo();
     }
   }, [handleAddTodo]);
 
+  // Auto-resize textarea
+  const handleTextareaResize = useCallback(() => {
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto';
+      inputRef.current.style.height = `${Math.min(inputRef.current.scrollHeight, 120)}px`;
+    }
+  }, []);
+
+  // Handle textarea change with auto-resize
+  const handleTextareaChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    handleInputChange(e as unknown as React.ChangeEvent<HTMLInputElement>);
+    handleTextareaResize();
+  }, [handleInputChange, handleTextareaResize]);
+
+  // Reset textarea height when input is cleared
+  useEffect(() => {
+    if (!newTodoText && inputRef.current) {
+      inputRef.current.style.height = 'auto';
+    }
+  }, [newTodoText]);
+
+  // Start undo countdown
+  const startUndoCountdown = useCallback(() => {
+    // Clear any existing timer
+    if (undoTimerRef.current) {
+      clearInterval(undoTimerRef.current);
+    }
+
+    setUndoCountdown(5);
+    setShowUndo(true);
+
+    undoTimerRef.current = setInterval(() => {
+      setUndoCountdown((prev) => {
+        if (prev <= 1) {
+          if (undoTimerRef.current) {
+            clearInterval(undoTimerRef.current);
+          }
+          setShowUndo(false);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, []);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (undoTimerRef.current) {
+        clearInterval(undoTimerRef.current);
+      }
+    };
+  }, []);
+
   // Handle todo toggle
   const handleTodoToggle = useCallback(async (todoId: string, completed: boolean) => {
     try {
       await toggleTodo(todoId, completed);
+      // Start countdown when completing a todo (completed was false, now it's true)
+      if (!completed) {
+        startUndoCountdown();
+      }
     } catch (err) {
       // Error handling can be improved with proper error state
     }
-  }, [toggleTodo]);
+  }, [toggleTodo, startUndoCountdown]);
 
   // Create optimized handlers to avoid arrow functions in JSX
   const createToggleHandler = useCallback((todoId: string, completed: boolean) => () => handleTodoToggle(todoId, completed), [handleTodoToggle]);
@@ -190,6 +259,12 @@ export const ToDoDropdown: React.FC<ToDoDropdownProps> = ({
   const handleUndo = useCallback(async () => {
     try {
       await undoLastCompleted();
+      // Clear countdown and hide undo button
+      if (undoTimerRef.current) {
+        clearInterval(undoTimerRef.current);
+      }
+      setShowUndo(false);
+      setUndoCountdown(0);
     } catch (err) {
       // Error handling can be improved with proper error state
     }
@@ -247,15 +322,15 @@ export const ToDoDropdown: React.FC<ToDoDropdownProps> = ({
       {/* Input Section */}
       <motion.div className={styles.inputSection} {...TODO_ANIMATIONS.content}>
         <div className={styles.inputContainer}>
-          <input
+          <textarea
             ref={inputRef}
-            type="text"
             value={newTodoText}
-            onChange={handleInputChange}
-            onKeyPress={handleKeyPress}
+            onChange={handleTextareaChange}
+            onKeyDown={handleKeyPress}
             placeholder={TODO_UI.INPUT_PLACEHOLDER}
-            className={`${styles.input} ${isInputError ? styles.error : ''}`}
+            className={`${styles.textarea} ${isInputError ? styles.error : ''}`}
             disabled={isLoading}
+            rows={1}
           />
           <button
             className={styles.addButton}
@@ -318,7 +393,7 @@ export const ToDoDropdown: React.FC<ToDoDropdownProps> = ({
                         </AnimateIcon>
                       ) : (
                         <AnimateIcon animateOnHover>
-                          <LoaderCircle className="w-4 h-4 text-gray-400" />
+                          <Check className="w-4 h-4 text-gray-400" />
                         </AnimateIcon>
                       )}
                     </div>
@@ -332,18 +407,28 @@ export const ToDoDropdown: React.FC<ToDoDropdownProps> = ({
         )}
       </motion.div>
 
-      {/* Footer */}
-      {completedToday > 0 && (
-        <motion.div className={styles.footer} {...TODO_ANIMATIONS.content}>
-          <button
-            className={styles.undoButton}
-            onClick={handleUndo}
-            aria-label={TODO_UI.ARIA_LABELS.UNDO}
+      {/* Footer - Undo with countdown */}
+      <AnimatePresence>
+        {showUndo && (
+          <motion.div
+            className={styles.footer}
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2 }}
           >
-            {TODO_UI.BUTTON_LABELS.UNDO}
-          </button>
-        </motion.div>
-      )}
+            <button
+              className={styles.undoButton}
+              onClick={handleUndo}
+              aria-label={TODO_UI.ARIA_LABELS.UNDO}
+            >
+              <Undo2 className="w-3.5 h-3.5" />
+              <span>Deshacer</span>
+              <span className={styles.countdown}>{undoCountdown}s</span>
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 

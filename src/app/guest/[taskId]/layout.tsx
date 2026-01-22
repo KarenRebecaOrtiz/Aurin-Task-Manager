@@ -1,5 +1,6 @@
 import { GuestAuthProvider } from '@/contexts/GuestAuthContext';
 import { PageProvider } from '@/contexts/PageContext';
+import { AuthProvider } from '@/contexts/AuthContext';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -13,9 +14,11 @@ export default async function GuestTaskLayout({ children, params }: LayoutProps)
 
   return (
     <PageProvider isPublic={true}>
-      <GuestAuthProvider taskId={taskId}>
-        {children}
-      </GuestAuthProvider>
+      <AuthProvider>
+        <GuestAuthProvider taskId={taskId}>
+          {children}
+        </GuestAuthProvider>
+      </AuthProvider>
     </PageProvider>
   );
 }

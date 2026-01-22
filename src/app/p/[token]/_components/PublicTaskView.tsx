@@ -19,6 +19,7 @@ interface GuestSession {
   guestName: string;
   avatar: string;
   taskId: string;
+  commentsEnabled?: boolean;
 }
 
 interface PublicTaskViewProps {
@@ -190,7 +191,8 @@ export function PublicTaskView({ task, token, tokenStatus, guestSession: initial
   }, [userId, users, usersMap, task.id, resendMessage, handleCopyMessage, handleDeleteMessage, handleDownloadFile]);
 
   // Check if input should be disabled (guest without comments enabled)
-  const canInteract = userId || (guestSession && task.commentsEnabled);
+  // For guests, use the token's commentsEnabled setting (granular per-invitation)
+  const canInteract = userId || (guestSession && guestSession.commentsEnabled !== false);
 
   // Auth error state
   if (authError) {

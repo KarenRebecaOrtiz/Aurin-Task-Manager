@@ -47,7 +47,7 @@ export const TODO_UI = {
     TITLE: '¡Aún no tienes tareas en tu lista!',
     SUBTITLE: '¿Cómo funciona?',
     DESCRIPTION: 'Añade tus pendientes usando el campo de arriba y el botón +. Marca tus tareas como completadas o elimínalas cuando ya no las necesites.',
-    FOOTER: 'Usa esta lista para organizar tus actividades diarias, recordatorios rápidos o cualquier cosa que no quieras olvidar. ¡Empieza a ser más productivo ahora!',
+    FOOTER: '',
   },
 
   // Loading state

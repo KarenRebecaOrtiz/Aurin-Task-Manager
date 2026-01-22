@@ -53,6 +53,7 @@ export function GuestTaskContent({ taskId, task }: GuestTaskContentProps) {
             taskId: taskId,
             guestName: user.fullName || user.firstName || 'Usuario',
             avatar: user.imageUrl,
+            commentsEnabled: true, // Authenticated users can always comment
           }}
         />
       </>
@@ -86,6 +87,7 @@ export function GuestTaskContent({ taskId, task }: GuestTaskContentProps) {
             taskId: guestSession.taskId,
             guestName: guestSession.guestName || guestSession.tokenName || 'Invitado',
             avatar: '', // El avatar se puede generar dinámicamente en el componente hijo
+            commentsEnabled: guestSession.commentsEnabled, // Pass token's comment permission
           }}
         />
       ) : (

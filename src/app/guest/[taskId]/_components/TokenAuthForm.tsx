@@ -37,6 +37,7 @@ export function TokenAuthForm({ taskId, taskName }: TokenAuthFormProps) {
           tokenName: result.tokenData.tokenName,
           guestName: result.tokenData.guestName,
           authenticatedAt: new Date().toISOString(),
+          commentsEnabled: result.tokenData.commentsEnabled ?? true,
         });
 
         success('¡Autenticación exitosa! Cargando tarea...');

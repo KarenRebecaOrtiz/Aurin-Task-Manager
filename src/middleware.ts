@@ -26,6 +26,7 @@ const isPublicApi = createRouteMatcher([
 const isPublicRoute = createRouteMatcher([
   '/p/(.*)', // Public shared tasks (legacy token-based)
   '/guest/(.*)', // Public guest task access with token auth
+  '/guest-team/(.*)', // Public guest team access with token auth
 ]);
 
 /**

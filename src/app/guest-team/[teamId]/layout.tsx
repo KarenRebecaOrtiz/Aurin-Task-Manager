@@ -1,5 +1,6 @@
 import { GuestTeamAuthProvider } from '@/contexts/GuestTeamAuthContext';
 import { PageProvider } from '@/contexts/PageContext';
+import { AuthProvider } from '@/contexts/AuthContext';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -13,9 +14,11 @@ export default async function GuestTeamLayout({ children, params }: LayoutProps)
 
   return (
     <PageProvider isPublic={true}>
-      <GuestTeamAuthProvider teamId={teamId}>
-        {children}
-      </GuestTeamAuthProvider>
+      <AuthProvider>
+        <GuestTeamAuthProvider teamId={teamId}>
+          {children}
+        </GuestTeamAuthProvider>
+      </AuthProvider>
     </PageProvider>
   );
 }

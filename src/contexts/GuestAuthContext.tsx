@@ -8,6 +8,7 @@ interface GuestSession {
   tokenName: string | null;
   guestName: string | null;
   authenticatedAt: string;
+  commentsEnabled: boolean;
 }
 
 interface GuestAuthContextType {

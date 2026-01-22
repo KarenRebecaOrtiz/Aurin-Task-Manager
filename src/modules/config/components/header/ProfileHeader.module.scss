@@ -16,43 +16,45 @@
 }
 
 .editCoverButton {
-  @include crystal-surface($radius: 50%);
   position: absolute;
   top: 1rem;
   right: 1rem;
+  background-color: rgba(255, 255, 255, 0.9);
   width: 40px;
+  border-radius: 8px;
   height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   z-index: 10;
+  border: none;
+  transition: background-color 0.2s ease;
 
   &:hover {
-    @include crystal-hover;
+    background-color: rgba(255, 255, 255, 1);
   }
 
   &:active {
-    @include crystal-active;
+    background-color: rgba(255, 255, 255, 0.8);
   }
 
   :global(body.dark) & {
-    @include crystal-dark();
-    color: black;
-    background-color: white !important;
+    background-color: rgba(39, 39, 42, 0.9);
+    color: white;
 
     &:hover {
-      background: lighten($zinc-900, 5%);
+      background-color: rgba(39, 39, 42, 1);
     }
     &:active {
-      background: darken($zinc-900, 5%);
+      background-color: rgba(39, 39, 42, 0.8);
     }
   }
 }
 
 .profileInfo {
   padding: 0 2rem 1rem 2rem;
-  margin-top: -47px;
+  margin-top: -25px;
   position: relative;
   z-index: 5;
 
@@ -88,7 +90,6 @@
 }
 
 .editProfilePhotoButton {
-  @include crystal-surface($radius: 50%);
   position: absolute;
   bottom: 5px;
   right: 5px;
@@ -99,25 +100,28 @@
   justify-content: center;
   cursor: pointer;
   z-index: 10;
+  background-color: rgba(255, 255, 255, 0.9);
+  border-radius: 8px;
+  border: none;
+  transition: background-color 0.2s ease;
 
   &:hover {
-    @include crystal-hover;
+    background-color: rgba(255, 255, 255, 1);
   }
 
   &:active {
-    @include crystal-active;
+    background-color: rgba(255, 255, 255, 0.8);
   }
 
   :global(body.dark) & {
-    @include crystal-dark();
-    color: black;
-    background-color: white !important;
+    background-color: rgba(39, 39, 42, 0.9);
+    color: white;
 
     &:hover {
-      background: lighten($zinc-900, 5%);
+      background-color: rgba(39, 39, 42, 1);
     }
     &:active {
-      background: darken($zinc-900, 5%);
+      background-color: rgba(39, 39, 42, 0.8);
     }
   }
 }
@@ -138,6 +142,14 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
+
+  @media (max-width: 768px) {
+    font-size: 1.75rem;
+  }
 }
 
 .mainNameText {
@@ -180,7 +192,11 @@
 }
 
 .userEmail {
-  font-size: 0.875rem;
+  font-size: 1.125rem;
   color: var(--text-secondary);
   font-weight: 400;
+
+  @media (max-width: 768px) {
+    font-size: 1rem;
+  }
 }

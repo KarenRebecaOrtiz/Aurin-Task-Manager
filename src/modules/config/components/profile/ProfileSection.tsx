@@ -121,7 +121,7 @@ export const ProfileSection: React.FC<ProfileSectionProps> = memo(({
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>
               <div className={styles.sectionIcon}>
-                <User size={20} animateOnHover loop style={{ color: 'white' }} />
+                <User size={20} animateOnHover loop />
               </div>
               Información General
             </h2>
@@ -222,7 +222,7 @@ export const ProfileSection: React.FC<ProfileSectionProps> = memo(({
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>
               <div className={styles.sectionIcon}>
-                <Hammer size={20} animateOnHover loop style={{ color: 'white' }} />
+                <Hammer size={20} animateOnHover loop />
               </div>
               Stack de Herramientas
             </h2>

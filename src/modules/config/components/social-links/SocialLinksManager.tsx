@@ -46,7 +46,7 @@ export function SocialLinksManager({ initialLinks = [], onChange, disabled = fal
       <div className={styles.header}>
         <h2 className={styles.title}>
           <div className={styles.iconWrapper}>
-            <Link size={20} animateOnHover loop style={{ color: 'white' }} />
+            <Link size={20} animateOnHover loop />
           </div>
           Redes Sociales
         </h2>
@@ -124,7 +124,7 @@ export function SocialLinksManager({ initialLinks = [], onChange, disabled = fal
           <div className={styles.divider} />
           <div className={styles.emptyState}>
             <div className={styles.emptyIconWrapper}>
-              <Link size={20} loop className={styles.emptyIcon} style={{ color: 'white' }} />
+              <Link size={20} loop className={styles.emptyIcon} />
             </div>
             <p className={styles.emptyText}>
               No hay links agregados. Selecciona una plataforma y agrega tu perfil.

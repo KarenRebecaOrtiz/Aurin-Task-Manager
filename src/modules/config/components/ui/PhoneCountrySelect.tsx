@@ -1,9 +1,16 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, memo } from 'react';
 import Image from 'next/image';
 import styles from './PhoneCountrySelect.module.scss';
 import { motion, AnimatePresence } from 'framer-motion';
+
+interface Country {
+  code: string;
+  country: string;
+  flag: string;
+  iso: string;
+}
 
 const countries = [
   { code: "+1", country: "United States", flag: "🇺🇸", iso: "US" },
@@ -65,6 +72,30 @@ const countries = [
   { code: "+62", country: "Indonesia", flag: "🇮🇩", iso: "ID" },
 ];
 
+interface CountryItemProps {
+  country: Country;
+  onSelect: (code: string) => void;
+}
+
+const CountryItem = memo<CountryItemProps>(({ country, onSelect }) => {
+  const handleClick = useCallback(() => {
+    onSelect(country.code);
+  }, [country.code, onSelect]);
+
+  return (
+    <li
+      onClick={handleClick}
+      className={styles.countryItem}
+    >
+      <span className={styles.flag}>{country.flag}</span>
+      <span className={styles.countryName}>{country.country}</span>
+      <span className={styles.countryCode}>{country.code}</span>
+    </li>
+  );
+});
+
+CountryItem.displayName = 'CountryItem';
+
 interface PhoneCountrySelectProps {
   value?: string;
   onChange: (value: string) => void;
@@ -95,12 +126,26 @@ const PhoneCountrySelect: React.FC<PhoneCountrySelectProps> = ({ value, onChange
     c.code.includes(searchTerm)
   );
 
+  const handleToggleDropdown = useCallback(() => {
+    setIsOpen(prev => !prev);
+  }, []);
+
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+  }, []);
+
+  const handleCountrySelect = useCallback((countryCode: string) => {
+    onChange(countryCode);
+    setIsOpen(false);
+    setSearchTerm('');
+  }, [onChange]);
+
   return (
     <div className={styles.phoneCountrySelect} ref={wrapperRef}>
       <button
         type="button"
         className={styles.selectButton}
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleToggleDropdown}
         disabled={disabled}
       >
         {selectedCountry ? (
@@ -126,23 +171,15 @@ const PhoneCountrySelect: React.FC<PhoneCountrySelectProps> = ({ value, onChange
               placeholder="Search..."
               className={styles.searchInput}
               value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
+              onChange={handleSearchChange}
             />
             <ul className={styles.countryList}>
               {filteredCountries.map(country => (
-                <li
+                <CountryItem
                   key={`${country.iso}-${country.code}`}
-                  onClick={() => {
-                    onChange(country.code);
-                    setIsOpen(false);
-                    setSearchTerm('');
-                  }}
-                  className={styles.countryItem}
-                >
-                  <span className={styles.flag}>{country.flag}</span>
-                  <span className={styles.countryName}>{country.country}</span>
-                  <span className={styles.countryCode}>{country.code}</span>
-                </li>
+                  country={country}
+                  onSelect={handleCountrySelect}
+                />
               ))}
             </ul>
           </motion.div>
