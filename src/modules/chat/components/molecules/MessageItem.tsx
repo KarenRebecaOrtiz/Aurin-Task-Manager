@@ -4,6 +4,7 @@ import React, { useState, forwardRef, memo, useRef, useCallback } from "react";
 import Image from "next/image";
 import sanitizeHtml from "sanitize-html";
 import { useDataStore } from "@/stores/dataStore";
+import { GradientAvatar } from "@/components/ui/GradientAvatar";
 import styles from "../../styles/MessageItem.module.scss";
 import type { Message, ChatUser } from "../../types";
 import { markdownToHtml, formatMessageTime } from "../../utils";
@@ -290,12 +291,20 @@ export const MessageItem = memo(
             {/* Avatar - solo en single/last */}
             {showAvatar ? (
               <div className={styles.avatar}>
-                <Image
-                  src={senderAvatar}
-                  alt={message.senderName}
-                  width={36}
-                  height={36}
-                />
+                {senderAvatar && senderAvatar !== "/default-avatar.svg" ? (
+                  <Image
+                    src={senderAvatar}
+                    alt={message.senderName}
+                    width={36}
+                    height={36}
+                  />
+                ) : (
+                  <GradientAvatar
+                    seed={message.senderName || message.senderId}
+                    size="md"
+                    animated={false}
+                  />
+                )}
               </div>
             ) : (
               <div className={styles.avatarPlaceholder} />

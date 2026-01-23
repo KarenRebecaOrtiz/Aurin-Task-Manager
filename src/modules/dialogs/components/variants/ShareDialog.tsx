@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { CheckIcon, CopyIcon, PlusCircle, Trash2, Link2, MessageSquare, AlertTriangle, Loader2, Info } from 'lucide-react';
+import { GradientAvatar } from '@/components/ui/GradientAvatar';
 import { CrudDialog } from '../organisms/CrudDialog';
 import { useDialog } from '../../hooks/useDialog';
 import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
@@ -476,6 +477,11 @@ export function ShareDialog({
                   <div className={styles.invitationList}>
                     {guestTokens.map((token) => (
                       <div key={token.id} className={styles.invitationRow}>
+                        <GradientAvatar
+                          seed={token.tokenName || token.guestName || token.id}
+                          size="sm"
+                          animated={false}
+                        />
                         <div className={styles.invitationInfo}>
                           <span className={styles.invitationName}>
                             {token.tokenName || token.guestName || 'Invitado'}
