@@ -236,10 +236,35 @@ export function calculateTimeComponentsFromDates(
 // ============================================================================
 
 /**
- * Create a timer interval from start and end dates
+ * Ensure a value is a Date object
+ * Handles Date objects, strings, numbers (timestamps), and Firestore Timestamps
  *
- * @param start - Interval start time
- * @param end - Interval end time
+ * @param value - Value to convert to Date
+ * @returns Date object
+ */
+function ensureDate(value: unknown): Date {
+  if (value instanceof Date) {
+    return value;
+  }
+  // Handle Firestore Timestamp
+  if (value && typeof value === 'object' && 'toDate' in value) {
+    const timestamp = value as { toDate: () => Date };
+    return timestamp.toDate();
+  }
+  // Handle string or number
+  if (typeof value === 'string' || typeof value === 'number') {
+    return new Date(value);
+  }
+  // Fallback: try to construct Date anyway
+  return new Date(value as string | number);
+}
+
+/**
+ * Create a timer interval from start and end dates
+ * Automatically converts inputs to Date objects if needed
+ *
+ * @param start - Interval start time (Date, string, number, or Firestore Timestamp)
+ * @param end - Interval end time (Date, string, number, or Firestore Timestamp)
  * @returns Timer interval with calculated duration
  *
  * @example
@@ -248,11 +273,16 @@ export function calculateTimeComponentsFromDates(
  * const interval = createInterval(start, end);
  * // Returns: { start, end, duration: 900 }
  */
-export function createInterval(start: Date, end: Date): TimerInterval {
+export function createInterval(
+  start: Date | string | number | unknown,
+  end: Date | string | number | unknown
+): TimerInterval {
+  const startDate = ensureDate(start);
+  const endDate = ensureDate(end);
   return {
-    start,
-    end,
-    duration: calculateElapsedSeconds(start, end),
+    start: startDate,
+    end: endDate,
+    duration: calculateElapsedSeconds(startDate, endDate),
   };
 }
 

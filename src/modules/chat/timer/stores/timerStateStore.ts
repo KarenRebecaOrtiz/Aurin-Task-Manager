@@ -11,6 +11,44 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { LocalTimerState, TimerInterval, TimerStateStore } from '../types/timer.types';
 import { TimerStatus } from '../types/timer.types';
+
+/**
+ * Extended TimerStateStore with per-task initialization tracking
+ */
+export interface TimerStateStoreExtended {
+  // State
+  activeTimers: Record<string, LocalTimerState>;
+  currentTaskId: string | null;
+  currentUserId: string | null;
+  /** @deprecated Use initializedTasks instead */
+  isInitialized: boolean;
+  /** Track which tasks have been initialized from Firebase */
+  initializedTasks: Set<string>;
+  /** Whether global initialization (all user timers) has been done */
+  globalInitialized: boolean;
+
+  // Actions
+  setCurrentTask: (taskId: string, userId: string) => void;
+  setTimerState: (taskId: string, state: LocalTimerState) => void;
+  updateTimerSeconds: (taskId: string, seconds: number) => void;
+  addInterval: (taskId: string, interval: TimerInterval) => void;
+  clearTimer: (taskId: string) => void;
+  resetStore: () => void;
+  setInitialized: (value: boolean) => void;
+  /** Mark a specific task as initialized */
+  markTaskInitialized: (taskId: string) => void;
+  /** Check if a task has been initialized */
+  isTaskInitialized: (taskId: string) => boolean;
+  /** Set global initialization status */
+  setGlobalInitialized: (value: boolean) => void;
+  /** Bulk set multiple timers at once (for global init) */
+  setMultipleTimers: (timers: LocalTimerState[]) => void;
+
+  // Selectors
+  getTimerForTask: (taskId: string) => LocalTimerState | undefined;
+  getIsTimerRunning: (taskId: string) => boolean;
+  getAllActiveTimers: () => LocalTimerState[];
+}
 import { TIMER_STATE_STORAGE_KEY } from '../utils/timerConstants';
 
 // ============================================================================
@@ -40,7 +78,7 @@ import { TIMER_STATE_STORAGE_KEY } from '../utils/timerConstants';
  * });
  * ```
  */
-export const useTimerStateStore = create<TimerStateStore>()(
+export const useTimerStateStore = create<TimerStateStoreExtended>()(
   persist(
     (set, get) => ({
       // ============================================================================
@@ -51,6 +89,8 @@ export const useTimerStateStore = create<TimerStateStore>()(
       currentTaskId: null,
       currentUserId: null,
       isInitialized: false,
+      initializedTasks: new Set<string>(),
+      globalInitialized: false,
 
       // ============================================================================
       // ACTIONS
@@ -156,11 +196,61 @@ export const useTimerStateStore = create<TimerStateStore>()(
 
       /**
        * Set initialization status
-       *
+       * @deprecated Use markTaskInitialized instead
        * @param value - Initialization status
        */
       setInitialized: (value: boolean) => {
         set({ isInitialized: value });
+      },
+
+      /**
+       * Mark a specific task as initialized from Firebase
+       * @param taskId - Task ID
+       */
+      markTaskInitialized: (taskId: string) => {
+        set((prev) => {
+          const newSet = new Set(prev.initializedTasks);
+          newSet.add(taskId);
+          return { initializedTasks: newSet };
+        });
+      },
+
+      /**
+       * Check if a task has been initialized
+       * @param taskId - Task ID
+       */
+      isTaskInitialized: (taskId: string): boolean => {
+        return get().initializedTasks.has(taskId);
+      },
+
+      /**
+       * Set global initialization status
+       * @param value - Whether global init is done
+       */
+      setGlobalInitialized: (value: boolean) => {
+        set({ globalInitialized: value });
+      },
+
+      /**
+       * Bulk set multiple timers at once (for global initialization)
+       * More efficient than calling setTimerState multiple times
+       * @param timers - Array of timer states
+       */
+      setMultipleTimers: (timers: LocalTimerState[]) => {
+        set((prev) => {
+          const newTimers = { ...prev.activeTimers };
+          const newInitialized = new Set(prev.initializedTasks);
+
+          for (const timer of timers) {
+            newTimers[timer.taskId] = timer;
+            newInitialized.add(timer.taskId);
+          }
+
+          return {
+            activeTimers: newTimers,
+            initializedTasks: newInitialized,
+          };
+        });
       },
 
       // ============================================================================
@@ -204,8 +294,21 @@ export const useTimerStateStore = create<TimerStateStore>()(
         activeTimers: state.activeTimers,
         currentTaskId: state.currentTaskId,
         currentUserId: state.currentUserId,
+        // Convert Set to Array for serialization
+        initializedTasks: Array.from(state.initializedTasks),
+        globalInitialized: state.globalInitialized,
       }),
-      //  storage with serialization to handle Date objects
+      // Merge function to handle rehydration
+      merge: (persistedState, currentState) => {
+        const persisted = persistedState as Partial<TimerStateStoreExtended> & { initializedTasks?: string[] };
+        return {
+          ...currentState,
+          ...persisted,
+          // Convert Array back to Set
+          initializedTasks: new Set(persisted.initializedTasks || []),
+        };
+      },
+      // Custom storage with serialization to handle Date objects
       storage: {
         getItem: (name) => {
           const str = localStorage.getItem(name);
@@ -223,6 +326,10 @@ export const useTimerStateStore = create<TimerStateStore>()(
             // Convert Date objects to ISO strings
             if (val instanceof Date) {
               return { __type: 'Date', value: val.toISOString() };
+            }
+            // Convert Set to Array
+            if (val instanceof Set) {
+              return { __type: 'Set', value: Array.from(val) };
             }
             return val;
           });
@@ -254,7 +361,7 @@ export const useTimerStateStore = create<TimerStateStore>()(
  * );
  * ```
  */
-export const selectTimerForTask = (state: TimerStateStore, taskId: string) => {
+export const selectTimerForTask = (state: TimerStateStoreExtended, taskId: string) => {
   return state.activeTimers[taskId];
 };
 
@@ -265,7 +372,7 @@ export const selectTimerForTask = (state: TimerStateStore, taskId: string) => {
  * @param taskId - Task ID
  * @returns Timer status or 'idle'
  */
-export const selectTimerStatus = (state: TimerStateStore, taskId: string) => {
+export const selectTimerStatus = (state: TimerStateStoreExtended, taskId: string) => {
   return state.activeTimers[taskId]?.status ?? TimerStatus.IDLE;
 };
 
@@ -276,7 +383,7 @@ export const selectTimerStatus = (state: TimerStateStore, taskId: string) => {
  * @param taskId - Task ID
  * @returns Accumulated seconds
  */
-export const selectTimerSeconds = (state: TimerStateStore, taskId: string): number => {
+export const selectTimerSeconds = (state: TimerStateStoreExtended, taskId: string): number => {
   return state.activeTimers[taskId]?.accumulatedSeconds ?? 0;
 };
 
@@ -286,7 +393,7 @@ export const selectTimerSeconds = (state: TimerStateStore, taskId: string): numb
  * @param state - Store state
  * @returns Array of running timers
  */
-export const selectRunningTimers = (state: TimerStateStore): LocalTimerState[] => {
+export const selectRunningTimers = (state: TimerStateStoreExtended): LocalTimerState[] => {
   return Object.values(state.activeTimers).filter(
     (timer) => timer.status === TimerStatus.RUNNING
   );
@@ -298,7 +405,7 @@ export const selectRunningTimers = (state: TimerStateStore): LocalTimerState[] =
  * @param state - Store state
  * @returns Number of active timers
  */
-export const selectActiveTimerCount = (state: TimerStateStore): number => {
+export const selectActiveTimerCount = (state: TimerStateStoreExtended): number => {
   return Object.keys(state.activeTimers).length;
 };
 
@@ -306,4 +413,4 @@ export const selectActiveTimerCount = (state: TimerStateStore): number => {
 // EXPORTS
 // ============================================================================
 
-export type { TimerStateStore, LocalTimerState };
+export type { LocalTimerState };

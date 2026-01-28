@@ -15,13 +15,9 @@
   visibility: hidden;
   transition: opacity 0.5s ease, visibility 0.5s ease;
 
-  // Only visible in dark mode with reduced opacity
-  :global(body.dark) & {
-    opacity: 0.18;
-    visibility: visible;
-
-    @include responsive(sm) {
-      opacity: 0;
-    }
+  // Keep hidden in dark mode
+  :global(.dark) & {
+    opacity: 0;
+    visibility: hidden;
   }
 }

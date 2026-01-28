@@ -1,5 +1,3 @@
-@use '@/app/styles/mixins' as *;
-
 .sharedBadge {
   display: inline-flex;
   align-items: center;
@@ -22,7 +20,7 @@
     transform: scale(1.05);
   }
 
-  @include dark-mode {
+  :global(.dark) & {
     background: rgba(208, 223, 0, 0.15);
     border-color: rgba(208, 223, 0, 0.4);
     color: #d0df00;

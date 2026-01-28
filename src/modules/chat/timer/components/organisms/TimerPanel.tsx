@@ -15,6 +15,7 @@ import { useTimerState } from '../../hooks/useTimerState';
 import { useTimerActions } from '../../hooks/useTimerActions';
 import { useTimerSync } from '../../hooks/useTimerSync';
 import { useTimerOptimistic } from '../../hooks/useTimerOptimistic';
+import { useTimerStateStore } from '../../stores/timerStateStore';
 import { timerPanelAnimations, slideDownAnimations } from '../../utils/timerAnimations';
 import { TimerCounter } from '../atoms/TimerCounter';
 import { TimerButton } from '../atoms/TimerButton';
@@ -27,6 +28,8 @@ import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
 import { firebaseService } from '../../../services/firebaseService';
 import { createTimeLog } from '../../services/timeLogFirebase';
 import { useDataStore } from '@/stores/dataStore';
+import { useShallow } from 'zustand/react/shallow';
+import type { TimerSwitchAction } from '../../types/timer.types';
 import styles from './TimerPanel.module.scss';
 
 /**
@@ -58,11 +61,15 @@ export function TimerPanel({
   const [pendingTimerSwitch, setPendingTimerSwitch] = useState<{
     current: string;
     next: string;
+    resolve: (value: import('../../types/timer.types').TimerSwitchConfirmation) => void;
   } | null>(null);
   const [isSendingLog, setIsSendingLog] = useState(false);
 
   // Toast notifications
   const { success: showSuccess, error: showError, info: showInfo } = useSonnerToast();
+
+  // Get tasks from store to display task names
+  const tasks = useDataStore(useShallow((state) => state.tasks));
 
   // Timer state
   const { timerSeconds, isRunning, intervals, status } = useTimerState(taskId);
@@ -80,17 +87,13 @@ export function TimerPanel({
     runningTimerTaskId
   } = useTimerActions(taskId, userId, {
     onConfirmStopOtherTimer: async (currentTaskId, newTaskId) => {
-      setPendingTimerSwitch({ current: currentTaskId, next: newTaskId });
-      setShowSwitchDialog(true);
-
-      return new Promise((resolve) => {
-        // This will be resolved by handleConfirmSwitch or handleCancelSwitch
-        const checkInterval = setInterval(() => {
-          if (!showSwitchDialog) {
-            clearInterval(checkInterval);
-            resolve(true); // If dialog closed, assume confirmed
-          }
-        }, 100);
+      return new Promise<import('../../types/timer.types').TimerSwitchConfirmation>((resolve) => {
+        setPendingTimerSwitch({
+          current: currentTaskId,
+          next: newTaskId,
+          resolve
+        });
+        setShowSwitchDialog(true);
       });
     }
   });
@@ -246,12 +249,35 @@ export function TimerPanel({
     await resetTimer();
   };
 
-  const handleConfirmSwitch = async () => {
-    setShowSwitchDialog(false);
-    setPendingTimerSwitch(null);
+  const handleConfirmSwitch = async (action: TimerSwitchAction) => {
+    if (!pendingTimerSwitch) return;
+
+    try {
+      if (action === 'send') {
+        showInfo('Guardando timer...');
+      } else {
+        showInfo('Descartando timer...');
+      }
+
+      // Resolve the promise to allow the new timer to start
+      // useTimerActions will handle saving or discarding based on the action
+      pendingTimerSwitch.resolve({ confirmed: true, action });
+    } catch (error) {
+      console.error('[TimerPanel] Error handling timer switch:', error);
+      showError('Error al cambiar el timer');
+      // Still resolve to confirmed to allow the switch with send action
+      pendingTimerSwitch.resolve({ confirmed: true, action: 'send' });
+    } finally {
+      setShowSwitchDialog(false);
+      setPendingTimerSwitch(null);
+    }
   };
 
   const handleCancelSwitch = () => {
+    if (!pendingTimerSwitch) return;
+
+    // Resolve with confirmed: false to cancel the switch
+    pendingTimerSwitch.resolve({ confirmed: false });
     setShowSwitchDialog(false);
     setPendingTimerSwitch(null);
   };
@@ -415,16 +441,22 @@ export function TimerPanel({
       )}
 
       {/* Confirmation Dialog */}
-      {pendingTimerSwitch && (
-        <ConfirmTimerSwitch
-          isOpen={showSwitchDialog}
-          currentTaskId={pendingTimerSwitch.current}
-          newTaskId={pendingTimerSwitch.next}
-          currentTimerSeconds={timerSeconds}
-          onConfirm={handleConfirmSwitch}
-          onCancel={handleCancelSwitch}
-        />
-      )}
+      {pendingTimerSwitch && (() => {
+        const currentTimer = useTimerStateStore.getState().getTimerForTask(pendingTimerSwitch.current);
+        const currentTimerSeconds = currentTimer?.accumulatedSeconds || 0;
+        return (
+          <ConfirmTimerSwitch
+            isOpen={showSwitchDialog}
+            currentTaskId={pendingTimerSwitch.current}
+            currentTaskName={tasks.find(t => t.id === pendingTimerSwitch.current)?.name}
+            newTaskId={pendingTimerSwitch.next}
+            newTaskName={tasks.find(t => t.id === pendingTimerSwitch.next)?.name}
+            currentTimerSeconds={currentTimerSeconds}
+            onConfirm={handleConfirmSwitch}
+            onCancel={handleCancelSwitch}
+          />
+        );
+      })()}
     </AnimatePresence>
   );
 }

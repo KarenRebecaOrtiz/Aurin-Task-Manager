@@ -15,7 +15,7 @@
   @include mixins.dropdown-light;
   @include mixins.custom-scrollbar-light;
 
-  :global(body.dark) & {
+  :global(.dark) & {
      background: #171717;
      border-color: 1px solid rgba(255, 255, 255, 0.0509803922);
   }
@@ -42,7 +42,7 @@
     @media (max-width: vars.$mobile-breakpoint) {
       background: rgba(241, 245, 249, 0.98);
       
-      :global(body.dark) & {
+      :global(.dark) & {
         background: rgba(25, 25, 25, 0.98);
       }
     }
@@ -70,7 +70,7 @@
     top: 0;
     z-index: vars.$z-mobile-header;
     
-    :global(body.dark) & {
+    :global(.dark) & {
     background: #171717;
      border-color: 1px solid rgba(255, 255, 255, 0.0509803922);
     }
@@ -86,7 +86,7 @@
   align-items: center;
   gap: 8px;
   
-  :global(body.dark) & {
+  :global(.dark) & {
     color: vars.$color-text-dark-primary;
   }
 }
@@ -99,7 +99,7 @@
     opacity: 1;
   }
 
-  :global(body.dark) & {
+  :global(.dark) & {
     filter: invert(1) brightness(100%);
   }
 }
@@ -122,7 +122,7 @@
     background: vars.$zinc-100;
   }
   
-  :global(body.dark) & {
+  :global(.dark) & {
     filter: invert(1) brightness(1);
     
     &:hover {
@@ -142,7 +142,7 @@
   font-size: 12px;
   color: #64748b;
 
-  :global(body.dark) & {
+  :global(.dark) & {
     color: vars.$color-text-dark-secondary;
   }
 }
@@ -151,7 +151,7 @@
   color: vars.$color-btn-primary;
   font-weight: 500;
 
-  :global(body.dark) & {
+  :global(.dark) & {
     color: #D1D1D1;
   }
 }
@@ -159,7 +159,7 @@
 .completedCount {
   color: vars.$color-text-muted;
 
-  :global(body.dark) & {
+  :global(.dark) & {
     color: vars.$color-text-dark-muted;
   }
 }
@@ -175,7 +175,7 @@
   gap: 8px;
   align-items: center;
 
-  :global(body.dark) & {
+  :global(.dark) & {
     border-bottom-color: rgba(255, 255, 255, 0.1);
   }
   
@@ -190,7 +190,7 @@
       -2px -2px 4px rgba(255, 255, 255, 0.9),
       2px 2px 6px rgba(0, 0, 0, 0.05);
       
-    :global(body.dark) & {
+    :global(.dark) & {
       background: rgb(38 38 42);
       border: 1px solid rgba(255, 255, 255, 0.2);
     }
@@ -209,12 +209,12 @@
   &.error {
     @include mixins.input-error;
     
-    :global(body.dark) & {
+    :global(.dark) & {
       @include mixins.input-error-dark;
     }
   }
 
-  :global(body.dark) & {
+  :global(.dark) & {
     @include mixins.input-dark;
   }
   
@@ -237,7 +237,7 @@
         0 0 0 3px rgba(59, 130, 246, 0.1);
     }
     
-    :global(body.dark) & {
+    :global(.dark) & {
       background: rgb(40 40 44) !important;
       border: 1px solid rgba(255, 255, 255, 0.3) !important;
       border-radius: 8px !important;
@@ -255,7 +255,7 @@
   color: vars.$color-text-muted;
   pointer-events: none;
 
-  :global(body.dark) & {
+  :global(.dark) & {
     color: vars.$color-text-dark-muted;
   }
 }
@@ -276,7 +276,7 @@
   z-index: 10;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 
-  :global(body.dark) & {
+  :global(.dark) & {
     background: rgba(30, 30, 30, 0.95);
     border-color: #f87171;
     color: #fca5a5;
@@ -316,7 +316,7 @@
     transform: none;
   }
 
-  :global(body.dark) & {
+  :global(.dark) & {
     background: rgba(30, 30, 30, 0.8);
     border-color: rgba(255, 255, 255, 0.2);
     color: vars.$color-text-dark-primary;
@@ -356,7 +356,7 @@
         inset 2px 2px 6px rgba(0, 0, 0, 0.05);
     }
     
-    :global(body.dark) & {
+    :global(.dark) & {
       background: rgb(0 0 0 / 0%) !important;
       border: 1px solid rgba(255, 255, 255, 0.2) !important;
       border-radius: 8px !important;
@@ -378,7 +378,7 @@
   scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
   @include mixins.custom-scrollbar-light;
 
-  :global(body.dark) & {
+  :global(.dark) & {
     scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
     @include mixins.custom-scrollbar-dark;
   }
@@ -417,7 +417,7 @@
     opacity: 0.7;
   }
 
-  :global(body.dark) & {
+  :global(.dark) & {
     border-bottom-color: rgba(255, 255, 255, 0.05);
 
     &:hover {
@@ -445,7 +445,7 @@
     background: rgba(255, 255, 255, 0.1);
   }
 
-  :global(body.dark) & {
+  :global(.dark) & {
     &:hover {
       background: rgba(255, 255, 255, 0.05);
     }
@@ -467,7 +467,7 @@
     border-color: vars.$color-btn-primary;
   }
 
-  :global(body.dark) & {
+  :global(.dark) & {
     border-color: rgba(255, 255, 255, 0.2);
   }
 }
@@ -492,7 +492,7 @@
     text-decoration-color: vars.$color-text-muted;
   }
 
-  :global(body.dark) & {
+  :global(.dark) & {
     color: #D1D1D1;
 
     &.completed {
@@ -505,7 +505,7 @@
     font-size: 22px !important;
     font-weight: bold !important;
     
-    :global(body.dark) & {
+    :global(.dark) & {
       color: #FFFFFF !important;
     }
   }
@@ -531,7 +531,7 @@
     transform: scale(0.95);
   }
 
-  :global(body.dark) & {
+  :global(.dark) & {
     &:hover {
       background: rgba(248, 113, 113, 0.1);
     }
@@ -548,7 +548,7 @@
   display: flex;
   justify-content: center;
 
-  :global(body.dark) & {
+  :global(.dark) & {
     border-top-color: rgba(255, 255, 255, 0.05);
   }
   
@@ -565,7 +565,7 @@
     -webkit-backdrop-filter: blur(10px);
     border-top: 1px solid rgba(255, 255, 255, 0.2);
     
-    :global(body.dark) & {
+    :global(.dark) & {
       background: rgba(25, 25, 25, 0.95);
       border-top: 1px solid rgba(255, 255, 255, 0.1);
     }
@@ -593,7 +593,7 @@
     transform: scale(0.95);
   }
   
-  :global(body.dark) & {
+  :global(.dark) & {
     color: vars.$color-btn-primary;
     
     &:hover {
@@ -621,7 +621,7 @@
     margin: 0;
     text-align: center;
     
-    :global(body.dark) & {
+    :global(.dark) & {
       color: #D1D1D1;
     }
   }
@@ -650,7 +650,7 @@
     font-weight: 500;
   }
   
-  :global(body.dark) & {
+  :global(.dark) & {
     .spinner {
       border-color: rgba(255, 255, 255, 0.2);
       border-top-color: vars.$color-btn-primary;
@@ -677,7 +677,7 @@
     text-align: center;
   }
   
-  :global(body.dark) & {
+  :global(.dark) & {
     span {
       color: vars.$color-text-dark-secondary;
     }

@@ -57,8 +57,9 @@ export function useTimerSync(
   // Stores
   const setTimerState = useTimerStateStore((state) => state.setTimerState);
   const getTimerForTask = useTimerStateStore((state) => state.getTimerForTask);
-  const isInitialized = useTimerStateStore((state) => state.isInitialized);
-  const setInitialized = useTimerStateStore((state) => state.setInitialized);
+  const isTaskInitialized = useTimerStateStore((state) => state.isTaskInitialized);
+  const markTaskInitialized = useTimerStateStore((state) => state.markTaskInitialized);
+  const globalInitialized = useTimerStateStore((state) => state.globalInitialized);
 
   const setSyncStatus = useTimerSyncStore((state) => state.setSyncStatus);
   const setLastSyncTimestamp = useTimerSyncStore((state) => state.setLastSyncTimestamp);
@@ -73,13 +74,20 @@ export function useTimerSync(
   const deviceId = useRef<string>(generateDeviceId());
 
   /**
-   * Initialize timer from Firebase
+   * Initialize timer from Firebase for this specific task
    */
   const initialize = useCallback(async () => {
-    if (!enabled || isInitialized) return;
+    // Skip if disabled or already initialized for this task
+    if (!enabled || isTaskInitialized(taskId)) {
+      console.log(`[useTimerSync] Skipping init for ${taskId} - disabled: ${!enabled}, initialized: ${isTaskInitialized(taskId)}`);
+      return;
+    }
+
+    // Check if we already have local state for this task
+    const existingLocalTimer = getTimerForTask(taskId);
 
     try {
-      console.log('[useTimerSync] Initializing timer sync...');
+      console.log(`[useTimerSync] Initializing timer sync for task ${taskId}...`);
       setSyncStatus('syncing');
 
       // Fetch timer from Firebase
@@ -87,7 +95,7 @@ export function useTimerSync(
 
       if (firebaseTimer) {
         // Convert to local state
-        const localState: LocalTimerState = {
+        const remoteState: LocalTimerState = {
           timerId: firebaseTimer.id,
           taskId: firebaseTimer.taskId,
           userId: firebaseTimer.userId,
@@ -103,11 +111,23 @@ export function useTimerSync(
           lastSyncTime: performance.now(),
         };
 
-        setTimerState(taskId, localState);
-        console.log('[useTimerSync] Timer initialized from Firebase');
+        // Decide which state to use: prefer Firebase if it has more recent data
+        // or if local state is empty/stale
+        const shouldUseRemote = !existingLocalTimer ||
+          remoteState.status === TimerStatus.RUNNING ||
+          (existingLocalTimer.lastSyncTime && remoteState.accumulatedSeconds > existingLocalTimer.accumulatedSeconds);
+
+        if (shouldUseRemote) {
+          setTimerState(taskId, remoteState);
+          console.log('[useTimerSync] Timer initialized from Firebase (remote was newer)');
+        } else {
+          console.log('[useTimerSync] Keeping local timer state (local was newer)');
+        }
+      } else if (!existingLocalTimer) {
+        console.log('[useTimerSync] No timer found in Firebase or local state');
       }
 
-      setInitialized(true);
+      markTaskInitialized(taskId);
       setSyncStatus('idle');
       setLastSyncTimestamp(Date.now());
     } catch (error) {
@@ -119,9 +139,10 @@ export function useTimerSync(
     taskId,
     userId,
     enabled,
-    isInitialized,
+    isTaskInitialized,
+    getTimerForTask,
     setTimerState,
-    setInitialized,
+    markTaskInitialized,
     setSyncStatus,
     setLastSyncTimestamp,
     setError,
@@ -131,7 +152,9 @@ export function useTimerSync(
    * Set up real-time listener
    */
   useEffect(() => {
-    if (!enabled || !isInitialized) return;
+    // Only set up listener if task is initialized (either by global init or local init)
+    const taskInit = isTaskInitialized(taskId);
+    if (!enabled || !taskInit) return;
 
     const localTimer = getTimerForTask(taskId);
     if (!localTimer) return;
@@ -183,7 +206,7 @@ export function useTimerSync(
     taskId,
     userId,
     enabled,
-    isInitialized,
+    isTaskInitialized,
     getTimerForTask,
     setTimerState,
     setLastSyncTimestamp,
@@ -193,7 +216,8 @@ export function useTimerSync(
    * Set up periodic sync for running timers
    */
   useEffect(() => {
-    if (!enabled || !isInitialized) return;
+    const taskInit = isTaskInitialized(taskId);
+    if (!enabled || !taskInit) return;
 
     const syncInterval = setInterval(() => {
       const localTimer = getTimerForTask(taskId);
@@ -210,7 +234,7 @@ export function useTimerSync(
     return () => {
       clearInterval(syncInterval);
     };
-  }, [taskId, enabled, isInitialized, getTimerForTask, setLastSyncTimestamp]);
+  }, [taskId, enabled, isTaskInitialized, getTimerForTask, setLastSyncTimestamp]);
 
   /**
    * Handle online/offline events

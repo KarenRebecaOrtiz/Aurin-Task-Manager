@@ -6,6 +6,9 @@ import { signInWithCustomToken } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import { usePageContext } from './PageContext';
+import { useDataStore } from '@/stores/dataStore';
+import { useShallow } from 'zustand/react/shallow';
+import { useGlobalTimerInit } from '@/modules/chat/timer/hooks/useGlobalTimerInit';
 
 // Define the context shape
 interface AuthContextType {
@@ -142,6 +145,26 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     syncUserToFirebase();
   }, [userId, user, isSynced, getToken, syncRetryCount, maxRetries, pageContext.canUseAuth]);
+
+  // ============================================================================
+  // GLOBAL TIMER INITIALIZATION
+  // ============================================================================
+
+  // Get user's task IDs from dataStore
+  const tasks = useDataStore(useShallow((state) => state.tasks));
+  const userTaskIds = useMemo(() => {
+    if (!userId) return [];
+    return tasks
+      .filter((t) => t.AssignedTo?.includes(userId) || t.LeadedBy?.includes(userId))
+      .map((t) => t.id);
+  }, [tasks, userId]);
+
+  // Initialize global timer sync
+  useGlobalTimerInit({
+    userId: userId || null,
+    userTaskIds,
+    enabled: pageContext.canUseAuth && isSynced && !!userId,
+  });
 
   // Cleanup listeners cuando el usuario se desloguea
   useEffect(() => {

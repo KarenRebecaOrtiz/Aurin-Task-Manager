@@ -18,7 +18,10 @@ import { Clock, Play, Pause, Send, Trash2, PenLine } from 'lucide-react';
 import { dropdownAnimations } from '@/modules/shared/components/molecules/Dropdown/animations';
 import { useTimerState } from '../../hooks/useTimerState';
 import { useTimerActions } from '../../hooks/useTimerActions';
+import { useTimerStateStore } from '../../stores/timerStateStore';
 import { TimerStatus } from '../../types/timer.types';
+import type { TimerSwitchAction } from '../../types/timer.types';
+import { ConfirmTimerSwitch } from '../organisms/ConfirmTimerSwitch';
 import { formatSecondsToHHMMSS } from '../../utils/timerFormatters';
 import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
 import { firebaseService } from '../../../services/firebaseService';
@@ -67,24 +70,75 @@ export function TimerDropdown({
 }: TimerDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isSendingLog, setIsSendingLog] = useState(false);
+  const [showSwitchDialog, setShowSwitchDialog] = useState(false);
+  const [pendingTimerSwitch, setPendingTimerSwitch] = useState<{
+    current: string;
+    next: string;
+    resolve: (value: import('../../types/timer.types').TimerSwitchConfirmation) => void;
+  } | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
-  
+
   // Check if mobile viewport
   const isMobile = useMediaQuery('(max-width: 767px)');
 
   // Toast notifications
   const { success: showSuccess, error: showError, info: showInfo } = useSonnerToast();
 
+  // Get tasks from store to display task names
+  const tasks = useDataStore((state) => state.tasks);
+
   // Timer state
   const { timerSeconds, isRunning, status } = useTimerState(taskId);
 
-  // Timer actions
+  // Timer actions with confirmation callback
   const {
     startTimer,
     pauseTimer,
     resetTimer,
     isProcessing,
-  } = useTimerActions(taskId, userId);
+  } = useTimerActions(taskId, userId, {
+    userName,
+    onConfirmStopOtherTimer: async (currentTaskId, newTaskId) => {
+      return new Promise<import('../../types/timer.types').TimerSwitchConfirmation>((resolve) => {
+        setPendingTimerSwitch({
+          current: currentTaskId,
+          next: newTaskId,
+          resolve
+        });
+        setShowSwitchDialog(true);
+      });
+    }
+  });
+
+  // Handlers for timer switch dialog
+  const handleConfirmSwitch = async (action: TimerSwitchAction) => {
+    if (!pendingTimerSwitch) return;
+
+    try {
+      if (action === 'send') {
+        showInfo('Guardando timer anterior...');
+      } else {
+        showInfo('Descartando timer anterior...');
+      }
+
+      pendingTimerSwitch.resolve({ confirmed: true, action });
+    } catch (error) {
+      console.error('[TimerDropdown] Error handling timer switch:', error);
+      showError('Error al cambiar el timer');
+      pendingTimerSwitch.resolve({ confirmed: true, action: 'send' });
+    } finally {
+      setShowSwitchDialog(false);
+      setPendingTimerSwitch(null);
+    }
+  };
+
+  const handleCancelSwitch = () => {
+    if (!pendingTimerSwitch) return;
+
+    pendingTimerSwitch.resolve({ confirmed: false });
+    setShowSwitchDialog(false);
+    setPendingTimerSwitch(null);
+  };
 
   // Close dropdown when clicking outside (only for desktop)
   useEffect(() => {
@@ -116,9 +170,12 @@ export function TimerDropdown({
   // Handle starting the timer
   const handleStartTimer = useCallback(async () => {
     try {
-      await startTimer();
-      showSuccess('Timer iniciado');
-      setIsOpen(false);
+      const started = await startTimer();
+      if (started) {
+        showSuccess('Timer iniciado');
+        setIsOpen(false);
+      }
+      // If not started (user cancelled), do nothing
     } catch {
       showError('Error al iniciar el timer');
     }
@@ -138,9 +195,11 @@ export function TimerDropdown({
   // Handle resuming the timer (when paused)
   const handleResumeTimer = useCallback(async () => {
     try {
-      await startTimer();
-      showSuccess('Timer reanudado');
-      setIsOpen(false);
+      const started = await startTimer();
+      if (started) {
+        showSuccess('Timer reanudado');
+        setIsOpen(false);
+      }
     } catch {
       showError('Error al reanudar el timer');
     }
@@ -428,6 +487,20 @@ export function TimerDropdown({
             </motion.div>
           )}
         </AnimatePresence>
+      )}
+
+      {/* Confirmation Dialog for Timer Switch */}
+      {pendingTimerSwitch && (
+        <ConfirmTimerSwitch
+          isOpen={showSwitchDialog}
+          currentTaskId={pendingTimerSwitch.current}
+          currentTaskName={tasks.find(t => t.id === pendingTimerSwitch.current)?.name}
+          newTaskId={pendingTimerSwitch.next}
+          newTaskName={tasks.find(t => t.id === pendingTimerSwitch.next)?.name}
+          currentTimerSeconds={useTimerStateStore.getState().getTimerForTask(pendingTimerSwitch.current)?.accumulatedSeconds || 0}
+          onConfirm={handleConfirmSwitch}
+          onCancel={handleCancelSwitch}
+        />
       )}
     </div>
   );

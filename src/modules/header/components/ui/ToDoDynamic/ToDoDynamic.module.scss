@@ -54,12 +54,12 @@
     stroke: currentColor;
     stroke-width: 2;
     fill: none;
-    filter: invert(0%) brightness(100%);
+    color: #0f172a;
   }
 
-:global(body.dark) & {
+  :global(.dark) & {
     background: #171717;
-    border-color: 1px solid rgba(255, 255, 255, 0.0509803922);
+    border-color: rgba(255, 255, 255, 0.05);
     box-shadow: none;
 
     &:hover {
@@ -77,7 +77,7 @@
     }
 
     svg {
-      filter: invert(100%) brightness(100%);
+      color: #ffffff;
     }
   }
 
@@ -98,7 +98,7 @@
   line-height: 1;
   transition: color 0.2s;
 
-  :global(body.dark) & {
+  :global(.dark) & {
     color: #fff;
   }
 }

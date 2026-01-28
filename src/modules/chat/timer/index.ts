@@ -33,6 +33,7 @@ export {
   useHasAnyPendingWrites,
   useSyncHealth,
   useOrphanedTimerCleanup,
+  useGlobalTimerInit,
 } from './hooks';
 
 export type {

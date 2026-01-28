@@ -31,6 +31,12 @@ export type { UseTimerActionsOptions } from './useTimerActions';
 export { useTimerSync } from './useTimerSync';
 
 // ============================================================================
+// GLOBAL INITIALIZATION HOOKS
+// ============================================================================
+
+export { useGlobalTimerInit } from './useGlobalTimerInit';
+
+// ============================================================================
 // TIME ENTRY HOOKS
 // ============================================================================
 

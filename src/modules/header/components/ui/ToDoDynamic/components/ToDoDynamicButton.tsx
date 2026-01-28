@@ -8,6 +8,7 @@
 
 import React, { useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { CheckSquare } from 'lucide-react';
 import styles from '../ToDoDynamic.module.scss';
 import { TODO_ANIMATIONS, TODO_UI } from '../constants';
 
@@ -47,22 +48,15 @@ export const ToDoDynamicButton: React.FC<ToDoDynamicButtonProps> = ({
             {remainingTodos}
           </motion.span>
         ) : (
-          <motion.svg
+          <motion.div
             key="icon"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
             initial={TODO_ANIMATIONS.todoItem.initial}
             animate={TODO_ANIMATIONS.todoItem.animate}
             exit={TODO_ANIMATIONS.todoItem.exit}
             transition={{ duration: 0.2, ease: 'easeInOut' }}
           >
-            <path d="M9 11l3 3L22 4"></path>
-            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
-          </motion.svg>
+            <CheckSquare size={20} strokeWidth={2} />
+          </motion.div>
         )}
       </AnimatePresence>
     </button>

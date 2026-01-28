@@ -228,8 +228,12 @@ export interface TimerStateStore {
   currentTaskId: string | null;
   /** Currently active user ID */
   currentUserId: string | null;
-  /** Whether the store has been initialized */
+  /** @deprecated Use initializedTasks instead */
   isInitialized: boolean;
+  /** Track which tasks have been initialized from Firebase */
+  initializedTasks: Set<string>;
+  /** Whether global initialization (all user timers) has been done */
+  globalInitialized: boolean;
 
   // Actions
   setCurrentTask: (taskId: string, userId: string) => void;
@@ -238,7 +242,16 @@ export interface TimerStateStore {
   addInterval: (taskId: string, interval: TimerInterval) => void;
   clearTimer: (taskId: string) => void;
   resetStore: () => void;
+  /** @deprecated Use markTaskInitialized instead */
   setInitialized: (value: boolean) => void;
+  /** Mark a specific task as initialized */
+  markTaskInitialized: (taskId: string) => void;
+  /** Check if a task has been initialized */
+  isTaskInitialized: (taskId: string) => boolean;
+  /** Set global initialization status */
+  setGlobalInitialized: (value: boolean) => void;
+  /** Bulk set multiple timers at once (for global init) */
+  setMultipleTimers: (timers: LocalTimerState[]) => void;
 
   // Selectors
   getTimerForTask: (taskId: string) => LocalTimerState | undefined;
@@ -318,13 +331,23 @@ export interface UseTimerStateReturn {
 }
 
 /**
+ * Result of timer switch confirmation
+ */
+export interface TimerSwitchConfirmation {
+  /** Whether to proceed with the switch */
+  confirmed: boolean;
+  /** What to do with the current timer: 'send' (save & send to chat) or 'discard' (don't save) */
+  action?: TimerSwitchAction;
+}
+
+/**
  * Callback for confirming action when another timer is running
- * Should return true to proceed, false to cancel
+ * Should return confirmation object with action
  */
 export type ConfirmStopOtherTimerCallback = (
   currentTaskId: string,
   newTaskId: string
-) => Promise<boolean>;
+) => Promise<TimerSwitchConfirmation>;
 
 /**
  * Return type for useTimerActions hook
@@ -332,8 +355,8 @@ export type ConfirmStopOtherTimerCallback = (
  * @interface UseTimerActionsReturn
  */
 export interface UseTimerActionsReturn {
-  /** Start the timer */
-  startTimer: () => Promise<void>;
+  /** Start the timer - returns true if started, false if user cancelled */
+  startTimer: () => Promise<boolean>;
   /** Pause the timer */
   pauseTimer: () => Promise<void>;
   /** Stop and finalize the timer */
@@ -558,14 +581,21 @@ export interface TimerPanelProps {
 }
 
 /**
+ * Action when switching timers
+ */
+export type TimerSwitchAction = 'send' | 'discard';
+
+/**
  * Props for ConfirmTimerSwitch component
  */
 export interface ConfirmTimerSwitchProps {
   isOpen: boolean;
   currentTaskId: string;
+  currentTaskName?: string;
   newTaskId: string;
+  newTaskName?: string;
   currentTimerSeconds: number;
-  onConfirm: () => void | Promise<void>;
+  onConfirm: (action: TimerSwitchAction) => void | Promise<void>;
   onCancel: () => void;
 }
 

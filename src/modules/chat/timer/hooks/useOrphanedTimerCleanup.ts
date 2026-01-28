@@ -46,6 +46,13 @@ export function useOrphanedTimerCleanup(
   const cleanupOrphanedTimers = useCallback(async () => {
     if (!userId) return;
 
+    // SAFETY: Don't run cleanup if tasks haven't loaded yet
+    // An empty array means tasks are still loading, not that all tasks were deleted
+    if (existingTaskIds.length === 0) {
+      console.log('[useOrphanedTimerCleanup] Skipping - tasks not loaded yet');
+      return;
+    }
+
     const activeTimers = getAllActiveTimers();
     const existingTaskIdSet = new Set(existingTaskIds);
 

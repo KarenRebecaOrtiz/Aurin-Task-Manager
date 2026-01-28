@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useRunningTimers } from '@/modules/chat/timer';
 import { useTimerStateStore } from '@/modules/chat/timer/stores/timerStateStore';
 import { tasksTableStore } from '@/modules/data-views/tasks/stores/tasksTableStore';
+import { useSidebarStateStore } from '@/stores/sidebarStateStore';
+import { useDataStore } from '@/stores/dataStore';
 import { TimerCounter } from './TimerCounter';
 import styles from './GeoClockWithTimer.module.scss';
 
@@ -14,11 +15,12 @@ interface GeoClockWithTimerProps {
 }
 
 const GeoClockWithTimer: React.FC<GeoClockWithTimerProps> = ({ onTaskClick }) => {
-  const router = useRouter();
   const { isDarkMode } = useTheme();
   const runningTimers = useRunningTimers();
   const getTimerForTask = useTimerStateStore((state) => state.getTimerForTask);
   const filteredTasks = tasksTableStore((state) => state.filteredTasks);
+  const tasks = useDataStore((state) => state.tasks);
+  const clients = useDataStore((state) => state.clients);
   const [taskName, setTaskName] = useState<string | null>(null);
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
@@ -70,16 +72,31 @@ const GeoClockWithTimer: React.FC<GeoClockWithTimerProps> = ({ onTaskClick }) =>
     }
   }, [activeTimer, getTimerForTask, filteredTasks]);
 
-  // Handle click to open task
+  // Handle click to open task chat sidebar
   const handleTimerClick = useCallback(() => {
-    if (activeTaskId) {
-      if (onTaskClick) {
-        onTaskClick(activeTaskId);
-      } else {
-        router.push(`/dashboard/tasks?taskId=${activeTaskId}`);
-      }
+    if (!activeTaskId) return;
+
+    // If custom handler provided, use it
+    if (onTaskClick) {
+      onTaskClick(activeTaskId);
+      return;
     }
-  }, [activeTaskId, onTaskClick, router]);
+
+    // Find the full task object
+    const task = tasks.find((t) => t.id === activeTaskId);
+    if (!task) {
+      console.warn('[GeoClockWithTimer] Task not found:', activeTaskId);
+      return;
+    }
+
+    // Find the client name
+    const client = clients.find((c) => c.id === task.clientId);
+    const clientName = client?.name || 'Sin cuenta';
+
+    // Open chat sidebar directly
+    const { openChatSidebar } = useSidebarStateStore.getState();
+    openChatSidebar(task, clientName);
+  }, [activeTaskId, onTaskClick, tasks, clients]);
 
   // Handle keyboard navigation
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {

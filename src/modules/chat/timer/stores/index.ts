@@ -19,7 +19,7 @@ export {
   selectActiveTimerCount,
 } from './timerStateStore';
 
-export type { TimerStateStore, LocalTimerState } from './timerStateStore';
+export type { TimerStateStoreExtended, LocalTimerState } from './timerStateStore';
 
 // ============================================================================
 // TIMER SYNC STORE

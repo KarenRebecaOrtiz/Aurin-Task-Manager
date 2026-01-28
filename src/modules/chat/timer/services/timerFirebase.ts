@@ -791,6 +791,90 @@ export async function getAllUserTimers(userId: string): Promise<TimerDocument[]>
   return timers;
 }
 
+/**
+ * Get all active (RUNNING or PAUSED) timers for a user across all their tasks
+ * Uses the user's assigned tasks to fetch timers efficiently
+ *
+ * @param userId - User ID
+ * @param userTaskIds - Array of task IDs the user has access to
+ * @returns Promise resolving to array of active timers
+ *
+ * @example
+ * ```typescript
+ * const activeTimers = await getUserActiveTimers('user123', ['task1', 'task2']);
+ * console.log(`User has ${activeTimers.length} active timers`);
+ * ```
+ */
+export async function getUserActiveTimers(
+  userId: string,
+  userTaskIds: string[]
+): Promise<TimerDocument[]> {
+  if (!userTaskIds.length) {
+    return [];
+  }
+
+  console.log(`[TimerFirebase] Fetching active timers for user ${userId} across ${userTaskIds.length} tasks`);
+
+  // Fetch timers in parallel for all user tasks
+  const timerPromises = userTaskIds.map(async (taskId) => {
+    try {
+      const timer = await getTimer(taskId, userId);
+      // Only return if timer exists and is active (RUNNING or PAUSED)
+      if (timer && (timer.status === TimerStatus.RUNNING || timer.status === TimerStatus.PAUSED)) {
+        return timer;
+      }
+      return null;
+    } catch (error) {
+      console.warn(`[TimerFirebase] Error fetching timer for task ${taskId}:`, error);
+      return null;
+    }
+  });
+
+  const results = await Promise.all(timerPromises);
+  const activeTimers = results.filter((timer): timer is TimerDocument => timer !== null);
+
+  console.log(`[TimerFirebase] Found ${activeTimers.length} active timers`);
+  return activeTimers;
+}
+
+/**
+ * Listen to all active timers for a user
+ * Sets up listeners for each task and returns a cleanup function
+ *
+ * @param userId - User ID
+ * @param userTaskIds - Array of task IDs the user has access to
+ * @param callback - Callback function called when any timer changes
+ * @returns Unsubscribe function to stop all listeners
+ */
+export function listenToUserTimers(
+  userId: string,
+  userTaskIds: string[],
+  callback: (timers: TimerDocument[]) => void
+): Unsubscribe {
+  const timersMap = new Map<string, TimerDocument>();
+  const unsubscribers: Unsubscribe[] = [];
+
+  // Set up a listener for each task
+  for (const taskId of userTaskIds) {
+    const unsubscribe = listenToTimer(taskId, userId, (timer) => {
+      if (timer && (timer.status === TimerStatus.RUNNING || timer.status === TimerStatus.PAUSED)) {
+        timersMap.set(taskId, timer);
+      } else {
+        timersMap.delete(taskId);
+      }
+      // Notify with all active timers
+      callback(Array.from(timersMap.values()));
+    });
+    unsubscribers.push(unsubscribe);
+  }
+
+  // Return a function that unsubscribes from all listeners
+  return () => {
+    console.log(`[TimerFirebase] Cleaning up ${unsubscribers.length} timer listeners`);
+    unsubscribers.forEach((unsub) => unsub());
+  };
+}
+
 // ============================================================================
 // EXPORTS
 // ============================================================================
@@ -817,11 +901,13 @@ export const TimerFirebaseService = {
   // Listeners
   listenToTimer,
   listenToTaskTimers,
+  listenToUserTimers,
 
   // Queries
   getActiveTimersForTask,
   getUserTimerForTask,
   getAllUserTimers,
+  getUserActiveTimers,
 
   // Helpers
   generateDeviceId,

@@ -18,6 +18,7 @@ import {
   batchStopTimer,
   deleteTimer,
 } from '../services/timerFirebase';
+import { createTimeLog } from '../services/timeLogFirebase';
 import { createInterval, calculateElapsedSeconds } from '../services/timerCalculations';
 import { retryWithBackoff } from '../services/timerRetry';
 import { TimerStatus } from '../types/timer.types';
@@ -28,6 +29,7 @@ import type {
 } from '../types/timer.types';
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from '../utils/timerConstants';
 import { useDataStore } from '@/stores/dataStore';
+import { firebaseService } from '../../services/firebaseService';
 
 /**
  * Options for useTimerActions hook
@@ -38,6 +40,11 @@ export interface UseTimerActionsOptions {
    * If not provided, will automatically stop other timers
    */
   onConfirmStopOtherTimer?: ConfirmStopOtherTimerCallback;
+  /**
+   * User name for creating time log messages when switching timers
+   * Required when onConfirmStopOtherTimer is provided
+   */
+  userName?: string;
 }
 
 /**
@@ -93,7 +100,7 @@ export function useTimerActions(
   userId: string,
   options: UseTimerActionsOptions = {}
 ): UseTimerActionsReturn {
-  const { onConfirmStopOtherTimer } = options;
+  const { onConfirmStopOtherTimer, userName } = options;
   // State stores
   const setTimerState = useTimerStateStore((state) => state.setTimerState);
   const getTimerForTask = useTimerStateStore((state) => state.getTimerForTask);
@@ -131,31 +138,89 @@ export function useTimerActions(
 
   /**
    * Stop another running timer (used when starting a new one)
+   * @param otherTaskId - ID of the task with the timer to stop
+   * @param shouldSave - Whether to save the time (true for 'send', false for 'discard')
    */
   const stopOtherTimer = useCallback(
-    async (otherTaskId: string) => {
+    async (otherTaskId: string, shouldSave: boolean = true) => {
       const otherTimer = getTimerForTask(otherTaskId);
       if (!otherTimer || otherTimer.status !== TimerStatus.RUNNING) {
         return;
       }
 
-      console.log(`[useTimerActions] Stopping other timer on task: ${otherTaskId}`);
+      console.log(`[useTimerActions] Stopping other timer on task: ${otherTaskId}, shouldSave: ${shouldSave}`);
 
-      // Calculate final interval
+      // If discarding, just clear the timer without saving
+      if (!shouldSave) {
+        clearTimer(otherTaskId);
+        removePendingWrite(otherTimer.timerId);
+        console.log(`[useTimerActions] Discarded timer on task: ${otherTaskId}`);
+        return;
+      }
+
+      // Calculate final interval for saving
       let finalInterval = createInterval(new Date(), new Date());
       if (otherTimer.startedAt) {
-        finalInterval = createInterval(otherTimer.startedAt, new Date());
+        // Ensure startedAt is a Date object (could be string from localStorage or Timestamp)
+        const startDate = otherTimer.startedAt instanceof Date
+          ? otherTimer.startedAt
+          : new Date(otherTimer.startedAt);
+        finalInterval = createInterval(startDate, new Date());
+        console.log(`[useTimerActions] Calculated interval from ${startDate} to now, duration: ${finalInterval.duration}s`);
       }
 
       const finalSeconds = otherTimer.accumulatedSeconds + finalInterval.duration;
+      console.log(`[useTimerActions] Final seconds: ${finalSeconds} (accumulated: ${otherTimer.accumulatedSeconds}, interval: ${finalInterval.duration})`);
 
       if (finalSeconds > 0) {
-        // Stop the other timer
+        // Stop the other timer and save to Firebase
+        console.log(`[useTimerActions] Calling batchStopTimer for task ${otherTaskId}...`);
         await batchStopTimer(otherTaskId, userId, finalInterval);
+        console.log(`[useTimerActions] batchStopTimer completed for task ${otherTaskId}`);
+
+        // Calculate hours and minutes for time log
+        const hours = finalSeconds / 3600;
+        const durationMinutes = Math.round(finalSeconds / 60);
+
+        // Format date string
+        const dateString = new Date().toLocaleDateString('es-ES', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+        });
+
+        // Create time log entry if userName is available
+        if (userName) {
+          console.log(`[useTimerActions] Creating time log for task ${otherTaskId}...`);
+          await createTimeLog(otherTaskId, {
+            userId,
+            userName,
+            durationMinutes,
+            description: undefined,
+            dateString,
+            source: 'timer',
+          });
+          console.log(`[useTimerActions] Time log created for task ${otherTaskId}`);
+
+          // Send message to chat
+          console.log(`[useTimerActions] Sending time log message to chat for task ${otherTaskId}...`);
+          await firebaseService.sendTimeLogMessage(
+            otherTaskId,
+            userId,
+            userName,
+            hours,
+            dateString,
+            undefined
+          );
+          console.log(`[useTimerActions] Time log message sent for task ${otherTaskId}`);
+        } else {
+          console.warn(`[useTimerActions] userName not provided, skipping time log and chat message for task ${otherTaskId}`);
+        }
 
         // Update local dataStore for the other task
         const { updateTask, tasks } = useDataStore.getState();
         const currentTask = tasks.find(t => t.id === otherTaskId);
+        console.log(`[useTimerActions] Updating local dataStore for task ${otherTaskId}, found: ${!!currentTask}`);
         if (currentTask) {
           const currentTimeTracking = currentTask.timeTracking || {
             totalHours: currentTask.totalHours || 0,
@@ -163,17 +228,17 @@ export function useTimerActions(
             lastLogDate: null,
             memberHours: currentTask.memberHours || {},
           };
-          
+
           const minutesToAdd = Math.round(finalSeconds / 60);
           const currentTotalMinutes = Math.round(currentTimeTracking.totalHours * 60) + (currentTimeTracking.totalMinutes || 0);
           const newTotalMinutes = currentTotalMinutes + minutesToAdd;
           const newTotalHours = Math.floor(newTotalMinutes / 60);
           const newRemainingMinutes = newTotalMinutes % 60;
-          
+
           const hoursToAdd = finalSeconds / 3600;
           const currentMemberHours = currentTimeTracking.memberHours?.[userId] || 0;
           const newMemberHours = currentMemberHours + hoursToAdd;
-          
+
           updateTask(otherTaskId, {
             timeTracking: {
               totalHours: newTotalHours,
@@ -190,23 +255,27 @@ export function useTimerActions(
               [userId]: newMemberHours,
             },
           });
+          console.log(`[useTimerActions] Local dataStore updated for task ${otherTaskId}`);
         }
+      } else {
+        console.log(`[useTimerActions] Skipping save - finalSeconds is ${finalSeconds}`);
       }
 
       // Clear from local state
       clearTimer(otherTaskId);
       removePendingWrite(otherTimer.timerId);
     },
-    [getTimerForTask, clearTimer, removePendingWrite, userId]
+    [getTimerForTask, clearTimer, removePendingWrite, userId, userName]
   );
 
   /**
    * Start the timer
    * Creates timer if doesn't exist, starts it in Firebase
    * Enforces single active timer per user
+   * @returns true if timer was started, false if cancelled by user
    */
-  const startTimer = useCallback(async () => {
-    if (isProcessing) return;
+  const startTimer = useCallback(async (): Promise<boolean> => {
+    if (isProcessing) return false;
 
     try {
       setIsProcessing(true);
@@ -222,19 +291,29 @@ export function useTimerActions(
       // Check if user has another timer running
       const runningTimer = findRunningTimer();
       if (runningTimer && runningTimer.taskId !== taskId) {
+        console.log(`[useTimerActions] Found running timer on task ${runningTimer.taskId}, current task: ${taskId}`);
+        console.log(`[useTimerActions] onConfirmStopOtherTimer callback provided: ${!!onConfirmStopOtherTimer}`);
+
+        let shouldSave = true; // Default: save the timer
+
         // Ask for confirmation if callback is provided
         if (onConfirmStopOtherTimer) {
-          const confirmed = await onConfirmStopOtherTimer(runningTimer.taskId, taskId);
-          if (!confirmed) {
-            // User cancelled
+          console.log('[useTimerActions] Calling onConfirmStopOtherTimer...');
+          const result = await onConfirmStopOtherTimer(runningTimer.taskId, taskId);
+
+          if (!result.confirmed) {
+            // User cancelled - return false without showing toast
             setSyncStatus('idle');
             setIsProcessing(false);
-            return;
+            return false;
           }
+
+          // Determine whether to save based on action
+          shouldSave = result.action === 'send';
         }
 
-        // Stop the other timer
-        await stopOtherTimer(runningTimer.taskId);
+        // Stop the other timer (save or discard based on user choice)
+        await stopOtherTimer(runningTimer.taskId, shouldSave);
       }
 
       let timerId: string;
@@ -286,6 +365,7 @@ export function useTimerActions(
       setSyncStatus('idle');
 
       console.log(SUCCESS_MESSAGES.TIMER_STARTED);
+      return true;
     } catch (error) {
       const err = error as Error;
       console.error('[useTimerActions] Start failed:', err);
@@ -311,6 +391,9 @@ export function useTimerActions(
     removePendingWrite,
     setError,
     clearError,
+    findRunningTimer,
+    onConfirmStopOtherTimer,
+    stopOtherTimer,
   ]);
 
   /**
