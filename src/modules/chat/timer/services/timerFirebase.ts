@@ -10,6 +10,7 @@
 import {
   doc,
   getDoc,
+  getDocFromServer,
   setDoc,
   updateDoc,
   deleteDoc,
@@ -794,6 +795,7 @@ export async function getAllUserTimers(userId: string): Promise<TimerDocument[]>
 /**
  * Get all active (RUNNING or PAUSED) timers for a user across all their tasks
  * Uses the user's assigned tasks to fetch timers efficiently
+ * Forces server fetch to ensure fresh data (important for PWA/multi-device sync)
  *
  * @param userId - User ID
  * @param userTaskIds - Array of task IDs the user has access to
@@ -816,11 +818,33 @@ export async function getUserActiveTimers(
   console.log(`[TimerFirebase] Fetching active timers for user ${userId} across ${userTaskIds.length} tasks`);
 
   // Fetch timers in parallel for all user tasks
+  // Use getDocFromServer to bypass cache and get fresh data (important for PWA)
   const timerPromises = userTaskIds.map(async (taskId) => {
     try {
-      const timer = await getTimer(taskId, userId);
+      const timerRef = doc(db, TASKS_COLLECTION_NAME, taskId, TIMER_COLLECTION_NAME, userId);
+
+      // Try server first, fall back to cache if offline
+      let timerSnap;
+      try {
+        timerSnap = await getDocFromServer(timerRef);
+      } catch (serverError) {
+        // If server fetch fails (e.g., offline), try cache
+        console.warn(`[TimerFirebase] Server fetch failed for task ${taskId}, trying cache:`, serverError);
+        timerSnap = await getDoc(timerRef);
+      }
+
+      if (!timerSnap.exists()) {
+        return null;
+      }
+
+      const data = timerSnap.data() as Omit<TimerDocument, 'id'>;
+      const timer: TimerDocument = {
+        id: timerSnap.id,
+        ...data,
+      };
+
       // Only return if timer exists and is active (RUNNING or PAUSED)
-      if (timer && (timer.status === TimerStatus.RUNNING || timer.status === TimerStatus.PAUSED)) {
+      if (timer.status === TimerStatus.RUNNING || timer.status === TimerStatus.PAUSED) {
         return timer;
       }
       return null;
