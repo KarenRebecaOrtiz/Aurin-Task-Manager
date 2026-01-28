@@ -252,7 +252,7 @@ const ClientOverlay: React.FC<ClientOverlayProps> = ({
           const result = await response.json();
           const uploadData = result.data || result;
           imageUrl = uploadData.url;
-          console.log('[ClientOverlay] Image uploaded via API:', { url });
+          console.log('[ClientOverlay] Image uploaded via API:', { url: imageUrl });
         }
 
         await onFormSubmit({
