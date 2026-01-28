@@ -187,7 +187,7 @@ export const AccountDetailsCard: React.FC<AccountDetailsCardComponentProps> = ({
         formDataUpload.append('userId', user?.id || 'currentUserId');
         formDataUpload.append('type', 'profile');
 
-        const response = await fetch('/api/upload', {
+        const response = await fetch('/api/upload-blob', {
           method: 'POST',
           body: formDataUpload,
           headers: { 'x-clerk-user-id': user?.id || 'currentUserId' },

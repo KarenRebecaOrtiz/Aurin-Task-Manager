@@ -237,7 +237,7 @@ const ClientOverlay: React.FC<ClientOverlayProps> = ({
           formData.append('userId', user?.id || 'currentUserId');
           formData.append('type', 'profile');
 
-          const response = await fetch('/api/upload', {
+          const response = await fetch('/api/upload-blob', {
             method: 'POST',
             body: formData,
             headers: { 'x-clerk-user-id': user?.id || 'currentUserId' },

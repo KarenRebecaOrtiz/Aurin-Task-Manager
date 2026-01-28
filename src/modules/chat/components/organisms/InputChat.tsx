@@ -299,10 +299,10 @@ export const InputChat: React.FC<InputChatProps> = ({
         const formData = new FormData()
         formData.append('file', selectedFile)
         formData.append('userId', userId)
-        formData.append('type', 'message')
+        formData.append('type', 'attachment')
         formData.append('conversationId', taskId)
 
-        const response = await fetch('/api/upload', {
+        const response = await fetch('/api/upload-blob', {
           method: 'POST',
           body: formData,
           headers: { 'x-clerk-user-id': userId },
