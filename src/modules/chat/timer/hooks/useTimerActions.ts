@@ -12,6 +12,7 @@ import { useTimerStateStore } from '../stores/timerStateStore';
 import { useTimerSyncStore } from '../stores/timerSyncStore';
 import {
   createTimer,
+  getTimer,
   getUserTimerForTask,
   startTimerInFirestore,
   pauseTimerInFirestore,
@@ -155,6 +156,16 @@ export function useTimerActions(
         clearTimer(otherTaskId);
         removePendingWrite(otherTimer.timerId);
         console.log(`[useTimerActions] Discarded timer on task: ${otherTaskId}`);
+        return;
+      }
+
+      // Verify timer exists in Firestore before attempting to stop
+      // This prevents "No document to update" errors from ghost timers
+      const firestoreTimer = await getTimer(otherTaskId, userId);
+      if (!firestoreTimer) {
+        console.warn(`[useTimerActions] Ghost timer detected for task ${otherTaskId}, clearing local state`);
+        clearTimer(otherTaskId);
+        removePendingWrite(otherTimer.timerId);
         return;
       }
 
@@ -399,6 +410,7 @@ export function useTimerActions(
   /**
    * Pause the timer
    * Calculates interval and syncs to Firebase
+   * Validates timer exists in Firestore before updating
    */
   const pauseTimer = useCallback(async () => {
     if (isProcessing) return;
@@ -419,6 +431,17 @@ export function useTimerActions(
 
       if (!existingTimer.startedAt) {
         throw new Error('Timer has no start time');
+      }
+
+      // Verify timer exists in Firestore before attempting to pause
+      // This prevents "No document to update" errors from ghost timers
+      const firestoreTimer = await getTimer(taskId, userId);
+      if (!firestoreTimer) {
+        console.warn(`[useTimerActions] Ghost timer detected for task ${taskId}, clearing local state`);
+        clearTimer(taskId);
+        setSyncStatus('idle');
+        setIsProcessing(false);
+        return;
       }
 
       const now = new Date();
@@ -485,6 +508,7 @@ export function useTimerActions(
   /**
    * Stop the timer
    * Calculates final interval, updates task aggregates, clears local state
+   * Validates timer exists in Firestore before updating
    */
   const stopTimer = useCallback(async () => {
     if (isProcessing) return;
@@ -497,6 +521,17 @@ export function useTimerActions(
 
       if (!existingTimer) {
         throw new Error(ERROR_MESSAGES.NO_ACTIVE_TIMER);
+      }
+
+      // Verify timer exists in Firestore before attempting to stop
+      // This prevents "No document to update" errors from ghost timers
+      const firestoreTimer = await getTimer(taskId, userId);
+      if (!firestoreTimer) {
+        console.warn(`[useTimerActions] Ghost timer detected for task ${taskId}, clearing local state`);
+        clearTimer(taskId);
+        setSyncStatus('idle');
+        setIsProcessing(false);
+        return;
       }
 
       // Calculate final interval if running

@@ -100,7 +100,6 @@ export function useGlobalTimerInit({
   const setMultipleTimers = useTimerStateStore((state) => state.setMultipleTimers);
   const setTimerState = useTimerStateStore((state) => state.setTimerState);
   const clearTimer = useTimerStateStore((state) => state.clearTimer);
-  const activeTimers = useTimerStateStore((state) => state.activeTimers);
 
   const setSyncStatus = useTimerSyncStore((state) => state.setSyncStatus);
   const setLastSyncTimestamp = useTimerSyncStore((state) => state.setLastSyncTimestamp);
@@ -113,15 +112,16 @@ export function useGlobalTimerInit({
 
   /**
    * Initialize all timers from Firebase
+   * Always reconciles local state with Firestore to remove ghost timers
    */
   const initialize = useCallback(async () => {
     if (!enabled || !userId || userTaskIds.length === 0) {
       return;
     }
 
-    // Skip if already initialized and we have timers
-    if (globalInitialized && Object.keys(activeTimers).length > 0) {
-      console.log('[useGlobalTimerInit] Already initialized, skipping');
+    // Prevent concurrent initialization
+    if (isLoadingRef.current) {
+      console.log('[useGlobalTimerInit] Already loading, skipping');
       return;
     }
 
@@ -132,24 +132,46 @@ export function useGlobalTimerInit({
 
       console.log(`[useGlobalTimerInit] Initializing timers for user ${userId} with ${userTaskIds.length} tasks`);
 
-      // Fetch all active timers from Firebase
+      // Always fetch from Firebase to get the source of truth
       const firebaseTimers = await getUserActiveTimers(userId, userTaskIds);
+
+      // Create a Set of taskIds that have real timers in Firestore
+      const firebaseTaskIds = new Set(firebaseTimers.map(t => t.taskId));
+
+      // Get current local timers (use getState to avoid stale closures)
+      const currentActiveTimers = useTimerStateStore.getState().activeTimers;
+      const localTaskIds = Object.keys(currentActiveTimers);
+
+      // Find ghost timers: exist locally but NOT in Firestore
+      const ghostTimerTaskIds = localTaskIds.filter(taskId => !firebaseTaskIds.has(taskId));
+
+      if (ghostTimerTaskIds.length > 0) {
+        console.log(`[useGlobalTimerInit] Found ${ghostTimerTaskIds.length} ghost timers to remove:`, ghostTimerTaskIds);
+
+        // Remove ghost timers from local state
+        for (const taskId of ghostTimerTaskIds) {
+          console.log(`[useGlobalTimerInit] Removing ghost timer for task: ${taskId}`);
+          clearTimer(taskId);
+        }
+      }
 
       if (firebaseTimers.length > 0) {
         // Convert to local state
         const localTimers = firebaseTimers.map(convertToLocalState);
 
-        // Bulk update store
+        // Bulk update store with real timers from Firestore
         setMultipleTimers(localTimers);
 
-        console.log(`[useGlobalTimerInit] Loaded ${localTimers.length} active timers`);
+        console.log(`[useGlobalTimerInit] Loaded ${localTimers.length} active timers from Firestore`);
       } else {
-        console.log('[useGlobalTimerInit] No active timers found');
+        console.log('[useGlobalTimerInit] No active timers found in Firestore');
       }
 
       setGlobalInitialized(true);
       setSyncStatus('idle');
       setLastSyncTimestamp(Date.now());
+
+      console.log('[useGlobalTimerInit] Initialization complete - local state reconciled with Firestore');
     } catch (error) {
       console.error('[useGlobalTimerInit] Initialization failed:', error);
       errorRef.current = error as Error;
@@ -161,8 +183,7 @@ export function useGlobalTimerInit({
     enabled,
     userId,
     userTaskIds,
-    globalInitialized,
-    activeTimers,
+    clearTimer,
     setMultipleTimers,
     setGlobalInitialized,
     setSyncStatus,
@@ -223,6 +244,32 @@ export function useGlobalTimerInit({
       initialize();
     }
   }, [enabled, userId, userTaskIds.length, initialize]);
+
+  /**
+   * Re-sync when window becomes visible (important for PWA/multi-tab)
+   * This ensures ghost timers are cleaned up when user returns to the app
+   */
+  useEffect(() => {
+    if (!enabled || !userId) return;
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && globalInitialized) {
+        console.log('[useGlobalTimerInit] Window became visible, re-syncing with Firestore');
+        // Reset globalInitialized to force a re-sync
+        setGlobalInitialized(false);
+        // Small delay to ensure state is updated before re-initializing
+        setTimeout(() => {
+          initialize();
+        }, 100);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [enabled, userId, globalInitialized, setGlobalInitialized, initialize]);
 
   /**
    * Cleanup on unmount

@@ -349,6 +349,20 @@
   animation: fadeSlideIn 0.6s ease-out 0.7s both;
 }
 
+// Ocultar el badge de "Development mode" de Clerk con un cuadrito negro
+:global(.cl-internal-1dauvpw) {
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: #000000;
+    z-index: 100;
+    border-radius: 4px;
+  }
+}
+
 
 
 

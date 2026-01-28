@@ -816,24 +816,32 @@ export async function getUserActiveTimers(
   }
 
   console.log(`[TimerFirebase] Fetching active timers for user ${userId} across ${userTaskIds.length} tasks`);
+  console.log(`[TimerFirebase] Task IDs:`, userTaskIds);
 
   // Fetch timers in parallel for all user tasks
   // Use getDocFromServer to bypass cache and get fresh data (important for PWA)
   const timerPromises = userTaskIds.map(async (taskId) => {
     try {
       const timerRef = doc(db, TASKS_COLLECTION_NAME, taskId, TIMER_COLLECTION_NAME, userId);
+      const path = `${TASKS_COLLECTION_NAME}/${taskId}/${TIMER_COLLECTION_NAME}/${userId}`;
 
       // Try server first, fall back to cache if offline
       let timerSnap;
+      let source = 'server';
       try {
+        console.log(`[TimerFirebase] Fetching from server: ${path}`);
         timerSnap = await getDocFromServer(timerRef);
+        console.log(`[TimerFirebase] Server response for ${taskId}: exists=${timerSnap.exists()}`);
       } catch (serverError) {
         // If server fetch fails (e.g., offline), try cache
-        console.warn(`[TimerFirebase] Server fetch failed for task ${taskId}, trying cache:`, serverError);
+        source = 'cache';
+        console.warn(`[TimerFirebase] Server fetch failed for ${path}, trying cache:`, serverError);
         timerSnap = await getDoc(timerRef);
+        console.log(`[TimerFirebase] Cache response for ${taskId}: exists=${timerSnap.exists()}`);
       }
 
       if (!timerSnap.exists()) {
+        console.log(`[TimerFirebase] No timer document at ${path}`);
         return null;
       }
 
@@ -843,13 +851,17 @@ export async function getUserActiveTimers(
         ...data,
       };
 
+      console.log(`[TimerFirebase] Timer found at ${path}: status=${timer.status}, source=${source}`);
+
       // Only return if timer exists and is active (RUNNING or PAUSED)
       if (timer.status === TimerStatus.RUNNING || timer.status === TimerStatus.PAUSED) {
+        console.log(`[TimerFirebase] Active timer found for task ${taskId}`);
         return timer;
       }
+      console.log(`[TimerFirebase] Timer for task ${taskId} is not active (status: ${timer.status})`);
       return null;
     } catch (error) {
-      console.warn(`[TimerFirebase] Error fetching timer for task ${taskId}:`, error);
+      console.error(`[TimerFirebase] Error fetching timer for task ${taskId}:`, error);
       return null;
     }
   });
@@ -857,7 +869,7 @@ export async function getUserActiveTimers(
   const results = await Promise.all(timerPromises);
   const activeTimers = results.filter((timer): timer is TimerDocument => timer !== null);
 
-  console.log(`[TimerFirebase] Found ${activeTimers.length} active timers`);
+  console.log(`[TimerFirebase] Found ${activeTimers.length} active timers out of ${userTaskIds.length} tasks checked`);
   return activeTimers;
 }
 
