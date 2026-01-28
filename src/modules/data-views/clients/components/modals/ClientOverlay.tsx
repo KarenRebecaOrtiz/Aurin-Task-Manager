@@ -248,8 +248,10 @@ const ClientOverlay: React.FC<ClientOverlayProps> = ({
             throw new Error(errorData.error || 'Failed to upload image');
           }
 
-          const { url } = await response.json();
-          imageUrl = url;
+          // La respuesta viene envuelta en { success: true, data: { url, ... } }
+          const result = await response.json();
+          const uploadData = result.data || result;
+          imageUrl = uploadData.url;
           console.log('[ClientOverlay] Image uploaded via API:', { url });
         }
 

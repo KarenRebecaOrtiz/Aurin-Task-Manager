@@ -198,8 +198,10 @@ export const AccountDetailsCard: React.FC<AccountDetailsCardComponentProps> = ({
           throw new Error(errorData.error || 'Failed to upload image');
         }
 
-        const { url } = await response.json();
-        finalImageUrl = url;
+        // La respuesta viene envuelta en { success: true, data: { url, ... } }
+        const result = await response.json();
+        const uploadData = result.data || result;
+        finalImageUrl = uploadData.url;
       }
 
       const clientData: Client = {

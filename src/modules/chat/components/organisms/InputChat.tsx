@@ -310,14 +310,18 @@ export const InputChat: React.FC<InputChatProps> = ({
 
         if (!response.ok) throw new Error('Failed to upload file')
 
-        const { url, fileName, fileType, filePath } = await response.json()
+        // La respuesta viene envuelta en { success: true, data: { url, ... } }
+        const result = await response.json()
+        const uploadData = result.data || result
+        const { url, fileName, fileType, pathname } = uploadData
+
         finalMessageData = {
           ...finalMessageData,
           imageUrl: selectedFile.type.startsWith('image/') ? url : null,
           fileUrl: url && !selectedFile.type.startsWith('image/') ? url : null,
           fileName,
           fileType,
-          filePath,
+          filePath: pathname, // Vercel Blob usa 'pathname' en lugar de 'filePath'
         }
       }
 
