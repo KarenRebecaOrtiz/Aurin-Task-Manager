@@ -9,7 +9,7 @@
 
 'use client'
 
-import React, { useRef, useState, useCallback, useEffect } from 'react'
+import React, { useRef, useState, useCallback, useEffect, useMemo } from 'react'
 import { ArrowUp, Paperclip, Mic, X, Square, StopCircle, Globe } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAudioRecorder } from '@/modules/chat/hooks/useAudioRecorder'
@@ -124,6 +124,23 @@ export const InputChat: React.FC<InputChatProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
+  // ========== STABLE CALLBACKS FOR AUDIO RECORDER ==========
+  // These MUST be stable (useCallback) to prevent the useEffect in useAudioRecorder
+  // from re-triggering startRecording multiple times due to callback reference changes.
+  // ChatSidebar has many re-render sources (Zustand stores, animations, etc.) that would
+  // otherwise cause these inline callbacks to change on every render.
+  const handleAudioTranscription = useCallback((text: string) => {
+    setValue(prev => prev ? `${prev} ${text}` : text)
+  }, [])
+
+  const handleAudioError = useCallback((error: string) => {
+    toast({
+      title: 'Error de audio',
+      description: error,
+      variant: 'error',
+    })
+  }, [])
+
   // ========== AUDIO RECORDING HOOK ==========
   const {
     isRecording,
@@ -132,17 +149,8 @@ export const InputChat: React.FC<InputChatProps> = ({
     stopRecording,
     audioTime
   } = useAudioRecorder({
-    onTranscription: (text) => {
-      // Insert transcription in input
-      setValue(prev => prev ? `${prev} ${text}` : text)
-    },
-    onError: (error) => {
-      toast({
-        title: 'Error de audio',
-        description: error,
-        variant: 'error',
-      })
-    }
+    onTranscription: handleAudioTranscription,
+    onError: handleAudioError,
   })
 
   // ========== AUTO-RESIZE TEXTAREA ==========

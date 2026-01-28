@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 
 export interface UseAudioRecorderOptions {
   onTranscription: (text: string) => void
@@ -29,8 +29,38 @@ export function useAudioRecorder({
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null)
   const [audioChunks, setAudioChunks] = useState<Blob[]>([])
 
+  // Refs to track current recording state without causing re-renders
+  // These prevent race conditions from multiple startRecording calls
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const chunksRef = useRef<Blob[]>([])
+  const streamRef = useRef<MediaStream | null>(null)
+
+  // Store callbacks in refs to keep useCallback dependencies stable
+  const onErrorRef = useRef(onError)
+  const onTranscriptionRef = useRef(onTranscription)
+
+  // Keep refs updated with latest callbacks
+  useEffect(() => {
+    onErrorRef.current = onError
+    onTranscriptionRef.current = onTranscription
+  }, [onError, onTranscription])
+
   // Inicializar MediaRecorder manualmente en el cliente
   const startMediaRecording = useCallback(async () => {
+    // Guard: if already recording, ignore duplicate start calls
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      console.log('⚠️ Already recording, ignoring duplicate start')
+      return
+    }
+
+    // Cleanup any previous recorder
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop()
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop())
+    }
+
     try {
       // Solicitar acceso al micrófono con configuración óptima
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -59,42 +89,54 @@ export function useAudioRecorder({
         audioBitsPerSecond: 128000 // 128 kbps para buena calidad
       })
 
-      const chunks: Blob[] = []
+      // Reset chunks ref for this recording session
+      chunksRef.current = []
 
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
-          chunks.push(e.data)
+          chunksRef.current.push(e.data)
         }
       }
 
       recorder.onstop = () => {
-        const blob = new Blob(chunks, { type: mimeType || 'audio/webm' })
+        const blob = new Blob(chunksRef.current, { type: mimeType || 'audio/webm' })
         const url = URL.createObjectURL(blob)
         setMediaBlobUrl(url)
         setStatus('stopped')
-        stream.getTracks().forEach(track => track.stop())
+        // Cleanup refs
+        mediaRecorderRef.current = null
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach(track => track.stop())
+          streamRef.current = null
+        }
       }
 
       recorder.onerror = (e) => {
         console.error('Error en MediaRecorder:', e)
+        mediaRecorderRef.current = null
       }
 
       recorder.start(1000)
 
+      // Store in refs for access across callbacks
+      mediaRecorderRef.current = recorder
+      streamRef.current = stream
+
       setMediaRecorder(recorder)
-      setAudioChunks(chunks)
+      setAudioChunks(chunksRef.current)
       setStatus('recording')
     } catch (error) {
       console.error('❌ Error starting recording:', error)
-      onError?.('No se pudo acceder al micrófono. Por favor, permite el acceso.')
+      onErrorRef.current?.('No se pudo acceder al micrófono. Por favor, permite el acceso.')
     }
-  }, [onError])
+  }, []) // No dependencies - uses refs for callbacks and state
 
   const stopMediaRecording = useCallback(() => {
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-      mediaRecorder.stop()
+    // Use ref to ensure we stop the correct recorder instance
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop()
     }
-  }, [mediaRecorder])
+  }, []) // No dependencies - uses ref
 
   // Timer para mostrar duración de grabación
   useEffect(() => {
@@ -154,10 +196,10 @@ export function useAudioRecorder({
 
       // 4. Devolver transcripción
       if (data?.text) {
-        onTranscription(data.text)
+        onTranscriptionRef.current(data.text)
       } else if (data?.transcription) {
         // Por si n8n devuelve con otro nombre de campo
-        onTranscription(data.transcription)
+        onTranscriptionRef.current(data.transcription)
       } else {
         throw new Error('No se recibió texto en la respuesta')
       }
@@ -167,7 +209,7 @@ export function useAudioRecorder({
       const errorMessage = error instanceof Error
         ? error.message
         : 'Error al transcribir audio'
-      onError?.(errorMessage)
+      onErrorRef.current?.(errorMessage)
     } finally {
       setIsProcessing(false)
     }
