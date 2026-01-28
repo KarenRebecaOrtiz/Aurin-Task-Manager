@@ -350,7 +350,8 @@
 }
 
 // Ocultar el badge de "Development mode" de Clerk con un cuadrito negro
-:global(.cl-internal-1dauvpw) {
+// Nota: :global() debe estar dentro de un contexto local para CSS Modules
+.container :global(.cl-internal-1dauvpw) {
   position: relative;
 
   &::after {
