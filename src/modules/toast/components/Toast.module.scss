@@ -20,6 +20,11 @@
   gap: $spacing-md;
   animation: slideIn 0.3s ease-out;
 
+  :global(body.dark) & {
+    background-color: $zinc-800;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  }
+
   &.toast-success {
     border-left: 4px solid $color-success;
 
@@ -33,6 +38,22 @@
 
     .label {
       color: $color-success;
+    }
+
+    :global(body.dark) & {
+      border-left-color: #4ade80;
+
+      .icon-container {
+        background-color: rgba(34, 197, 94, 0.2);
+      }
+
+      .icon {
+        color: #4ade80;
+      }
+
+      .label {
+        color: #4ade80;
+      }
     }
   }
 
@@ -50,6 +71,22 @@
     .label {
       color: $color-error;
     }
+
+    :global(body.dark) & {
+      border-left-color: #f87171;
+
+      .icon-container {
+        background-color: rgba(239, 68, 68, 0.2);
+      }
+
+      .icon {
+        color: #f87171;
+      }
+
+      .label {
+        color: #f87171;
+      }
+    }
   }
 
   &.toast-warning {
@@ -66,6 +103,22 @@
     .label {
       color: $color-warning;
     }
+
+    :global(body.dark) & {
+      border-left-color: #fbbf24;
+
+      .icon-container {
+        background-color: rgba(251, 191, 36, 0.2);
+      }
+
+      .icon {
+        color: #fbbf24;
+      }
+
+      .label {
+        color: #fbbf24;
+      }
+    }
   }
 
   &.toast-info {
@@ -81,6 +134,22 @@
 
     .label {
       color: $color-info;
+    }
+
+    :global(body.dark) & {
+      border-left-color: #60a5fa;
+
+      .icon-container {
+        background-color: rgba(59, 130, 246, 0.2);
+      }
+
+      .icon {
+        color: #60a5fa;
+      }
+
+      .label {
+        color: #60a5fa;
+      }
     }
   }
 }
@@ -110,11 +179,19 @@
 .label {
   @include typography($text-sm, $font-weight-bold, $color-text-primary, left);
   margin: 0;
+
+  :global(body.dark) & {
+    color: $color-text-dark-primary;
+  }
 }
 
 .message {
   @include typography($text-sm, $font-weight-normal, $color-text-secondary, left);
   margin: 0;
+
+  :global(body.dark) & {
+    color: $color-text-dark-secondary;
+  }
 }
 
 .error-details {
@@ -140,6 +217,19 @@
   &:active {
     background-color: rgba($primary, 0.2);
   }
+
+  :global(body.dark) & {
+    color: $primary-light;
+    border-color: $primary-light;
+
+    &:hover {
+      background-color: rgba($primary-light, 0.1);
+    }
+
+    &:active {
+      background-color: rgba($primary-light, 0.2);
+    }
+  }
 }
 
 .close-button {
@@ -156,6 +246,14 @@
 
   &:hover {
     color: $color-text-primary;
+  }
+
+  :global(body.dark) & {
+    color: $color-text-dark-secondary;
+
+    &:hover {
+      color: $color-text-dark-primary;
+    }
   }
 }
 
