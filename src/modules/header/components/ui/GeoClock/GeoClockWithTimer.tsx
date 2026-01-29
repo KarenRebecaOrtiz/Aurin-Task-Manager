@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useRunningTimers } from '@/modules/chat/timer';
 import { useTimerStateStore } from '@/modules/chat/timer/stores/timerStateStore';
-import { tasksTableStore } from '@/modules/data-views/tasks/stores/tasksTableStore';
 import { useSidebarStateStore } from '@/stores/sidebarStateStore';
 import { useDataStore } from '@/stores/dataStore';
 import { TimerCounter } from './TimerCounter';
@@ -18,7 +17,6 @@ const GeoClockWithTimer: React.FC<GeoClockWithTimerProps> = ({ onTaskClick }) =>
   const { isDarkMode } = useTheme();
   const runningTimers = useRunningTimers();
   const getTimerForTask = useTimerStateStore((state) => state.getTimerForTask);
-  const filteredTasks = tasksTableStore((state) => state.filteredTasks);
   const tasks = useDataStore((state) => state.tasks);
   const clients = useDataStore((state) => state.clients);
   const [taskName, setTaskName] = useState<string | null>(null);
@@ -45,8 +43,8 @@ const GeoClockWithTimer: React.FC<GeoClockWithTimerProps> = ({ onTaskClick }) =>
     const timer = getTimerForTask(activeTimer.taskId);
     if (!timer) return;
 
-    // Get task name from store
-    const task = filteredTasks.find((t) => t.id === activeTimer.taskId);
+    // Get task name from store (use tasks instead of filteredTasks for global display)
+    const task = tasks.find((t) => t.id === activeTimer.taskId);
     setTaskName(task?.name || null);
     setActiveTaskId(activeTimer.taskId);
     setIsRunning(timer.status === 'running');
@@ -70,7 +68,7 @@ const GeoClockWithTimer: React.FC<GeoClockWithTimerProps> = ({ onTaskClick }) =>
     } else {
       setTimerSeconds(timer.accumulatedSeconds);
     }
-  }, [activeTimer, getTimerForTask, filteredTasks]);
+  }, [activeTimer, getTimerForTask, tasks]);
 
   // Handle click to open task chat sidebar
   const handleTimerClick = useCallback(() => {
