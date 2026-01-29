@@ -99,7 +99,7 @@ function IconComponent({ size, ...props }: XProps) {
         y2={6}
         variants={variants.line1}
         initial="initial"
-        animate={controls}
+        animate={controls || "initial"}
       />
       <motion.line
         x1={6}
@@ -108,7 +108,7 @@ function IconComponent({ size, ...props }: XProps) {
         y2={18}
         variants={variants.line2}
         initial="initial"
-        animate={controls}
+        animate={controls || "initial"}
       />
     </motion.svg>
   );

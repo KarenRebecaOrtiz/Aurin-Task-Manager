@@ -121,85 +121,85 @@ function IconComponent({ size, ...props }: CogProps) {
           d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z"
           variants={variants.path1}
           initial="initial"
-          animate={controls}
+          animate={controls || "initial"}
         />
         <motion.path
           d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"
           variants={variants.path2}
           initial="initial"
-          animate={controls}
+          animate={controls || "initial"}
         />
         <motion.path
           d="M12 2v2"
           variants={variants.path3}
           initial="initial"
-          animate={controls}
+          animate={controls || "initial"}
         />
         <motion.path
           d="M12 22v-2"
           variants={variants.path4}
           initial="initial"
-          animate={controls}
+          animate={controls || "initial"}
         />
         <motion.path
           d="m17 20.66-1-1.73"
           variants={variants.path5}
           initial="initial"
-          animate={controls}
+          animate={controls || "initial"}
         />
         <motion.path
           d="M11 10.27 7 3.34"
           variants={variants.path6}
           initial="initial"
-          animate={controls}
+          animate={controls || "initial"}
         />
         <motion.path
           d="m20.66 17-1.73-1"
           variants={variants.path7}
           initial="initial"
-          animate={controls}
+          animate={controls || "initial"}
         />
         <motion.path
           d="m3.34 7 1.73 1"
           variants={variants.path8}
           initial="initial"
-          animate={controls}
+          animate={controls || "initial"}
         />
         <motion.path
           d="M14 12h8"
           variants={variants.path9}
           initial="initial"
-          animate={controls}
+          animate={controls || "initial"}
         />
         <motion.path
           d="M2 12h2"
           variants={variants.path10}
           initial="initial"
-          animate={controls}
+          animate={controls || "initial"}
         />
         <motion.path
           d="m20.66 7-1.73 1"
           variants={variants.path11}
           initial="initial"
-          animate={controls}
+          animate={controls || "initial"}
         />
         <motion.path
           d="m3.34 17 1.73-1"
           variants={variants.path12}
           initial="initial"
-          animate={controls}
+          animate={controls || "initial"}
         />
         <motion.path
           d="m17 3.34-1 1.73"
           variants={variants.path13}
           initial="initial"
-          animate={controls}
+          animate={controls || "initial"}
         />
         <motion.path
           d="m11 13.73-4 6.93"
           variants={variants.path14}
           initial="initial"
-          animate={controls}
+          animate={controls || "initial"}
         />
       </motion.g>
     </motion.svg>

@@ -61,7 +61,7 @@ function IconComponent({ size, ...props }: TimerProps) {
         r={8}
         variants={variants.circle}
         initial="initial"
-        animate={controls}
+        animate={controls || "initial"}
       />
       <motion.line
         x1={12}
@@ -70,7 +70,7 @@ function IconComponent({ size, ...props }: TimerProps) {
         y2={11}
         variants={variants.line1}
         initial="initial"
-        animate={controls}
+        animate={controls || "initial"}
       />
       <motion.line
         x1={10}
@@ -79,7 +79,7 @@ function IconComponent({ size, ...props }: TimerProps) {
         y2={2}
         variants={variants.line2}
         initial="initial"
-        animate={controls}
+        animate={controls || "initial"}
       />
     </motion.svg>
   );

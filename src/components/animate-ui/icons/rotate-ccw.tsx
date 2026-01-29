@@ -60,20 +60,20 @@ function IconComponent({ size, ...props }: RotateCcwProps) {
       strokeLinejoin="round"
       variants={variants.group}
       initial="initial"
-      animate={controls}
+      animate={controls || "initial"}
       {...props}
     >
       <motion.path
         d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"
         variants={variants.path1}
         initial="initial"
-        animate={controls}
+        animate={controls || "initial"}
       />
       <motion.path
         d="M3 3v5h5"
         variants={variants.path2}
         initial="initial"
-        animate={controls}
+        animate={controls || "initial"}
       />
     </motion.svg>
   );

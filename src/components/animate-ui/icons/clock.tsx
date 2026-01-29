@@ -63,7 +63,7 @@ function IconComponent({ size, ...props }: ClockProps) {
         r={10}
         variants={variants.circle}
         initial="initial"
-        animate={controls}
+        animate={controls || "initial"}
       />
       <motion.line
         x1={12}
@@ -72,7 +72,7 @@ function IconComponent({ size, ...props }: ClockProps) {
         y2={14}
         variants={variants.line1}
         initial="initial"
-        animate={controls}
+        animate={controls || "initial"}
       />
       <motion.line
         x1={12}
@@ -81,7 +81,7 @@ function IconComponent({ size, ...props }: ClockProps) {
         y2={12}
         variants={variants.line2}
         initial="initial"
-        animate={controls}
+        animate={controls || "initial"}
       />
     </motion.svg>
   );

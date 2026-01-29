@@ -61,25 +61,25 @@ function IconComponent({ size, ...props }: LogOutProps) {
       strokeLinejoin="round"
       {...props}
     >
-      <motion.g variants={variants.group} initial="initial" animate={controls}>
+      <motion.g variants={variants.group} initial="initial" animate={controls || "initial"}>
         <motion.path
           d="m16 17 5-5-5-5"
           variants={variants.path1}
           initial="initial"
-          animate={controls}
+          animate={controls || "initial"}
         />
         <motion.path
           d="M21 12H9"
           variants={variants.path2}
           initial="initial"
-          animate={controls}
+          animate={controls || "initial"}
         />
       </motion.g>
       <motion.path
         d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"
         variants={variants.path3}
         initial="initial"
-        animate={controls}
+        animate={controls || "initial"}
       />
     </motion.svg>
   );

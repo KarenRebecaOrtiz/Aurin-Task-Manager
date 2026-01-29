@@ -61,7 +61,7 @@ function IconComponent({ size, ...props }: CirclePlusProps) {
         r={10}
         variants={variants.circle}
         initial="initial"
-        animate={controls}
+        animate={controls || "initial"}
       />
       <motion.line
         x1={8}
@@ -70,7 +70,7 @@ function IconComponent({ size, ...props }: CirclePlusProps) {
         y2={12}
         variants={variants.line1}
         initial="initial"
-        animate={controls}
+        animate={controls || "initial"}
       />
       <motion.line
         x1={12}
@@ -79,7 +79,7 @@ function IconComponent({ size, ...props }: CirclePlusProps) {
         y2={8}
         variants={variants.line2}
         initial="initial"
-        animate={controls}
+        animate={controls || "initial"}
       />
     </motion.svg>
   );

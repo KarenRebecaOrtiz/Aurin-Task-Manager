@@ -53,7 +53,7 @@ function IconComponent({ size, ...props }: SunProps) {
       strokeLinecap="round"
       strokeLinejoin="round"
       initial="initial"
-      animate={controls}
+      animate={controls || "initial"}
       {...props}
     >
       <motion.circle
@@ -62,7 +62,7 @@ function IconComponent({ size, ...props }: SunProps) {
         r="4"
         variants={variants.circle}
         initial="initial"
-        animate={controls}
+        animate={controls || "initial"}
       />
       <motion.line
         x1="12"
@@ -71,7 +71,7 @@ function IconComponent({ size, ...props }: SunProps) {
         y2="2"
         variants={variants.line1}
         initial="initial"
-        animate={controls}
+        animate={controls || "initial"}
       />
       <motion.line
         x1="17.7"
@@ -80,7 +80,7 @@ function IconComponent({ size, ...props }: SunProps) {
         y2="4.9"
         variants={variants.line2}
         initial="initial"
-        animate={controls}
+        animate={controls || "initial"}
       />
       <motion.line
         x1="20"
@@ -89,7 +89,7 @@ function IconComponent({ size, ...props }: SunProps) {
         y2="12"
         variants={variants.line3}
         initial="initial"
-        animate={controls}
+        animate={controls || "initial"}
       />
       <motion.line
         x1="17.7"
@@ -98,7 +98,7 @@ function IconComponent({ size, ...props }: SunProps) {
         y2="19.1"
         variants={variants.line4}
         initial="initial"
-        animate={controls}
+        animate={controls || "initial"}
       />
       <motion.line
         x1="12"
@@ -107,7 +107,7 @@ function IconComponent({ size, ...props }: SunProps) {
         y2="22"
         variants={variants.line5}
         initial="initial"
-        animate={controls}
+        animate={controls || "initial"}
       />
       <motion.line
         x1="6.3"
@@ -116,7 +116,7 @@ function IconComponent({ size, ...props }: SunProps) {
         y2="19.1"
         variants={variants.line6}
         initial="initial"
-        animate={controls}
+        animate={controls || "initial"}
       />
       <motion.line
         x1="4"
@@ -125,7 +125,7 @@ function IconComponent({ size, ...props }: SunProps) {
         y2="12"
         variants={variants.line7}
         initial="initial"
-        animate={controls}
+        animate={controls || "initial"}
       />
       <motion.line
         x1="6.3"
@@ -134,7 +134,7 @@ function IconComponent({ size, ...props }: SunProps) {
         y2="4.9"
         variants={variants.line8}
         initial="initial"
-        animate={controls}
+        animate={controls || "initial"}
       />
     </motion.svg>
   );

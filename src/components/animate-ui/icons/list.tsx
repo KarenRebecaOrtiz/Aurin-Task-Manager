@@ -140,37 +140,37 @@ function IconComponent({ size, ...props }: ListProps) {
         d="M3 5h.01"
         variants={variants.path1}
         initial="initial"
-        animate={controls}
+        animate={controls || "initial"}
       />
       <motion.path
         d="M8 5h13"
         variants={variants.path2}
         initial="initial"
-        animate={controls}
+        animate={controls || "initial"}
       />
       <motion.path
         d="M3 12h.01"
         variants={variants.path3}
         initial="initial"
-        animate={controls}
+        animate={controls || "initial"}
       />
       <motion.path
         d="M8 12h13"
         variants={variants.path4}
         initial="initial"
-        animate={controls}
+        animate={controls || "initial"}
       />
       <motion.path
         d="M3 19h.01"
         variants={variants.path5}
         initial="initial"
-        animate={controls}
+        animate={controls || "initial"}
       />
       <motion.path
         d="M8 19h13"
         variants={variants.path6}
         initial="initial"
-        animate={controls}
+        animate={controls || "initial"}
       />
     </motion.svg>
   );

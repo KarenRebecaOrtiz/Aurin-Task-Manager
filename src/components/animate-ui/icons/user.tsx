@@ -62,7 +62,7 @@ function IconComponent({ size, ...props }: UserProps) {
         d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"
         variants={variants.path}
         initial="initial"
-        animate={controls}
+        animate={controls || "initial"}
       />
       <motion.circle
         cx={12}
@@ -70,7 +70,7 @@ function IconComponent({ size, ...props }: UserProps) {
         r={4}
         variants={variants.circle}
         initial="initial"
-        animate={controls}
+        animate={controls || "initial"}
       />
     </motion.svg>
   );

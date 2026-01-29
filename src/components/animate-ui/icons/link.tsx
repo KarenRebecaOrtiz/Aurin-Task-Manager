@@ -120,13 +120,13 @@ function IconComponent({ size, ...props }: LinkProps) {
         d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"
         variants={variants.path1}
         initial="initial"
-        animate={controls}
+        animate={controls || "initial"}
       />
       <motion.path
         d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
         variants={variants.path2}
         initial="initial"
-        animate={controls}
+        animate={controls || "initial"}
       />
     </motion.svg>
   );
