@@ -282,10 +282,7 @@ export function NotificationPreferencesDialog() {
               >
                 <ResponsiveDialogHeader>
                   <ResponsiveDialogTitle>
-                    <div className={styles.titleWrapper}>
-                      <Mail size={20} className={styles.titleIcon} />
-                      {dialogTitle}
-                    </div>
+                    {dialogTitle}
                   </ResponsiveDialogTitle>
                   <p className={styles.subtitle}>{dialogSubtitle}</p>
                 </ResponsiveDialogHeader>
