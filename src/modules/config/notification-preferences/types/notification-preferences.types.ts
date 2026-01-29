@@ -18,15 +18,15 @@ import type { NotificationType } from '@/modules/mailer/services/notification.se
 export type NotificationEntityType = 'task' | 'team';
 
 // ============================================================================
-// PREFERENCES INTERFACE
+// TASK PREFERENCES INTERFACE
 // ============================================================================
 
 /**
- * Preferencias de notificaciones por email para una entidad específica.
- * NO incluye taskCreated porque estas preferencias son POR tarea/equipo,
- * no globales. Si estás viendo las preferencias, ya estás en la entidad.
+ * Preferencias de notificaciones por email para una TAREA específica.
+ * NO incluye taskCreated porque estas preferencias son POR tarea,
+ * no globales. Si estás viendo las preferencias, ya estás en la tarea.
  */
-export interface EntityNotificationPreferences {
+export interface TaskNotificationPreferences {
   /** Notificación de actualizaciones generales */
   updated: boolean;
   /** Notificación de cambios de estado */
@@ -45,26 +45,70 @@ export interface EntityNotificationPreferences {
   deleted: boolean;
 }
 
+// ============================================================================
+// TEAM PREFERENCES INTERFACE
+// ============================================================================
+
 /**
- * Documento completo en Firestore
+ * Preferencias de notificaciones por email para un EQUIPO específico.
+ * NO incluye team_member_added_you porque esa notificación siempre se envía
+ * cuando te agregan a un equipo (no es configurable).
+ * Solo 2 preferencias configurables para teams.
  */
-export interface NotificationPreferencesDocument extends EntityNotificationPreferences {
+export interface TeamNotificationPreferences {
+  /** Notificación de nuevos mensajes en el equipo */
+  newMessage: boolean;
+  /** Notificación cuando se agregan nuevos miembros */
+  memberAdded: boolean;
+}
+
+// ============================================================================
+// UNIFIED TYPE (para compatibilidad)
+// ============================================================================
+
+/**
+ * Alias para TaskNotificationPreferences (compatibilidad hacia atrás)
+ * @deprecated Usar TaskNotificationPreferences o TeamNotificationPreferences según el caso
+ */
+export type EntityNotificationPreferences = TaskNotificationPreferences;
+
+/**
+ * Documento completo en Firestore para tareas
+ */
+export interface TaskNotificationPreferencesDocument extends TaskNotificationPreferences {
   /** ID del usuario */
   userId: string;
   /** Fecha de creación */
-  createdAt: string;
+  createdAt?: string;
   /** Última actualización */
   updatedAt: string;
 }
+
+/**
+ * Documento completo en Firestore para equipos
+ */
+export interface TeamNotificationPreferencesDocument extends TeamNotificationPreferences {
+  /** ID del usuario */
+  userId: string;
+  /** Fecha de creación */
+  createdAt?: string;
+  /** Última actualización */
+  updatedAt: string;
+}
+
+/**
+ * @deprecated Usar TaskNotificationPreferencesDocument o TeamNotificationPreferencesDocument
+ */
+export type NotificationPreferencesDocument = TaskNotificationPreferencesDocument;
 
 // ============================================================================
 // DEFAULTS
 // ============================================================================
 
 /**
- * Por defecto todas las notificaciones están activadas
+ * Por defecto todas las notificaciones de TAREAS están activadas
  */
-export const DEFAULT_NOTIFICATION_PREFERENCES: EntityNotificationPreferences = {
+export const DEFAULT_TASK_NOTIFICATION_PREFERENCES: TaskNotificationPreferences = {
   updated: true,
   statusChanged: true,
   priorityChanged: true,
@@ -75,15 +119,28 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: EntityNotificationPreferences = {
   deleted: true,
 };
 
+/**
+ * Por defecto todas las notificaciones de EQUIPOS están activadas
+ */
+export const DEFAULT_TEAM_NOTIFICATION_PREFERENCES: TeamNotificationPreferences = {
+  newMessage: true,
+  memberAdded: true,
+};
+
+/**
+ * @deprecated Usar DEFAULT_TASK_NOTIFICATION_PREFERENCES o DEFAULT_TEAM_NOTIFICATION_PREFERENCES
+ */
+export const DEFAULT_NOTIFICATION_PREFERENCES = DEFAULT_TASK_NOTIFICATION_PREFERENCES;
+
 // ============================================================================
 // MAPPING
 // ============================================================================
 
 /**
- * Mapeo de NotificationType del mailer a la key en preferencias
- * Solo los tipos que aplican por entidad (excluye task_created)
+ * Mapeo de NotificationType del mailer a la key en preferencias de TAREAS
+ * Solo los tipos que aplican por tarea (excluye task_created)
  */
-export const NOTIFICATION_TYPE_TO_PREF_KEY: Partial<Record<NotificationType, keyof EntityNotificationPreferences>> = {
+export const TASK_NOTIFICATION_TYPE_TO_PREF_KEY: Partial<Record<NotificationType, keyof TaskNotificationPreferences>> = {
   task_updated: 'updated',
   task_status_changed: 'statusChanged',
   task_priority_changed: 'priorityChanged',
@@ -94,24 +151,38 @@ export const NOTIFICATION_TYPE_TO_PREF_KEY: Partial<Record<NotificationType, key
   task_deleted: 'deleted',
 };
 
+/**
+ * Mapeo de NotificationType del mailer a la key en preferencias de EQUIPOS
+ * Solo los tipos configurables (excluye team_member_added_you que siempre se envía)
+ */
+export const TEAM_NOTIFICATION_TYPE_TO_PREF_KEY: Partial<Record<NotificationType, keyof TeamNotificationPreferences>> = {
+  team_new_message: 'newMessage',
+  team_member_added: 'memberAdded',
+};
+
+/**
+ * @deprecated Usar TASK_NOTIFICATION_TYPE_TO_PREF_KEY o TEAM_NOTIFICATION_TYPE_TO_PREF_KEY
+ */
+export const NOTIFICATION_TYPE_TO_PREF_KEY = TASK_NOTIFICATION_TYPE_TO_PREF_KEY;
+
 // ============================================================================
-// UI CONFIG
+// UI CONFIG - TASKS
 // ============================================================================
 
 /**
- * Configuración de UI para cada preferencia
+ * Configuración de UI para cada preferencia de TAREA
  */
-export interface NotificationPreferenceConfig {
-  key: keyof EntityNotificationPreferences;
+export interface TaskNotificationPreferenceConfig {
+  key: keyof TaskNotificationPreferences;
   label: string;
   description: string;
   category: 'changes' | 'lifecycle';
 }
 
 /**
- * Configuración de preferencias para renderizar en UI
+ * Configuración de preferencias de TAREAS para renderizar en UI
  */
-export const NOTIFICATION_PREFERENCES_CONFIG: NotificationPreferenceConfig[] = [
+export const TASK_NOTIFICATION_PREFERENCES_CONFIG: TaskNotificationPreferenceConfig[] = [
   // Cambios
   {
     key: 'updated',
@@ -164,10 +235,46 @@ export const NOTIFICATION_PREFERENCES_CONFIG: NotificationPreferenceConfig[] = [
   },
 ];
 
+// ============================================================================
+// UI CONFIG - TEAMS
+// ============================================================================
+
 /**
- * Categorías de preferencias
+ * Configuración de UI para cada preferencia de EQUIPO
  */
-export const PREFERENCE_CATEGORIES = {
+export interface TeamNotificationPreferenceConfig {
+  key: keyof TeamNotificationPreferences;
+  label: string;
+  description: string;
+  category: 'activity';
+}
+
+/**
+ * Configuración de preferencias de EQUIPOS para renderizar en UI
+ */
+export const TEAM_NOTIFICATION_PREFERENCES_CONFIG: TeamNotificationPreferenceConfig[] = [
+  {
+    key: 'newMessage',
+    label: 'Nuevos mensajes',
+    description: 'Cuando alguien envía un mensaje en este equipo',
+    category: 'activity',
+  },
+  {
+    key: 'memberAdded',
+    label: 'Nuevos miembros',
+    description: 'Cuando se agregan personas a este equipo',
+    category: 'activity',
+  },
+];
+
+// ============================================================================
+// CATEGORIES
+// ============================================================================
+
+/**
+ * Categorías de preferencias para TAREAS
+ */
+export const TASK_PREFERENCE_CATEGORIES = {
   changes: {
     title: 'Cambios',
     description: 'Notificaciones sobre modificaciones',
@@ -177,3 +284,32 @@ export const PREFERENCE_CATEGORIES = {
     description: 'Archivado, reactivación y eliminación',
   },
 } as const;
+
+/**
+ * Categorías de preferencias para EQUIPOS
+ */
+export const TEAM_PREFERENCE_CATEGORIES = {
+  activity: {
+    title: 'Actividad',
+    description: 'Notificaciones sobre actividad en el equipo',
+  },
+} as const;
+
+// ============================================================================
+// ALIASES (compatibilidad hacia atrás)
+// ============================================================================
+
+/**
+ * @deprecated Usar TaskNotificationPreferenceConfig
+ */
+export type NotificationPreferenceConfig = TaskNotificationPreferenceConfig;
+
+/**
+ * @deprecated Usar TASK_NOTIFICATION_PREFERENCES_CONFIG
+ */
+export const NOTIFICATION_PREFERENCES_CONFIG = TASK_NOTIFICATION_PREFERENCES_CONFIG;
+
+/**
+ * @deprecated Usar TASK_PREFERENCE_CATEGORIES
+ */
+export const PREFERENCE_CATEGORIES = TASK_PREFERENCE_CATEGORIES;

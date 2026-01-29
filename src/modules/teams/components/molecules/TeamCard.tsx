@@ -7,7 +7,7 @@ import { useUser } from '@clerk/nextjs';
 import { useDataStore } from '@/stores/dataStore';
 import { useSidebarStateStore } from '@/stores/sidebarStateStore';
 import { useShallow } from 'zustand/react/shallow';
-import { Users, Globe, Lock, MessageSquare, Settings } from 'lucide-react';
+import { Building2, Globe, Lock, MessageSquare, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/buttons';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import {
@@ -41,8 +41,7 @@ const getGradientFromId = (id: string): { color1: string; color2: string; color3
 export function TeamCard({ team }: TeamCardProps) {
   const { user } = useUser();
 
-  // Get users to display member avatars
-  const users = useDataStore(useShallow((state) => state.users));
+  // Get clients to display account info
   const clients = useDataStore(useShallow((state) => state.clients));
 
   // State for edit dialog
@@ -50,14 +49,6 @@ export function TeamCard({ team }: TeamCardProps) {
 
   // Check if current user is admin (creator of the team)
   const isAdmin = user?.id === team.createdBy;
-
-  // Get member data
-  const memberData = useMemo(() => {
-    return team.memberIds
-      .map((id) => users.find((u) => u.id === id))
-      .filter(Boolean)
-      .slice(0, 5);
-  }, [team.memberIds, users]);
 
   // Get team initials
   const teamInitials = useMemo(() => {
@@ -70,11 +61,18 @@ export function TeamCard({ team }: TeamCardProps) {
     return name.slice(0, 2).toUpperCase();
   }, [team.name]);
 
-  // Get client name
-  const clientName = useMemo(() => {
+  // Get client data (name and image)
+  const clientData = useMemo(() => {
     const client = clients.find((c) => c.id === team.clientId);
-    return client?.name || 'Sin cuenta';
+    return {
+      name: client?.name || 'Sin cuenta',
+      imageUrl: client?.imageUrl || null,
+      initials: client?.name ? client.name.charAt(0).toUpperCase() : 'S',
+    };
   }, [clients, team.clientId]);
+
+  // Keep clientName for backward compatibility
+  const clientName = clientData.name;
 
 
   // Open team chat sidebar - Usa openTeamSidebar para chats de equipo
@@ -197,45 +195,25 @@ export function TeamCard({ team }: TeamCardProps) {
             </div>
           </div>
 
-          {/* Contributors section */}
+          {/* Account section - Para todos los equipos */}
           <div className={styles.contributors}>
             <div className={styles.contributorsHeader}>
-              <Users className="w-4 h-4" />
-              <span>Miembros</span>
+              <Building2 className="w-4 h-4" />
+              <span>Cuenta</span>
             </div>
-            <div className={styles.avatarStack}>
-              {memberData.map((member) => (
-                <Tooltip key={member!.id}>
-                  <TooltipTrigger asChild>
-                    <Avatar className={styles.contributorAvatar}>
-                      <AvatarImage
-                        src={member!.imageUrl}
-                        alt={member!.fullName}
-                      />
-                      <AvatarFallback className={styles.avatarFallback} />
-                    </Avatar>
-                  </TooltipTrigger>
-                  <TooltipContent className={styles.tooltipContent}>
-                    {member!.fullName}
-                  </TooltipContent>
-                </Tooltip>
-              ))}
-              {team.memberIds.length > 5 && (
-                <div className={styles.moreCount}>
-                  +{team.memberIds.length - 5}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Footer with member count and chat button */}
-          <div className={styles.footer}>
-            <div className={styles.memberCount}>
-              <Users className="w-4 h-4" />
-              <span>
-                {team.memberIds.length}{' '}
-                {team.memberIds.length === 1 ? 'miembro' : 'miembros'}
-              </span>
+            <div className={styles.accountInfo}>
+              <Avatar className={styles.contributorAvatar}>
+                {clientData.imageUrl ? (
+                  <AvatarImage
+                    src={clientData.imageUrl}
+                    alt={clientData.name}
+                  />
+                ) : null}
+                <AvatarFallback className={styles.avatarFallback}>
+                  {clientData.initials}
+                </AvatarFallback>
+              </Avatar>
+              <span className={styles.accountName}>{clientData.name}</span>
             </div>
           </div>
 

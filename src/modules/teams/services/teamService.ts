@@ -75,8 +75,17 @@ class TeamService {
    */
   async updateTeam(teamId: string, updates: Partial<TeamFormData>): Promise<void> {
     const teamRef = doc(db, TEAMS_COLLECTION, teamId);
+
+    // Filter out undefined values (Firestore doesn't accept undefined)
+    const cleanUpdates: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(updates)) {
+      if (value !== undefined) {
+        cleanUpdates[key] = value;
+      }
+    }
+
     await updateDoc(teamRef, {
-      ...updates,
+      ...cleanUpdates,
       updatedAt: new Date().toISOString(),
     });
   }

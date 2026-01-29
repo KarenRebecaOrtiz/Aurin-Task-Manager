@@ -12,8 +12,29 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotificationPreferencesStore } from '../stores';
-import type { EntityNotificationPreferences, NotificationEntityType } from '../types';
-import { DEFAULT_NOTIFICATION_PREFERENCES } from '../types';
+import type {
+  NotificationEntityType,
+  TaskNotificationPreferences,
+  TeamNotificationPreferences,
+} from '../types';
+import {
+  DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+  DEFAULT_TEAM_NOTIFICATION_PREFERENCES,
+} from '../types';
+
+/**
+ * Type union for preferences
+ */
+type AnyNotificationPreferences = TaskNotificationPreferences | TeamNotificationPreferences;
+
+/**
+ * Get default preferences based on entity type
+ */
+function getDefaultsForType(type: NotificationEntityType): AnyNotificationPreferences {
+  return type === 'team'
+    ? DEFAULT_TEAM_NOTIFICATION_PREFERENCES
+    : DEFAULT_TASK_NOTIFICATION_PREFERENCES;
+}
 
 // ============================================================================
 // HELPERS
@@ -70,27 +91,30 @@ export function useNotificationPreferences() {
     setIsLoading(true);
     setError(null);
 
+    // Get defaults for this entity type
+    const defaults = getDefaultsForType(entityType);
+
     try {
       const docPath = getPreferencesDocPath(entityType, entityId, userId);
       const docRef = doc(db, docPath);
       const docSnap = await getDoc(docRef);
 
       if (docSnap.exists()) {
-        const data = docSnap.data() as EntityNotificationPreferences;
+        const data = docSnap.data() as AnyNotificationPreferences;
         // Merge con defaults para asegurar que todas las keys existen
-        const merged: EntityNotificationPreferences = {
-          ...DEFAULT_NOTIFICATION_PREFERENCES,
+        const merged = {
+          ...defaults,
           ...data,
         };
         setOriginalPreferences(merged);
       } else {
         // No existe documento: usar defaults (todas ON)
-        setOriginalPreferences(DEFAULT_NOTIFICATION_PREFERENCES);
+        setOriginalPreferences(defaults);
       }
     } catch (err) {
       console.error('[NotificationPreferences] Error loading:', err);
       setError('Error al cargar preferencias');
-      setOriginalPreferences(DEFAULT_NOTIFICATION_PREFERENCES);
+      setOriginalPreferences(defaults);
     }
   }, [userId, entityType, entityId, setIsLoading, setError, setOriginalPreferences]);
 

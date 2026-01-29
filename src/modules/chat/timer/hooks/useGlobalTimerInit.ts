@@ -121,7 +121,6 @@ export function useGlobalTimerInit({
 
     // Prevent concurrent initialization
     if (isLoadingRef.current) {
-      console.log('[useGlobalTimerInit] Already loading, skipping');
       return;
     }
 
@@ -129,8 +128,6 @@ export function useGlobalTimerInit({
       isLoadingRef.current = true;
       errorRef.current = null;
       setSyncStatus('syncing');
-
-      console.log(`[useGlobalTimerInit] Initializing timers for user ${userId} with ${userTaskIds.length} tasks`);
 
       // Always fetch from Firebase to get the source of truth
       const firebaseTimers = await getUserActiveTimers(userId, userTaskIds);
@@ -146,11 +143,8 @@ export function useGlobalTimerInit({
       const ghostTimerTaskIds = localTaskIds.filter(taskId => !firebaseTaskIds.has(taskId));
 
       if (ghostTimerTaskIds.length > 0) {
-        console.log(`[useGlobalTimerInit] Found ${ghostTimerTaskIds.length} ghost timers to remove:`, ghostTimerTaskIds);
-
         // Remove ghost timers from local state
         for (const taskId of ghostTimerTaskIds) {
-          console.log(`[useGlobalTimerInit] Removing ghost timer for task: ${taskId}`);
           clearTimer(taskId);
         }
       }
@@ -161,19 +155,12 @@ export function useGlobalTimerInit({
 
         // Bulk update store with real timers from Firestore
         setMultipleTimers(localTimers);
-
-        console.log(`[useGlobalTimerInit] Loaded ${localTimers.length} active timers from Firestore`);
-      } else {
-        console.log('[useGlobalTimerInit] No active timers found in Firestore');
       }
 
       setGlobalInitialized(true);
       setSyncStatus('idle');
       setLastSyncTimestamp(Date.now());
-
-      console.log('[useGlobalTimerInit] Initialization complete - local state reconciled with Firestore');
     } catch (error) {
-      console.error('[useGlobalTimerInit] Initialization failed:', error);
       errorRef.current = error as Error;
       setSyncStatus('error');
     } finally {
@@ -198,10 +185,7 @@ export function useGlobalTimerInit({
       return;
     }
 
-    console.log('[useGlobalTimerInit] Setting up global timer listeners');
-
     const unsubscribe = listenToUserTimers(userId, userTaskIds, (timers) => {
-      console.log(`[useGlobalTimerInit] Received ${timers.length} timer updates`);
 
       // Update local state with remote changes
       const currentDeviceId = deviceIdRef.current;
@@ -211,7 +195,6 @@ export function useGlobalTimerInit({
         const isRemoteUpdate = timer.deviceId !== currentDeviceId;
 
         if (isRemoteUpdate) {
-          console.log(`[useGlobalTimerInit] Remote update for task ${timer.taskId}`);
           const localState = convertToLocalState(timer);
           setTimerState(timer.taskId, localState);
         }
@@ -223,7 +206,6 @@ export function useGlobalTimerInit({
     unsubscribeRef.current = unsubscribe;
 
     return () => {
-      console.log('[useGlobalTimerInit] Cleaning up global timer listeners');
       unsubscribe();
     };
   }, [
@@ -254,7 +236,6 @@ export function useGlobalTimerInit({
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && globalInitialized) {
-        console.log('[useGlobalTimerInit] Window became visible, re-syncing with Firestore');
         // Reset globalInitialized to force a re-sync
         setGlobalInitialized(false);
         // Small delay to ensure state is updated before re-initializing
@@ -287,7 +268,6 @@ export function useGlobalTimerInit({
    */
   useEffect(() => {
     if (!userId) {
-      console.log('[useGlobalTimerInit] User logged out, resetting state');
       setGlobalInitialized(false);
       if (unsubscribeRef.current) {
         unsubscribeRef.current();

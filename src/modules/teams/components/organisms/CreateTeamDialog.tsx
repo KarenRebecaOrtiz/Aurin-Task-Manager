@@ -9,7 +9,7 @@ import { CrystalInput, CrystalTextarea } from '@/components/ui/inputs';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { GradientAvatarSelector } from '../atoms';
 import { useTeamForm } from '../../hooks';
-import { teamService } from '../../services';
+import { teamService, teamNotificationService } from '../../services';
 import { useDataStore } from '@/stores/dataStore';
 import { useShallow } from 'zustand/react/shallow';
 import { cn } from '@/lib/utils';
@@ -159,6 +159,13 @@ export function CreateTeamDialog({
 
   // Handle submit
   const handleSubmit = useCallback(async () => {
+    // DEBUG: Log para verificar modo y datos
+    console.log('[CreateTeamDialog] handleSubmit called:');
+    console.log('  - mode:', mode);
+    console.log('  - teamId:', teamId);
+    console.log('  - existingTeam:', existingTeam);
+    console.log('  - formData.memberIds:', formData.memberIds);
+
     if (isSubmitting) return;
 
     if (!user) {
@@ -188,11 +195,77 @@ export function CreateTeamDialog({
         // Add to unified dataStore for immediate UI update
         addTeam(newTeam);
         showSuccess(`El equipo "${formData.name}" se ha creado exitosamente.`);
+
+        // Send notifications to all members (except the creator)
+        // This notification is ALWAYS sent (not configurable)
+        teamNotificationService.notifyMembersAddedToTeam(
+          newTeam.id,
+          formData.memberIds,
+          user.id
+        ).catch((err) => console.error('[CreateTeamDialog] Notification error:', err));
+
         onTeamCreated?.();
-      } else if (mode === 'edit' && teamId) {
+      } else if (mode === 'edit' && teamId && existingTeam) {
         await teamService.updateTeam(teamId, formData);
         updateTeamInStore(teamId, formData);
         showSuccess(`El equipo "${formData.name}" se ha actualizado exitosamente.`);
+
+        // Detect newly added members
+        const previousMemberIds = existingTeam.memberIds;
+        let newMemberIds = formData.memberIds.filter(
+          (id) => !previousMemberIds.includes(id)
+        );
+
+        // Detectar cambio de público → privado
+        // Si el equipo era público y ahora es privado, notificar a todos los miembros
+        const wasPublic = existingTeam.isPublic;
+        const isNowPrivate = !formData.isPublic;
+        const switchedToPrivate = wasPublic && isNowPrivate;
+
+        // DEBUG: Log para verificar detección de nuevos miembros
+        console.log('[CreateTeamDialog] Edit mode - Checking for new members:');
+        console.log('  - Previous members:', previousMemberIds);
+        console.log('  - Current form members:', formData.memberIds);
+        console.log('  - Detected new members:', newMemberIds);
+        console.log('  - Was public:', wasPublic, '→ Is now private:', isNowPrivate);
+        console.log('  - Switched to private:', switchedToPrivate);
+        console.log('  - Current user (actor):', user.id);
+
+        // Si cambió de público a privado, notificar a TODOS los miembros (excepto el actor)
+        if (switchedToPrivate && newMemberIds.length === 0) {
+          console.log('[CreateTeamDialog] Team switched from public to private - notifying all members');
+          newMemberIds = formData.memberIds.filter((id) => id !== user.id);
+        }
+
+        if (newMemberIds.length > 0) {
+          console.log('[CreateTeamDialog] Sending notifications to new members...');
+
+          // Notify newly added members (ALWAYS sent)
+          teamNotificationService.notifyMembersAddedToTeam(
+            teamId,
+            newMemberIds,
+            user.id
+          ).then((result) => {
+            console.log('[CreateTeamDialog] Notification result:', result);
+          }).catch((err) => console.error('[CreateTeamDialog] Notification error:', err));
+
+          // Notify existing members about new additions (configurable)
+          for (const newMemberId of newMemberIds) {
+            const newMember = users.find((u) => u.id === newMemberId);
+            if (newMember) {
+              teamNotificationService.notifyTeamOfNewMember(
+                teamId,
+                previousMemberIds,
+                newMember.fullName || 'Nuevo miembro',
+                newMemberId,
+                user.id
+              ).catch((err) => console.error('[CreateTeamDialog] Notification error:', err));
+            }
+          }
+        } else {
+          console.log('[CreateTeamDialog] No new members detected, skipping notifications');
+        }
+
         onTeamUpdated?.();
       }
 
@@ -211,7 +284,9 @@ export function CreateTeamDialog({
     validate,
     mode,
     teamId,
+    existingTeam,
     formData,
+    users,
     addTeam,
     updateTeamInStore,
     showSuccess,

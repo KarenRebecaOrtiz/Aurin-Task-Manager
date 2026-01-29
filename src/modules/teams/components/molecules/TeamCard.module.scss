@@ -244,14 +244,35 @@
   align-items: center;
 }
 
+// Account info section (client display)
+.accountInfo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.accountName {
+  font-size: 14px;
+  font-weight: 500;
+  color: $color-text-primary;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  :global(.dark) & {
+    color: #fafafa;
+  }
+}
+
 .contributorAvatar {
   width: 28px;
   height: 28px;
   border-radius: 50% !important;
   border: 2px solid white;
-  margin-right: -8px;
+  margin-right: 0;
   transition: transform 0.2s ease;
   overflow: hidden;
+  flex-shrink: 0;
 
   &:hover {
     transform: translateY(-2px);

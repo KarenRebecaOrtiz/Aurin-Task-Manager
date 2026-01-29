@@ -26,6 +26,7 @@ import { useVirtuosoMessages } from "../hooks/useVirtuosoMessages";
 import { useMessageActions } from "@/hooks/useMessageActions";
 import { ManualTimeDialog } from "@/modules/dialogs";
 import { toast } from "@/components/ui/use-toast";
+import { teamNotificationService } from "@/modules/teams/services";
 import type { ChatSidebarProps } from "../types";
 
 /**
@@ -129,6 +130,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(({
   }, []);
 
   // Hook con virtuoso (infinite scroll + ordenamiento correcto)
+  // IMPORTANTE: Pasar collectionType para diferenciar tareas de equipos
   const {
     messages,
     groupCounts,
@@ -142,12 +144,14 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(({
     pageSize: 50,
     decryptMessage,
     onNewMessage: handleNewMessage,
+    collectionType: isTeamChat ? 'teams' : 'tasks',
   });
 
   // Hook de acciones de mensajes - pass null-safe task
   // Create a stable empty task object to prevent null errors during unmount animations
   const safeTask = useMemo(() => task || { id: '', name: '', description: '' }, [task]);
 
+  // IMPORTANTE: Pasar collectionType para diferenciar tareas de equipos
   const {
     sendMessage,
     editMessage,
@@ -159,6 +163,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(({
     encryptMessage,
     addOptimisticMessage: () => {},
     updateOptimisticMessage: () => {},
+    collectionType: isTeamChat ? 'teams' : 'tasks',
   });
 
   // Estados de reply/edit locales
@@ -172,6 +177,28 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(({
     setEditingMessageId(null);
     onClose();
   }, [onClose]);
+
+  // Handler para enviar mensaje con notificaciones
+  const handleSendMessage = useCallback(
+    async (messageData: any) => {
+      await sendMessage(messageData);
+
+      // Enviar notificaciones por email a miembros del equipo (respeta preferencias)
+      if (isTeamChat && teamSidebar.team && userId) {
+        const textPreview = messageData.text
+          ? messageData.text.substring(0, 100) + (messageData.text.length > 100 ? '...' : '')
+          : undefined;
+
+        teamNotificationService.notifyTeamOfNewMessage(
+          teamSidebar.team.id,
+          teamSidebar.team.memberIds,
+          userId,
+          textPreview
+        ).catch((err) => console.error('[ChatSidebar] Team message notification error:', err));
+      }
+    },
+    [sendMessage, isTeamChat, teamSidebar.team, userId]
+  );
 
   // No renderizar si no hay tarea
   if (!task) {
@@ -276,7 +303,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(({
             userId={userId}
             userName={userName}
             userFirstName={userFirstName}
-            onSendMessage={sendMessage}
+            onSendMessage={handleSendMessage}
             onEditMessage={editMessage}
             replyingTo={replyingTo}
             onCancelReply={() => setReplyingTo(null)}

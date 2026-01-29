@@ -16,6 +16,7 @@ import { InputChat } from "./organisms/InputChat";
 import { MessageItem } from "./molecules/MessageItem";
 import { ManualTimeDialog } from "@/modules/dialogs";
 import { toast } from "@/components/ui/use-toast";
+import { teamNotificationService } from "@/modules/teams/services";
 import type { ChatSidebarProps } from "../types";
 import { useUserDataStore } from "@/stores/userDataStore";
 import { useSidebarStateStore } from "@/stores/sidebarStateStore";
@@ -148,6 +149,7 @@ const MobileChatDrawer: React.FC<ChatSidebarProps> = memo(({
     // Callback para nuevos mensajes en tiempo real
   }, []);
 
+  // IMPORTANTE: Pasar collectionType para diferenciar tareas de equipos
   const {
     messages,
     groupCounts,
@@ -161,8 +163,10 @@ const MobileChatDrawer: React.FC<ChatSidebarProps> = memo(({
     pageSize: 50,
     decryptMessage,
     onNewMessage: handleNewMessage,
+    collectionType: isTeamChat ? 'teams' : 'tasks',
   });
 
+  // IMPORTANTE: Pasar collectionType para diferenciar tareas de equipos
   const {
     sendMessage,
     editMessage,
@@ -174,6 +178,7 @@ const MobileChatDrawer: React.FC<ChatSidebarProps> = memo(({
     encryptMessage,
     addOptimisticMessage: () => {},
     updateOptimisticMessage: () => {},
+    collectionType: isTeamChat ? 'teams' : 'tasks',
   });
 
   // Estados de reply/edit locales
@@ -184,6 +189,28 @@ const MobileChatDrawer: React.FC<ChatSidebarProps> = memo(({
   const handleClose = useCallback(() => {
     onClose();
   }, [onClose]);
+
+  // Handler para enviar mensaje con notificaciones
+  const handleSendMessage = useCallback(
+    async (messageData: any) => {
+      await sendMessage(messageData);
+
+      // Enviar notificaciones por email a miembros del equipo (respeta preferencias)
+      if (isTeamChat && teamSidebar.team && userId) {
+        const textPreview = messageData.text
+          ? messageData.text.substring(0, 100) + (messageData.text.length > 100 ? '...' : '')
+          : undefined;
+
+        teamNotificationService.notifyTeamOfNewMessage(
+          teamSidebar.team.id,
+          teamSidebar.team.memberIds,
+          userId,
+          textPreview
+        ).catch((err) => console.error('[ResponsiveChatSidebar] Team message notification error:', err));
+      }
+    },
+    [sendMessage, isTeamChat, teamSidebar.team, userId]
+  );
 
   if (!task) {
     return null;
@@ -271,7 +298,7 @@ const MobileChatDrawer: React.FC<ChatSidebarProps> = memo(({
               userId={userId}
               userName={userName}
               userFirstName={userFirstName}
-              onSendMessage={sendMessage}
+              onSendMessage={handleSendMessage}
               onEditMessage={editMessage}
               replyingTo={replyingTo}
               onCancelReply={() => setReplyingTo(null)}

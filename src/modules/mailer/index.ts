@@ -26,7 +26,13 @@
 
 import 'server-only';
 
-import { NotificationService, type NotificationData, type NotificationType } from './services/notification.service';
+import {
+  NotificationService,
+  type NotificationData,
+  type NotificationType,
+  type TaskNotificationData,
+  type TeamNotificationData,
+} from './services/notification.service';
 import { isMailConfigured, validateMailConfig } from './config';
 import { verifyTransporter } from './transporter';
 
@@ -174,11 +180,86 @@ export const mailer = {
     });
   },
 
+  // =========================================================================
+  // TEAM NOTIFICATIONS
+  // =========================================================================
+
+  /**
+   * Send notification when someone is added to a team (ALWAYS SENT)
+   * This notification is NOT configurable - users always receive it
+   */
+  notifyTeamMemberAddedYou: async (params: {
+    recipientIds: string[];
+    teamId: string;
+    actorId: string;
+  }) => {
+    return NotificationService.sendTeamNotification({
+      ...params,
+      type: 'team_member_added_you',
+    });
+  },
+
+  /**
+   * Send notification when someone else is added to a team (CONFIGURABLE)
+   * Users can disable this via team notification preferences
+   */
+  notifyTeamMemberAdded: async (params: {
+    recipientIds: string[];
+    teamId: string;
+    actorId: string;
+    newMemberName: string;
+    newMemberId: string;
+  }) => {
+    return NotificationService.sendTeamNotification({
+      recipientIds: params.recipientIds,
+      teamId: params.teamId,
+      actorId: params.actorId,
+      type: 'team_member_added',
+      newMemberName: params.newMemberName,
+      newMemberId: params.newMemberId,
+    });
+  },
+
+  /**
+   * Send notification for new message in team (CONFIGURABLE)
+   * Users can disable this via team notification preferences
+   */
+  notifyTeamNewMessage: async (params: {
+    recipientIds: string[];
+    teamId: string;
+    actorId: string;
+    messageSummary?: string;
+  }) => {
+    return NotificationService.sendTeamNotification({
+      recipientIds: params.recipientIds,
+      teamId: params.teamId,
+      actorId: params.actorId,
+      type: 'team_new_message',
+      messageSummary: params.messageSummary,
+    });
+  },
+
+  /**
+   * Generic method for team notifications
+   * (Advanced usage - prefer specific methods above)
+   */
+  notifyTeam: async (data: TeamNotificationData) => {
+    return NotificationService.sendTeamNotification(data);
+  },
+
   /**
    * Generic method for custom notification types
    * (Advanced usage - prefer specific methods above)
+   * @deprecated Use notifyTask or notifyTeam instead
    */
   notify: async (data: NotificationData) => {
+    return NotificationService.sendTaskNotification(data);
+  },
+
+  /**
+   * Generic method for task notifications
+   */
+  notifyTask: async (data: TaskNotificationData) => {
     return NotificationService.sendTaskNotification(data);
   },
 
@@ -205,7 +286,12 @@ export const mailer = {
 };
 
 // --- Re-export types for convenience ---
-export type { NotificationData, NotificationType } from './services/notification.service';
+export type {
+  NotificationData,
+  NotificationType,
+  TaskNotificationData,
+  TeamNotificationData,
+} from './services/notification.service';
 
 // --- Default Export ---
 export default mailer;

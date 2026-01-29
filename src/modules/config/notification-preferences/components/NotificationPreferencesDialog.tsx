@@ -5,7 +5,7 @@
 
 'use client';
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, CheckCircle2, XCircle } from 'lucide-react';
 import {
@@ -20,8 +20,10 @@ import {
 import { useMediaQuery } from '@/modules/dialogs/hooks/useMediaQuery';
 import { useNotificationPreferences } from '../hooks';
 import {
-  NOTIFICATION_PREFERENCES_CONFIG,
-  PREFERENCE_CATEGORIES,
+  TASK_NOTIFICATION_PREFERENCES_CONFIG,
+  TEAM_NOTIFICATION_PREFERENCES_CONFIG,
+  TASK_PREFERENCE_CATEGORIES,
+  TEAM_PREFERENCE_CATEGORIES,
 } from '../types';
 import styles from './NotificationPreferencesDialog.module.scss';
 
@@ -104,17 +106,33 @@ export function NotificationPreferencesDialog() {
     close();
   }, [resetToOriginal, close]);
 
+  // Select config based on entity type
+  const preferencesConfig = useMemo(() => {
+    return entityType === 'team'
+      ? TEAM_NOTIFICATION_PREFERENCES_CONFIG
+      : TASK_NOTIFICATION_PREFERENCES_CONFIG;
+  }, [entityType]);
+
+  const categoriesConfig = useMemo(() => {
+    return entityType === 'team'
+      ? TEAM_PREFERENCE_CATEGORIES
+      : TASK_PREFERENCE_CATEGORIES;
+  }, [entityType]);
+
   // Agrupar preferencias por categoría
-  const preferencesByCategory = NOTIFICATION_PREFERENCES_CONFIG.reduce(
-    (acc, config) => {
-      if (!acc[config.category]) {
-        acc[config.category] = [];
-      }
-      acc[config.category].push(config);
-      return acc;
-    },
-    {} as Record<string, typeof NOTIFICATION_PREFERENCES_CONFIG>
-  );
+  type PreferenceConfig = { key: string; label: string; description: string; category: string };
+  const preferencesByCategory = useMemo(() => {
+    return (preferencesConfig as PreferenceConfig[]).reduce(
+      (acc, config) => {
+        if (!acc[config.category]) {
+          acc[config.category] = [];
+        }
+        acc[config.category].push(config);
+        return acc;
+      },
+      {} as Record<string, PreferenceConfig[]>
+    );
+  }, [preferencesConfig]);
 
   // Título según tipo de entidad
   const dialogTitle = entityType === 'team'
@@ -164,10 +182,10 @@ export function NotificationPreferencesDialog() {
           <div key={category} className={styles.category}>
             <div className={styles.categoryHeader}>
               <h3 className={styles.categoryTitle}>
-                {PREFERENCE_CATEGORIES[category as keyof typeof PREFERENCE_CATEGORIES].title}
+                {(categoriesConfig as Record<string, { title: string; description: string }>)[category]?.title || category}
               </h3>
               <p className={styles.categoryDescription}>
-                {PREFERENCE_CATEGORIES[category as keyof typeof PREFERENCE_CATEGORIES].description}
+                {(categoriesConfig as Record<string, { title: string; description: string }>)[category]?.description || ''}
               </p>
             </div>
             <div className={styles.switchList}>
@@ -176,7 +194,7 @@ export function NotificationPreferencesDialog() {
                   key={config.key}
                   label={config.label}
                   description={config.description}
-                  checked={preferences[config.key]}
+                  checked={(preferences as unknown as Record<string, boolean>)[config.key] ?? true}
                   onChange={(value) => updatePreference(config.key, value)}
                   disabled={isSaving}
                 />

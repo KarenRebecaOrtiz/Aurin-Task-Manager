@@ -186,15 +186,17 @@ export class FirebaseService {
    * 2. Si es paginación (con lastDoc) → Siempre fetch (mensajes viejos)
    * 3. Cache se invalida automáticamente en mutaciones
    *
-   * @param taskId - ID de la tarea
+   * @param taskId - ID de la tarea o equipo
    * @param pageSize - Número de mensajes a cargar (default: 10)
    * @param lastDoc - Último documento para paginación
+   * @param collectionType - Tipo de colección: 'tasks' o 'teams' (default: 'tasks')
    * @returns Mensajes y último documento
    */
   async loadMessages(
     taskId: string,
     pageSize = 10,
-    lastDoc?: DocumentSnapshot
+    lastDoc?: DocumentSnapshot,
+    collectionType: 'tasks' | 'teams' = 'tasks'
   ): Promise<{ messages: any[]; lastDoc: DocumentSnapshot | null }> {
     // ✅ Cache solo para carga inicial (sin paginación)
     if (!lastDoc) {
@@ -211,9 +213,10 @@ export class FirebaseService {
       // ...
     }
 
-    // Fetch desde Firestore
+    // Fetch desde Firestore (usa collectionType para determinar la ruta)
+    const messagesPath = `${collectionType}/${taskId}/messages`;
     let q = query(
-      collection(db, `tasks/${taskId}/messages`),
+      collection(db, messagesPath),
       orderBy("timestamp", "desc"),
       limit(pageSize)
     );

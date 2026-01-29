@@ -4,19 +4,31 @@
  */
 
 import { create } from 'zustand';
-import type { EntityNotificationPreferences, NotificationEntityType } from '../types';
-import { DEFAULT_NOTIFICATION_PREFERENCES } from '../types';
+import type {
+  NotificationEntityType,
+  TaskNotificationPreferences,
+  TeamNotificationPreferences,
+} from '../types';
+import {
+  DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+  DEFAULT_TEAM_NOTIFICATION_PREFERENCES,
+} from '../types';
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
+/**
+ * Union type for all notification preferences
+ */
+type AnyNotificationPreferences = TaskNotificationPreferences | TeamNotificationPreferences;
+
 interface NotificationPreferencesState {
   isOpen: boolean;
   entityType: NotificationEntityType | null;
   entityId: string | null;
-  preferences: EntityNotificationPreferences;
-  originalPreferences: EntityNotificationPreferences;
+  preferences: AnyNotificationPreferences;
+  originalPreferences: AnyNotificationPreferences;
   hasChanges: boolean;
   isSaving: boolean;
   isLoading: boolean;
@@ -26,9 +38,9 @@ interface NotificationPreferencesState {
 interface NotificationPreferencesActions {
   open: (entityType: NotificationEntityType, entityId: string) => void;
   close: () => void;
-  setPreferences: (prefs: EntityNotificationPreferences) => void;
-  setOriginalPreferences: (prefs: EntityNotificationPreferences) => void;
-  updatePreference: (key: keyof EntityNotificationPreferences, value: boolean) => void;
+  setPreferences: (prefs: AnyNotificationPreferences) => void;
+  setOriginalPreferences: (prefs: AnyNotificationPreferences) => void;
+  updatePreference: (key: string, value: boolean) => void;
   enableAll: () => void;
   disableAll: () => void;
   resetToOriginal: () => void;
@@ -44,16 +56,31 @@ type NotificationPreferencesStore = NotificationPreferencesState & NotificationP
 // HELPERS
 // ============================================================================
 
+/**
+ * Get default preferences based on entity type
+ */
+const getDefaultPreferences = (entityType: NotificationEntityType | null): AnyNotificationPreferences => {
+  if (entityType === 'team') {
+    return { ...DEFAULT_TEAM_NOTIFICATION_PREFERENCES };
+  }
+  return { ...DEFAULT_TASK_NOTIFICATION_PREFERENCES };
+};
+
 const calculateHasChanges = (
-  current: EntityNotificationPreferences,
-  original: EntityNotificationPreferences
+  current: AnyNotificationPreferences,
+  original: AnyNotificationPreferences
 ): boolean => {
-  return Object.keys(current).some(
-    (key) => current[key as keyof EntityNotificationPreferences] !== original[key as keyof EntityNotificationPreferences]
+  const currentRecord = current as unknown as Record<string, boolean>;
+  const originalRecord = original as unknown as Record<string, boolean>;
+  return Object.keys(currentRecord).some(
+    (key) => currentRecord[key] !== originalRecord[key]
   );
 };
 
-const createAllPreferences = (value: boolean): EntityNotificationPreferences => ({
+/**
+ * Create all task preferences with a value
+ */
+const createAllTaskPreferences = (value: boolean): TaskNotificationPreferences => ({
   updated: value,
   statusChanged: value,
   priorityChanged: value,
@@ -62,6 +89,14 @@ const createAllPreferences = (value: boolean): EntityNotificationPreferences => 
   archived: value,
   unarchived: value,
   deleted: value,
+});
+
+/**
+ * Create all team preferences with a value
+ */
+const createAllTeamPreferences = (value: boolean): TeamNotificationPreferences => ({
+  newMessage: value,
+  memberAdded: value,
 });
 
 // ============================================================================
@@ -73,32 +108,35 @@ export const useNotificationPreferencesStore = create<NotificationPreferencesSto
   isOpen: false,
   entityType: null,
   entityId: null,
-  preferences: { ...DEFAULT_NOTIFICATION_PREFERENCES },
-  originalPreferences: { ...DEFAULT_NOTIFICATION_PREFERENCES },
+  preferences: { ...DEFAULT_TASK_NOTIFICATION_PREFERENCES },
+  originalPreferences: { ...DEFAULT_TASK_NOTIFICATION_PREFERENCES },
   hasChanges: false,
   isSaving: false,
   isLoading: false,
   error: null,
 
   // Actions
-  open: (entityType, entityId) => set({
-    isOpen: true,
-    entityType,
-    entityId,
-    error: null,
-    // Reset to defaults until loaded from Firestore
-    preferences: { ...DEFAULT_NOTIFICATION_PREFERENCES },
-    originalPreferences: { ...DEFAULT_NOTIFICATION_PREFERENCES },
-    hasChanges: false,
-  }),
+  open: (entityType, entityId) => {
+    const defaults = getDefaultPreferences(entityType);
+    set({
+      isOpen: true,
+      entityType,
+      entityId,
+      error: null,
+      // Reset to defaults for this entity type until loaded from Firestore
+      preferences: defaults,
+      originalPreferences: defaults,
+      hasChanges: false,
+    });
+  },
 
   close: () => {
     set({
       isOpen: false,
       entityType: null,
       entityId: null,
-      preferences: { ...DEFAULT_NOTIFICATION_PREFERENCES },
-      originalPreferences: { ...DEFAULT_NOTIFICATION_PREFERENCES },
+      preferences: { ...DEFAULT_TASK_NOTIFICATION_PREFERENCES },
+      originalPreferences: { ...DEFAULT_TASK_NOTIFICATION_PREFERENCES },
       hasChanges: false,
       error: null,
     });
@@ -121,7 +159,7 @@ export const useNotificationPreferencesStore = create<NotificationPreferencesSto
 
   updatePreference: (key, value) => {
     const { preferences, originalPreferences } = get();
-    const newPreferences = { ...preferences, [key]: value };
+    const newPreferences = { ...preferences, [key]: value } as AnyNotificationPreferences;
     set({
       preferences: newPreferences,
       hasChanges: calculateHasChanges(newPreferences, originalPreferences),
@@ -129,8 +167,10 @@ export const useNotificationPreferencesStore = create<NotificationPreferencesSto
   },
 
   enableAll: () => {
-    const { originalPreferences } = get();
-    const allEnabled = createAllPreferences(true);
+    const { entityType, originalPreferences } = get();
+    const allEnabled = entityType === 'team'
+      ? createAllTeamPreferences(true)
+      : createAllTaskPreferences(true);
     set({
       preferences: allEnabled,
       hasChanges: calculateHasChanges(allEnabled, originalPreferences),
@@ -138,8 +178,10 @@ export const useNotificationPreferencesStore = create<NotificationPreferencesSto
   },
 
   disableAll: () => {
-    const { originalPreferences } = get();
-    const allDisabled = createAllPreferences(false);
+    const { entityType, originalPreferences } = get();
+    const allDisabled = entityType === 'team'
+      ? createAllTeamPreferences(false)
+      : createAllTaskPreferences(false);
     set({
       preferences: allDisabled,
       hasChanges: calculateHasChanges(allDisabled, originalPreferences),

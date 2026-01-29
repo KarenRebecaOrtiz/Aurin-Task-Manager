@@ -133,7 +133,6 @@ export async function createTimer(userId: string, taskId: string): Promise<strin
 
   await setDoc(timerRef, timerData);
 
-  console.log(`[TimerFirebase] Created timer: tasks/${taskId}/timers/${userId}`);
   return userId;
 }
 
@@ -195,8 +194,6 @@ export async function updateTimer(
     ...data,
     updatedAt: serverTimestamp(),
   });
-
-  console.log(`[TimerFirebase] Updated timer: tasks/${taskId}/timers/${userId}`);
 }
 
 /**
@@ -218,8 +215,6 @@ export async function deleteTimer(taskId: string, userId: string): Promise<void>
 
   // Also invalidate cache
   timerCache.invalidate(userId);
-
-  console.log(`[TimerFirebase] Deleted timer: tasks/${taskId}/timers/${userId}`);
 }
 
 // ============================================================================
@@ -247,8 +242,6 @@ export async function startTimerInFirestore(taskId: string, userId: string): Pro
     lastSync: serverTimestamp() as Timestamp,
     deviceId: generateDeviceId(),
   });
-
-  console.log(`[TimerFirebase] Started timer: tasks/${taskId}/timers/${userId}`);
 }
 
 /**
@@ -286,8 +279,6 @@ export async function pauseTimerInFirestore(
     [FIRESTORE_FIELDS.UPDATED_AT]: serverTimestamp(),
     [FIRESTORE_FIELDS.DEVICE_ID]: generateDeviceId(),
   });
-
-  console.log(`[TimerFirebase] Paused timer: tasks/${taskId}/timers/${userId}, duration: ${interval.duration}s`);
 }
 
 /**
@@ -336,8 +327,6 @@ export async function stopTimerInFirestore(
 
   // Update task aggregates
   await updateTaskAggregates(taskId, userId, finalSeconds);
-
-  console.log(`[TimerFirebase] Stopped timer: tasks/${taskId}/timers/${userId}, total: ${finalSeconds}s`);
 }
 
 // ============================================================================
@@ -641,7 +630,6 @@ export function listenToTimer(
       callback(timerDoc);
     },
     (error) => {
-      console.error('[TimerFirebase] Error listening to timer:', error);
       callback(null);
     }
   );
@@ -686,7 +674,6 @@ export function listenToTaskTimers(
       callback(timers);
     },
     (error) => {
-      console.error('[TimerFirebase] Error listening to task timers:', error);
       callback([]);
     }
   );
@@ -815,9 +802,6 @@ export async function getUserActiveTimers(
     return [];
   }
 
-  console.log(`[TimerFirebase] Fetching active timers for user ${userId} across ${userTaskIds.length} tasks`);
-  console.log(`[TimerFirebase] Task IDs:`, userTaskIds);
-
   // Fetch timers in parallel for all user tasks
   // Use getDocFromServer to bypass cache and get fresh data (important for PWA)
   const timerPromises = userTaskIds.map(async (taskId) => {
@@ -829,19 +813,14 @@ export async function getUserActiveTimers(
       let timerSnap;
       let source = 'server';
       try {
-        console.log(`[TimerFirebase] Fetching from server: ${path}`);
         timerSnap = await getDocFromServer(timerRef);
-        console.log(`[TimerFirebase] Server response for ${taskId}: exists=${timerSnap.exists()}`);
       } catch (serverError) {
         // If server fetch fails (e.g., offline), try cache
         source = 'cache';
-        console.warn(`[TimerFirebase] Server fetch failed for ${path}, trying cache:`, serverError);
         timerSnap = await getDoc(timerRef);
-        console.log(`[TimerFirebase] Cache response for ${taskId}: exists=${timerSnap.exists()}`);
       }
 
       if (!timerSnap.exists()) {
-        console.log(`[TimerFirebase] No timer document at ${path}`);
         return null;
       }
 
@@ -851,17 +830,12 @@ export async function getUserActiveTimers(
         ...data,
       };
 
-      console.log(`[TimerFirebase] Timer found at ${path}: status=${timer.status}, source=${source}`);
-
       // Only return if timer exists and is active (RUNNING or PAUSED)
       if (timer.status === TimerStatus.RUNNING || timer.status === TimerStatus.PAUSED) {
-        console.log(`[TimerFirebase] Active timer found for task ${taskId}`);
         return timer;
       }
-      console.log(`[TimerFirebase] Timer for task ${taskId} is not active (status: ${timer.status})`);
       return null;
     } catch (error) {
-      console.error(`[TimerFirebase] Error fetching timer for task ${taskId}:`, error);
       return null;
     }
   });
@@ -869,7 +843,6 @@ export async function getUserActiveTimers(
   const results = await Promise.all(timerPromises);
   const activeTimers = results.filter((timer): timer is TimerDocument => timer !== null);
 
-  console.log(`[TimerFirebase] Found ${activeTimers.length} active timers out of ${userTaskIds.length} tasks checked`);
   return activeTimers;
 }
 
@@ -906,7 +879,6 @@ export function listenToUserTimers(
 
   // Return a function that unsubscribes from all listeners
   return () => {
-    console.log(`[TimerFirebase] Cleaning up ${unsubscribers.length} timer listeners`);
     unsubscribers.forEach((unsub) => unsub());
   };
 }

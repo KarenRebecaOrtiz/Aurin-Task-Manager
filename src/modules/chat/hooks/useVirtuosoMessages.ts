@@ -35,6 +35,8 @@ interface UseVirtuosoMessagesProps {
     salt: string;
   }) => Promise<string>;
   onNewMessage?: () => void;
+  /** Tipo de colección: 'tasks' para tareas, 'teams' para equipos. Default: 'tasks' */
+  collectionType?: 'tasks' | 'teams';
 }
 
 export const useVirtuosoMessages = ({
@@ -42,7 +44,11 @@ export const useVirtuosoMessages = ({
   pageSize = 50,
   decryptMessage,
   onNewMessage,
+  collectionType = 'tasks',
 }: UseVirtuosoMessagesProps) => {
+  // IMPORTANTE: No usar función getMessagesPath() para evitar stale closures
+  // Calcular el path directamente donde se necesite usando collectionType
+
   // ============================================================================
   // STATE
   // ============================================================================
@@ -166,7 +172,7 @@ export const useVirtuosoMessages = ({
 
     try {
       const { messages: initialMessages, lastDoc: initialLastDoc } =
-        await firebaseService.loadMessages(taskId, pageSize);
+        await firebaseService.loadMessages(taskId, pageSize, undefined, collectionType);
 
       const processed = await Promise.all(
         initialMessages.map((msg) => processMessage(msg))
@@ -187,7 +193,7 @@ export const useVirtuosoMessages = ({
       setIsLoadingMore(false);
       setIsInitialLoad(false);
     }
-  }, [taskId, pageSize, processMessage, sortMessagesAsc, isInitialLoad]);
+  }, [taskId, pageSize, processMessage, sortMessagesAsc, isInitialLoad, collectionType]);
 
   /**
    * Carga más mensajes (paginación hacia atrás)
@@ -205,7 +211,7 @@ export const useVirtuosoMessages = ({
 
     try {
       const { messages: olderMessages, lastDoc: newLastDoc } =
-        await firebaseService.loadMessages(taskId, pageSize, lastDoc || undefined);
+        await firebaseService.loadMessages(taskId, pageSize, lastDoc || undefined, collectionType);
 
       if (olderMessages.length === 0) {
         setHasMore(false);
@@ -241,7 +247,7 @@ export const useVirtuosoMessages = ({
       isLoadingRef.current = false;
       setIsLoadingMore(false);
     }
-  }, [hasMore, lastDoc, taskId, pageSize, processMessage, sortMessagesAsc]);
+  }, [hasMore, lastDoc, taskId, pageSize, processMessage, sortMessagesAsc, collectionType]);
 
   // ============================================================================
   // REAL-TIME LISTENER
@@ -260,7 +266,10 @@ export const useVirtuosoMessages = ({
       unsubscribeRef.current();
     }
 
-    const messagesRef = collection(db, `tasks/${taskId}/messages`);
+    // IMPORTANTE: Calcular path directamente aquí, NO usar función externa
+    const path = `${collectionType}/${taskId}/messages`;
+
+    const messagesRef = collection(db, path);
     const q = query(messagesRef, orderBy('timestamp', 'desc'));
 
     const unsubscribe = onSnapshot(
@@ -319,7 +328,7 @@ export const useVirtuosoMessages = ({
         unsubscribeRef.current();
       }
     };
-  }, [taskId, processMessage, onNewMessage, isInitialLoad]);
+  }, [taskId, processMessage, onNewMessage, isInitialLoad, collectionType]);
 
   // ============================================================================
   // CLEANUP ON TASK CHANGE

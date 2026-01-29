@@ -21,6 +21,7 @@ import { useMessageActions } from '@/hooks/useMessageActions';
 import { useEncryption } from '@/hooks/useEncryption';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { getGradientStyle } from '../../config';
+import { teamNotificationService } from '../../services';
 import { Users, Globe, Lock, X } from 'lucide-react';
 import type { Message, ChatUser } from '@/modules/chat/types';
 import type { Team } from '../../types';
@@ -66,7 +67,7 @@ export const TeamChatDialog: React.FC<TeamChatDialogProps> = memo(({
     // Could update lastMessageAt on team here
   }, []);
 
-  // Messages hook - use teamId as taskId
+  // Messages hook - use teamId con collectionType 'teams'
   const {
     messages,
     groupCounts,
@@ -76,10 +77,11 @@ export const TeamChatDialog: React.FC<TeamChatDialogProps> = memo(({
     loadMoreMessages,
     initialLoad,
   } = useVirtuosoMessages({
-    taskId: team?.id || '', // Teams use the same message system
+    taskId: team?.id || '',
     pageSize: 50,
     decryptMessage,
     onNewMessage: handleNewMessage,
+    collectionType: 'teams',
   });
 
   // Create a pseudo-task object for useMessageActions compatibility
@@ -100,7 +102,7 @@ export const TeamChatDialog: React.FC<TeamChatDialogProps> = memo(({
     };
   }, [team]);
 
-  // Actions hook
+  // Actions hook - usando collectionType 'teams' para escribir en teams/{id}/messages
   const {
     sendMessage,
     deleteMessage,
@@ -110,6 +112,7 @@ export const TeamChatDialog: React.FC<TeamChatDialogProps> = memo(({
     encryptMessage,
     addOptimisticMessage: () => {},
     updateOptimisticMessage: () => {},
+    collectionType: 'teams',
   });
 
   // Build users map for the chat
@@ -151,9 +154,22 @@ export const TeamChatDialog: React.FC<TeamChatDialogProps> = memo(({
           senderId: userId,
           senderName: userName,
         });
+
+        // Send email notifications to team members (respects user preferences)
+        // Note: This could be optimized with batching for high-volume chats
+        const textPreview = messageData.text
+          ? messageData.text.substring(0, 100) + (messageData.text.length > 100 ? '...' : '')
+          : undefined;
+
+        teamNotificationService.notifyTeamOfNewMessage(
+          team.id,
+          team.memberIds,
+          userId,
+          textPreview
+        ).catch((err) => console.error('[TeamChatDialog] Message notification error:', err));
       }
     },
-    [sendMessage, userId, userName, isLoading]
+    [sendMessage, userId, userName, isLoading, team.id, team.memberIds]
   );
 
   const handleDeleteMessage = useCallback(

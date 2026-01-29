@@ -31,10 +31,21 @@ import {
   getTaskDeletedTemplate,
   type TaskDeletedTemplateData,
 } from '../templates/task-deleted';
+import {
+  getTeamMemberAddedYouTemplate,
+  getTeamMemberAddedOtherTemplate,
+  type TeamMemberAddedYouTemplateData,
+  type TeamMemberAddedOtherTemplateData,
+} from '../templates/team-member-added';
+import {
+  getTeamNewMessageTemplate,
+  type TeamNewMessageTemplateData,
+} from '../templates/team-new-message';
 
 // --- Type Definitions ---
 
 export type NotificationType =
+  // Task notifications
   | 'task_created'
   | 'task_updated'
   | 'task_status_changed'
@@ -43,14 +54,48 @@ export type NotificationType =
   | 'task_assignment_changed'
   | 'task_archived'
   | 'task_unarchived'
-  | 'task_deleted';
+  | 'task_deleted'
+  // Team notifications
+  | 'team_member_added_you'   // Cuando te agregan a un equipo (siempre se envía)
+  | 'team_new_message'        // Nuevo mensaje en equipo (configurable)
+  | 'team_member_added';      // Alguien más fue agregado al equipo (configurable)
 
-export interface NotificationData {
-  recipientIds: string[]; // Array of user IDs to notify
+/**
+ * Data for task notifications
+ */
+export interface TaskNotificationData {
+  recipientIds: string[];
   taskId: string;
-  actorId: string; // User who performed the action
+  actorId: string;
+  type: Extract<NotificationType, `task_${string}`>;
+  oldValue?: string;
+  newValue?: string;
+}
+
+/**
+ * Data for team notifications
+ */
+export interface TeamNotificationData {
+  recipientIds: string[];
+  teamId: string;
+  actorId: string;
+  type: Extract<NotificationType, `team_${string}`>;
+  /** Nombre del nuevo miembro (para team_member_added) */
+  newMemberName?: string;
+  /** ID del nuevo miembro */
+  newMemberId?: string;
+  /** Resumen del mensaje (para team_new_message) */
+  messageSummary?: string;
+}
+
+/**
+ * @deprecated Use TaskNotificationData or TeamNotificationData
+ */
+export interface NotificationData {
+  recipientIds: string[];
+  taskId: string;
+  actorId: string;
   type: NotificationType;
-  // Optional fields for specific notification types
   oldValue?: string;
   newValue?: string;
 }
@@ -63,11 +108,10 @@ interface UserBasicInfo {
 }
 
 /**
- * Per-entity notification preferences structure
+ * Task notification preferences structure
  * Stored in: tasks/{taskId}/notificationPreferences/{userId}
- * Mirrors the type in config/notification-preferences/types
  */
-interface EntityNotificationPreferences {
+interface TaskNotificationPreferences {
   updated: boolean;
   statusChanged: boolean;
   priorityChanged: boolean;
@@ -79,10 +123,18 @@ interface EntityNotificationPreferences {
 }
 
 /**
- * Default preferences: all notifications enabled
- * Used when no preferences document exists for a user in a task
+ * Team notification preferences structure
+ * Stored in: teams/{teamId}/notificationPreferences/{userId}
  */
-const DEFAULT_ENTITY_PREFERENCES: EntityNotificationPreferences = {
+interface TeamNotificationPreferences {
+  newMessage: boolean;
+  memberAdded: boolean;
+}
+
+/**
+ * Default preferences for TASKS: all notifications enabled
+ */
+const DEFAULT_TASK_PREFERENCES: TaskNotificationPreferences = {
   updated: true,
   statusChanged: true,
   priorityChanged: true,
@@ -94,11 +146,18 @@ const DEFAULT_ENTITY_PREFERENCES: EntityNotificationPreferences = {
 };
 
 /**
- * Map NotificationType to the preference key
- * Note: task_created is NOT mapped because preferences are per-task,
- * and the user hasn't set preferences when first assigned to a task
+ * Default preferences for TEAMS: all notifications enabled
  */
-const NOTIFICATION_TYPE_TO_PREF_KEY: Partial<Record<NotificationType, keyof EntityNotificationPreferences>> = {
+const DEFAULT_TEAM_PREFERENCES: TeamNotificationPreferences = {
+  newMessage: true,
+  memberAdded: true,
+};
+
+/**
+ * Map task NotificationType to the preference key
+ * Note: task_created is NOT mapped because user hasn't set preferences yet
+ */
+const TASK_NOTIFICATION_TYPE_TO_PREF_KEY: Partial<Record<NotificationType, keyof TaskNotificationPreferences>> = {
   task_updated: 'updated',
   task_status_changed: 'statusChanged',
   task_priority_changed: 'priorityChanged',
@@ -107,6 +166,15 @@ const NOTIFICATION_TYPE_TO_PREF_KEY: Partial<Record<NotificationType, keyof Enti
   task_archived: 'archived',
   task_unarchived: 'unarchived',
   task_deleted: 'deleted',
+};
+
+/**
+ * Map team NotificationType to the preference key
+ * Note: team_member_added_you is NOT mapped because it always sends
+ */
+const TEAM_NOTIFICATION_TYPE_TO_PREF_KEY: Partial<Record<NotificationType, keyof TeamNotificationPreferences>> = {
+  team_new_message: 'newMessage',
+  team_member_added: 'memberAdded',
 };
 
 // --- Helper Functions ---
@@ -152,7 +220,7 @@ async function getTaskInfo(taskId: string): Promise<any | null> {
 async function getTaskNotificationPreferences(
   taskId: string,
   userId: string
-): Promise<EntityNotificationPreferences> {
+): Promise<TaskNotificationPreferences> {
   try {
     const adminDb = getAdminDb();
     const prefsDoc = await adminDb
@@ -163,20 +231,66 @@ async function getTaskNotificationPreferences(
       .get();
 
     if (prefsDoc.exists) {
-      const data = prefsDoc.data() as Partial<EntityNotificationPreferences>;
-      // Merge with defaults to ensure all keys exist
+      const data = prefsDoc.data() as Partial<TaskNotificationPreferences>;
       return {
-        ...DEFAULT_ENTITY_PREFERENCES,
+        ...DEFAULT_TASK_PREFERENCES,
         ...data,
       };
     }
 
-    // No preferences set - return defaults (all enabled)
-    return DEFAULT_ENTITY_PREFERENCES;
+    return DEFAULT_TASK_PREFERENCES;
   } catch (error) {
-    console.error(`[Mailer] Error fetching notification preferences for user ${userId} in task ${taskId}:`, error);
-    // On error, default to sending (fail open)
-    return DEFAULT_ENTITY_PREFERENCES;
+    console.error(`[Mailer] Error fetching task notification preferences for user ${userId} in task ${taskId}:`, error);
+    return DEFAULT_TASK_PREFERENCES;
+  }
+}
+
+/**
+ * Fetch user's notification preferences for a specific team
+ * Stored in: teams/{teamId}/notificationPreferences/{userId}
+ */
+async function getTeamNotificationPreferences(
+  teamId: string,
+  userId: string
+): Promise<TeamNotificationPreferences> {
+  try {
+    const adminDb = getAdminDb();
+    const prefsDoc = await adminDb
+      .collection('teams')
+      .doc(teamId)
+      .collection('notificationPreferences')
+      .doc(userId)
+      .get();
+
+    if (prefsDoc.exists) {
+      const data = prefsDoc.data() as Partial<TeamNotificationPreferences>;
+      return {
+        ...DEFAULT_TEAM_PREFERENCES,
+        ...data,
+      };
+    }
+
+    return DEFAULT_TEAM_PREFERENCES;
+  } catch (error) {
+    console.error(`[Mailer] Error fetching team notification preferences for user ${userId} in team ${teamId}:`, error);
+    return DEFAULT_TEAM_PREFERENCES;
+  }
+}
+
+/**
+ * Fetch team information from Firestore using Admin SDK
+ */
+async function getTeamInfo(teamId: string): Promise<any | null> {
+  try {
+    const adminDb = getAdminDb();
+    const teamDoc = await adminDb.collection('teams').doc(teamId).get();
+    if (teamDoc.exists) {
+      return teamDoc.data();
+    }
+    return null;
+  } catch (error) {
+    console.error(`[Mailer] Error fetching team ${teamId}:`, error);
+    return null;
   }
 }
 
@@ -189,14 +303,14 @@ function getUserEmail(userInfo: UserBasicInfo | null): string | null {
 }
 
 /**
- * Check if user has enabled notifications for this type in a specific task
+ * Check if user has enabled notifications for this type in a specific TASK
  *
  * @param taskId - The task ID to check preferences for
  * @param userId - The user ID to check preferences for
  * @param notificationType - The type of notification
  * @returns Promise<boolean> - Whether to send the notification
  */
-async function shouldSendNotification(
+async function shouldSendTaskNotification(
   taskId: string,
   userId: string,
   notificationType: NotificationType
@@ -207,7 +321,7 @@ async function shouldSendNotification(
   }
 
   // Get the preference key for this notification type
-  const prefKey = NOTIFICATION_TYPE_TO_PREF_KEY[notificationType];
+  const prefKey = TASK_NOTIFICATION_TYPE_TO_PREF_KEY[notificationType];
 
   // If no mapping exists for this type, default to sending
   if (!prefKey) {
@@ -216,6 +330,39 @@ async function shouldSendNotification(
 
   // Fetch user's preferences for this task
   const prefs = await getTaskNotificationPreferences(taskId, userId);
+
+  // Return the preference value (default true if not found)
+  return prefs[prefKey] ?? true;
+}
+
+/**
+ * Check if user has enabled notifications for this type in a specific TEAM
+ *
+ * @param teamId - The team ID to check preferences for
+ * @param userId - The user ID to check preferences for
+ * @param notificationType - The type of notification
+ * @returns Promise<boolean> - Whether to send the notification
+ */
+async function shouldSendTeamNotification(
+  teamId: string,
+  userId: string,
+  notificationType: NotificationType
+): Promise<boolean> {
+  // team_member_added_you always sends - you need to know you were added!
+  if (notificationType === 'team_member_added_you') {
+    return true;
+  }
+
+  // Get the preference key for this notification type
+  const prefKey = TEAM_NOTIFICATION_TYPE_TO_PREF_KEY[notificationType];
+
+  // If no mapping exists for this type, default to sending
+  if (!prefKey) {
+    return true;
+  }
+
+  // Fetch user's preferences for this team
+  const prefs = await getTeamNotificationPreferences(teamId, userId);
 
   // Return the preference value (default true if not found)
   return prefs[prefKey] ?? true;
@@ -234,6 +381,13 @@ function getUserDisplayName(userInfo: UserBasicInfo | null): string {
  */
 function getTaskUrl(taskId: string): string {
   return `${appConfig.dashboardUrl}/tasks/${taskId}`;
+}
+
+/**
+ * Get team URL
+ */
+function getTeamUrl(teamId: string): string {
+  return `${appConfig.dashboardUrl}/teams/${teamId}`;
 }
 
 /**
@@ -329,7 +483,7 @@ public static async sendTaskNotification(
           }
 
           // Check user's notification preferences for this task
-          const shouldSend = await shouldSendNotification(data.taskId, recipientId, data.type);
+          const shouldSend = await shouldSendTaskNotification(data.taskId, recipientId, data.type);
           if (!shouldSend) {
             console.log(`[Mailer] User ${recipientId} has disabled ${data.type} notifications for task ${data.taskId}. Skipping.`);
             return { success: true, skipped: true, reason: 'preference_disabled' };
@@ -381,7 +535,109 @@ public static async sendTaskNotification(
   }
 
   /**
-   * Generate email template and send
+   * Send team-related notification emails
+   *
+   * This handles all team notifications including:
+   * - team_member_added_you: When you're added to a team (always sent)
+   * - team_member_added: When someone else is added to your team (configurable)
+   * - team_new_message: New message in team (configurable)
+   *
+   * @param data - Team notification data including recipients, team, and type
+   * @returns Promise with success status
+   */
+  public static async sendTeamNotification(
+    data: TeamNotificationData
+  ): Promise<{ success: boolean; sent: number; failed: number }> {
+    // Check if email is configured
+    if (!isMailConfigured()) {
+      console.warn('[Mailer] Email service not configured. Skipping team notification.');
+      return { success: false, sent: 0, failed: 0 };
+    }
+
+    // Validate input
+    if (!data.recipientIds || data.recipientIds.length === 0) {
+      console.warn('[Mailer] No recipients specified. Skipping team notification.');
+      return { success: true, sent: 0, failed: 0 };
+    }
+
+    try {
+      // Fetch required data
+      const [actorInfo, teamInfo] = await Promise.all([
+        getUserInfo(data.actorId),
+        getTeamInfo(data.teamId),
+      ]);
+
+      if (!teamInfo) {
+        console.error('[Mailer] Team not found:', data.teamId);
+        return { success: false, sent: 0, failed: 0 };
+      }
+
+      const actorName = getUserDisplayName(actorInfo);
+      const teamUrl = getTeamUrl(data.teamId);
+
+      // Send emails to all recipients
+      const results = await Promise.allSettled(
+        data.recipientIds.map(async (recipientId) => {
+          // Skip sending to the actor (except for team_member_added_you)
+          if (recipientId === data.actorId && data.type !== 'team_member_added_you') {
+            return { success: true, skipped: true };
+          }
+
+          // Check user's notification preferences for this team
+          const shouldSend = await shouldSendTeamNotification(data.teamId, recipientId, data.type);
+          if (!shouldSend) {
+            console.log(`[Mailer] User ${recipientId} has disabled ${data.type} notifications for team ${data.teamId}. Skipping.`);
+            return { success: true, skipped: true, reason: 'preference_disabled' };
+          }
+
+          const recipientInfo = await getUserInfo(recipientId);
+          const recipientEmail = getUserEmail(recipientInfo);
+
+          if (!recipientEmail) {
+            console.warn(`[Mailer] No email found for user ${recipientId}`);
+            return { success: false, error: 'No email' };
+          }
+
+          const recipientName = getUserDisplayName(recipientInfo);
+
+          // Generate email based on notification type
+          const emailResult = await this.generateAndSendTeamEmail(
+            data.type,
+            {
+              recipientName,
+              actorName,
+              teamInfo,
+              teamUrl,
+              newMemberName: data.newMemberName,
+              newMemberId: data.newMemberId,
+              messageSummary: data.messageSummary,
+            },
+            recipientEmail
+          );
+
+          return emailResult;
+        })
+      );
+
+      // Count successes and failures
+      const sent = results.filter(
+        (r) => r.status === 'fulfilled' && r.value.success
+      ).length;
+      const failed = results.filter(
+        (r) => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value.success)
+      ).length;
+
+      console.log(`[Mailer] Team notification sent: ${sent} successful, ${failed} failed`);
+
+      return { success: sent > 0, sent, failed };
+    } catch (error) {
+      console.error('[Mailer] Error sending team notifications:', error);
+      return { success: false, sent: 0, failed: data.recipientIds.length };
+    }
+  }
+
+  /**
+   * Generate email template and send for TASKS
    * (Private helper method)
    */
   private static async generateAndSendEmail(
@@ -521,6 +777,86 @@ public static async sendTaskNotification(
       return result;
     } catch (error) {
       console.error('[Mailer] Error generating/sending email:', error);
+      return { success: false, error };
+    }
+  }
+
+  /**
+   * Generate email template and send for TEAMS
+   * (Private helper method)
+   */
+  private static async generateAndSendTeamEmail(
+    type: NotificationType,
+    data: {
+      recipientName: string;
+      actorName: string;
+      teamInfo: any;
+      teamUrl: string;
+      newMemberName?: string;
+      newMemberId?: string;
+      messageSummary?: string;
+    },
+    recipientEmail: string
+  ): Promise<{ success: boolean; error?: unknown }> {
+    try {
+      let subject: string;
+      let html: string;
+
+      // Get members list for team templates
+      const membersList = await getUserNamesList(data.teamInfo.memberIds || []);
+
+      // Select template based on notification type
+      switch (type) {
+        case 'team_member_added_you':
+          subject = `Te han agregado al equipo: ${data.teamInfo.name}`;
+          html = getTeamMemberAddedYouTemplate({
+            recipientName: data.recipientName,
+            adderName: data.actorName,
+            teamName: data.teamInfo.name,
+            teamDescription: data.teamInfo.description,
+            teamUrl: data.teamUrl,
+            membersList,
+            memberCount: data.teamInfo.memberIds?.length || 0,
+          } as TeamMemberAddedYouTemplateData);
+          break;
+
+        case 'team_member_added':
+          subject = `Nuevo miembro en ${data.teamInfo.name}`;
+          html = getTeamMemberAddedOtherTemplate({
+            recipientName: data.recipientName,
+            adderName: data.actorName,
+            newMemberName: data.newMemberName || 'Un nuevo miembro',
+            teamName: data.teamInfo.name,
+            teamUrl: data.teamUrl,
+          } as TeamMemberAddedOtherTemplateData);
+          break;
+
+        case 'team_new_message':
+          subject = `Nuevo mensaje en ${data.teamInfo.name}`;
+          html = getTeamNewMessageTemplate({
+            recipientName: data.recipientName,
+            senderName: data.actorName,
+            teamName: data.teamInfo.name,
+            teamUrl: data.teamUrl,
+            messageSummary: data.messageSummary,
+          } as TeamNewMessageTemplateData);
+          break;
+
+        default:
+          console.warn(`[Mailer] Unknown team notification type: ${type}`);
+          return { success: false, error: 'Unknown notification type' };
+      }
+
+      // Send email
+      const result = await sendEmailInternal({
+        to: recipientEmail,
+        subject,
+        html,
+      });
+
+      return result;
+    } catch (error) {
+      console.error('[Mailer] Error generating/sending team email:', error);
       return { success: false, error };
     }
   }

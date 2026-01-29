@@ -11,6 +11,8 @@ interface UseMessageActionsProps {
   encryptMessage: (text: string) => Promise<{ encryptedData: string; nonce: string; tag: string; salt: string }>;
   addOptimisticMessage: (message: Message) => void;
   updateOptimisticMessage: (clientId: string, updates: Partial<Message>) => void;
+  /** Tipo de colección: 'tasks' para tareas, 'teams' para equipos. Default: 'tasks' */
+  collectionType?: 'tasks' | 'teams';
 }
 
 export const useMessageActions = ({
@@ -18,8 +20,12 @@ export const useMessageActions = ({
   encryptMessage,
   addOptimisticMessage,
   updateOptimisticMessage,
+  collectionType = 'tasks',
 }: UseMessageActionsProps) => {
   const [isSending, setIsSending] = useState(false);
+
+  // IMPORTANTE: No usar función getMessagesPath() para evitar stale closures
+  // Calcular el path directamente dentro de cada callback usando collectionType
 
   const sendMessage = useCallback(async (
     messageData: Partial<Message>,
@@ -55,7 +61,10 @@ export const useMessageActions = ({
     try {
       const encrypted = messageData.text ? await encryptMessage(messageData.text.trim()) : null;
 
-      const docRef = await addDoc(collection(db, `tasks/${task.id}/messages`), {
+      // IMPORTANTE: Calcular path directamente aquí, NO usar función externa
+      const messagesPath = `${collectionType}/${task.id}/messages`;
+
+      const docRef = await addDoc(collection(db, messagesPath), {
         senderId: messageData.senderId,
         senderName: messageData.senderName || 'Usuario',
         encrypted,
@@ -76,9 +85,11 @@ export const useMessageActions = ({
         timestamp: Timestamp.now(),
       });
 
-      await updateTaskActivity(task.id, 'message');
-    } catch {
-      // Error logging removed for production
+      // Solo actualizar actividad para tareas, no para equipos
+      if (collectionType === 'tasks') {
+        await updateTaskActivity(task.id, 'message');
+      }
+    } catch (error) {
       updateOptimisticMessage(clientId, {
         isPending: false,
         hasError: true,
@@ -86,7 +97,7 @@ export const useMessageActions = ({
     } finally {
       setIsSending(false);
     }
-  }, [task?.id, isSending, encryptMessage, addOptimisticMessage, updateOptimisticMessage]);
+  }, [task?.id, isSending, encryptMessage, addOptimisticMessage, updateOptimisticMessage, collectionType]);
 
   const editMessage = useCallback(async (messageId: string, newText: string) => {
     if (!task || !newText.trim()) {
@@ -97,44 +108,47 @@ export const useMessageActions = ({
       const encrypted = await encryptMessage(newText.trim());
       const now = Timestamp.now();
       
-      const messageRef = doc(db, `tasks/${task.id}/messages`, messageId);
+      const messagesPath = `${collectionType}/${task.id}/messages`;
+      const messageRef = doc(db, messagesPath, messageId);
       const messageDoc = await getDoc(messageRef);
-      
+
       if (!messageDoc.exists()) {
         throw new Error('El mensaje no existe.');
       }
-      
+
       await updateDoc(messageRef, {
         encrypted,
         lastModified: now,
       });
 
-      await updateTaskActivity(task.id, 'message');
+      // Solo actualizar actividad para tareas, no para equipos
+      if (collectionType === 'tasks') {
+        await updateTaskActivity(task.id, 'message');
+      }
     } catch {
       // Error logging removed for production
       throw new Error('Error al editar el mensaje. Verifica que seas el autor del mensaje o intenta de nuevo.');
     }
-  }, [task?.id, encryptMessage]);
+  }, [task?.id, encryptMessage, collectionType]);
 
   const deleteMessage = useCallback(async (messageId: string) => {
     if (!task) return;
     try {
-      // Debug logging removed for production
-      const messageRef = doc(db, `tasks/${task.id}/messages`, messageId);
+      const messagesPath = `${collectionType}/${task.id}/messages`;
+      const messageRef = doc(db, messagesPath, messageId);
       const messageDoc = await getDoc(messageRef);
-      
+
       if (messageDoc.exists()) {
         const messageData = messageDoc.data();
-        
-        if (messageData.hours && typeof messageData.hours === 'number' && messageData.hours > 0) {
-          // Debug logging removed for production
+
+        // Solo manejar timers para tareas, no para equipos
+        if (collectionType === 'tasks' && messageData.hours && typeof messageData.hours === 'number' && messageData.hours > 0) {
           const timerRef = doc(db, `tasks/${task.id}/timers/global`);
           const timerDoc = await getDoc(timerRef);
-          
+
           if (timerDoc.exists()) {
             const currentTotal = timerDoc.data().totalHours || 0;
             const newTotal = Math.max(0, currentTotal - messageData.hours);
-            // Debug logging removed for production
             await updateDoc(timerRef, { totalHours: newTotal });
           }
         }
@@ -148,22 +162,19 @@ export const useMessageActions = ({
             });
             if (!response.ok) {
               // Error logging removed for production
-            } else {
-              // Debug logging removed for production
             }
-                } catch {
-        // Error logging removed for production
-      }
+          } catch {
+            // Error logging removed for production
+          }
         }
       }
-      
+
       await deleteDoc(messageRef);
-      // Debug logging removed for production
     } catch {
       // Error logging removed for production
       throw new Error('Error al eliminar el mensaje');
     }
-  }, [task?.id]);
+  }, [task?.id, collectionType]);
 
   const resendMessage = useCallback(async (message: Message) => {
     if (!task || isSending) {
@@ -186,8 +197,9 @@ export const useMessageActions = ({
 
     try {
       const encrypted = message.text ? await encryptMessage(message.text) : null;
-      
-      const docRef = await addDoc(collection(db, `tasks/${task.id}/messages`), {
+      const messagesPath = `${collectionType}/${task.id}/messages`;
+
+      const docRef = await addDoc(collection(db, messagesPath), {
         senderId: message.senderId,
         senderName: message.senderName,
         encrypted,
@@ -198,7 +210,7 @@ export const useMessageActions = ({
         fileName: message.fileName,
         fileType: message.fileType,
         filePath: message.filePath,
-        clientId: newClientId, // Use newClientId
+        clientId: newClientId,
         replyTo: message.replyTo || null,
         ...(message.hours && { hours: message.hours }),
       });
@@ -208,24 +220,24 @@ export const useMessageActions = ({
         isPending: false,
         timestamp: Timestamp.now(),
       });
-          } catch {
-        // Error logging removed for production
-        updateOptimisticMessage(newClientId, {
-          isPending: false,
-          hasError: true,
-        });
+    } catch {
+      updateOptimisticMessage(newClientId, {
+        isPending: false,
+        hasError: true,
+      });
       throw new Error('Error al reenviar el mensaje');
     } finally {
       setIsSending(false);
     }
-  }, [task?.id, encryptMessage, addOptimisticMessage, updateOptimisticMessage, isSending]);
+  }, [task?.id, encryptMessage, addOptimisticMessage, updateOptimisticMessage, isSending, collectionType]);
 
   const markMessagesAsRead = useCallback(async (messageIds: string[]) => {
     if (!task || messageIds.length === 0) return;
 
     try {
+      const messagesPath = `${collectionType}/${task.id}/messages`;
       const updatePromises = messageIds.map(messageId =>
-        updateDoc(doc(db, `tasks/${task.id}/messages`, messageId), {
+        updateDoc(doc(db, messagesPath, messageId), {
           read: true,
         })
       );
@@ -234,7 +246,7 @@ export const useMessageActions = ({
     } catch {
       // Error logging removed for production
     }
-  }, [task?.id]);
+  }, [task?.id, collectionType]);
 
   // Helper para crear timestamp con la hora actual del día seleccionado
   const getCurrentTimeTimestamp = (date: Date): Timestamp => {
@@ -266,7 +278,6 @@ export const useMessageActions = ({
           const today = new Date();
           today.setHours(0, 0, 0, 0);
           if (parsedDate > today) {
-            console.warn('[useMessageActions] Future date detected, using current date:', dateString);
             return new Date();
           }
           
@@ -281,17 +292,14 @@ export const useMessageActions = ({
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         if (fallbackDate > today) {
-          console.warn('[useMessageActions] Future date detected in fallback, using current date:', dateString);
           return new Date();
         }
         return fallbackDate;
       }
       
       // Si todo falla, usar fecha actual
-      console.warn('[useMessageActions] Invalid date format, using current date:', dateString);
       return new Date();
     } catch (error) {
-      console.warn('[useMessageActions] Error parsing date, using current date:', dateString, error);
       return new Date();
     }
   };
@@ -345,13 +353,14 @@ export const useMessageActions = ({
       // Debug logging removed for production
       addOptimisticMessage(optimisticTimeMessage);
 
-      const timeDocRef = await addDoc(collection(db, `tasks/${task.id}/messages`), {
+      const messagesPath = `${collectionType}/${task.id}/messages`;
+      const timeDocRef = await addDoc(collection(db, messagesPath), {
         senderId,
         senderName,
         encrypted: encryptedTime,
         timestamp,
         read: false,
-        clientId: timeMessageClientId, // Add clientId here
+        clientId: timeMessageClientId,
         hours,
       });
       
@@ -386,15 +395,15 @@ export const useMessageActions = ({
         };
         
         addOptimisticMessage(optimisticCommentMessage);
-        
+
         const encryptedComment = await encryptMessage(comment.trim());
-        const commentDocRef = await addDoc(collection(db, `tasks/${task.id}/messages`), {
+        const commentDocRef = await addDoc(collection(db, messagesPath), {
           senderId,
           senderName,
           encrypted: encryptedComment,
           timestamp: Timestamp.fromMillis(timestamp.toMillis() + 1),
           read: false,
-          clientId: commentClientId, // Add clientId here
+          clientId: commentClientId,
         });
         
         updateOptimisticMessage(commentClientId, {
@@ -406,10 +415,13 @@ export const useMessageActions = ({
         // Debug logging removed for production
       }
       
-      await updateTaskActivity(task.id, 'time_entry');
-      
+      // Solo actualizar actividad para tareas, no para equipos
+      if (collectionType === 'tasks') {
+        await updateTaskActivity(task.id, 'time_entry');
+      }
+
       // Debug logging removed for production
-      
+
     } catch (error) {
       // Error logging removed for production
       
@@ -427,7 +439,7 @@ export const useMessageActions = ({
       
       throw new Error(`Error al añadir la entrada de tiempo: ${error instanceof Error ? error.message : 'Inténtalo de nuevo.'}`);
     }
-  }, [task?.id, encryptMessage, addOptimisticMessage, updateOptimisticMessage]);
+  }, [task?.id, encryptMessage, addOptimisticMessage, updateOptimisticMessage, collectionType]);
 
   return {
     isSending,

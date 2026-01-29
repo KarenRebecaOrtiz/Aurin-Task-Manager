@@ -15,6 +15,7 @@ import { useVirtuosoMessages } from "../hooks/useVirtuosoMessages";
 import { useMessageActions } from "@/hooks/useMessageActions";
 import { ManualTimeDialog } from "@/modules/dialogs";
 import { toast } from "@/components/ui/use-toast";
+import { teamNotificationService } from "@/modules/teams/services";
 import type { ChatSidebarProps } from "../types";
 import type { Message } from "../types";
 
@@ -105,6 +106,7 @@ const ChatSidebarVirtualized: React.FC<ChatSidebarProps> = memo(({
   }, []);
 
   // ✅ NUEVO HOOK: useVirtuosoMessages (simplificado, sin optimistic UI)
+  // IMPORTANTE: Pasar collectionType para diferenciar tareas de equipos
   const {
     messages,
     groupCounts,
@@ -118,11 +120,13 @@ const ChatSidebarVirtualized: React.FC<ChatSidebarProps> = memo(({
     pageSize: 50,
     decryptMessage,
     onNewMessage: handleNewMessage,
+    collectionType: isTeamChat ? 'teams' : 'tasks',
   });
 
   // ✅ Hook de acciones (para enviar, editar, eliminar)
   // NOTA: Este hook usa Optimistic UI, pero no está integrado con useVirtuosoMessages
   // Los mensajes nuevos aparecerán cuando Firebase los devuelva via real-time listener
+  // IMPORTANTE: Pasar collectionType para diferenciar tareas de equipos
   const {
     sendMessage,
     deleteMessage,
@@ -134,6 +138,7 @@ const ChatSidebarVirtualized: React.FC<ChatSidebarProps> = memo(({
     // El real-time listener de useVirtuosoMessages manejará los nuevos mensajes
     addOptimisticMessage: () => {},
     updateOptimisticMessage: () => {},
+    collectionType: isTeamChat ? 'teams' : 'tasks',
   });
 
   // ============================================================================
@@ -149,8 +154,22 @@ const ChatSidebarVirtualized: React.FC<ChatSidebarProps> = memo(({
     async (messageData: Partial<Message>) => {
       await sendMessage(messageData);
       // El real-time listener agregará el mensaje automáticamente
+
+      // Enviar notificaciones por email a miembros del equipo (respeta preferencias)
+      if (isTeamChat && teamSidebar.team && userId) {
+        const textPreview = messageData.text
+          ? messageData.text.substring(0, 100) + (messageData.text.length > 100 ? '...' : '')
+          : undefined;
+
+        teamNotificationService.notifyTeamOfNewMessage(
+          teamSidebar.team.id,
+          teamSidebar.team.memberIds,
+          userId,
+          textPreview
+        ).catch((err) => console.error('[ChatSidebarVirtualized] Team message notification error:', err));
+      }
     },
-    [sendMessage]
+    [sendMessage, isTeamChat, teamSidebar.team, userId]
   );
 
   const handleDeleteMessage = useCallback(
