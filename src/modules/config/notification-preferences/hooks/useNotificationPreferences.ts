@@ -63,6 +63,7 @@ export function useNotificationPreferences() {
   const isOpen = useNotificationPreferencesStore((s) => s.isOpen);
   const entityType = useNotificationPreferencesStore((s) => s.entityType);
   const entityId = useNotificationPreferencesStore((s) => s.entityId);
+  const entityName = useNotificationPreferencesStore((s) => s.entityName);
   const preferences = useNotificationPreferencesStore((s) => s.preferences);
   const hasChanges = useNotificationPreferencesStore((s) => s.hasChanges);
   const isSaving = useNotificationPreferencesStore((s) => s.isSaving);
@@ -165,6 +166,7 @@ export function useNotificationPreferences() {
     isOpen,
     entityType,
     entityId,
+    entityName,
     preferences,
     hasChanges,
     isSaving,

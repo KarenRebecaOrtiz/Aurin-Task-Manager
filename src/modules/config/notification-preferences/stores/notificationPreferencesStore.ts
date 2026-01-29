@@ -27,6 +27,7 @@ interface NotificationPreferencesState {
   isOpen: boolean;
   entityType: NotificationEntityType | null;
   entityId: string | null;
+  entityName: string | null;
   preferences: AnyNotificationPreferences;
   originalPreferences: AnyNotificationPreferences;
   hasChanges: boolean;
@@ -36,7 +37,7 @@ interface NotificationPreferencesState {
 }
 
 interface NotificationPreferencesActions {
-  open: (entityType: NotificationEntityType, entityId: string) => void;
+  open: (entityType: NotificationEntityType, entityId: string, entityName?: string) => void;
   close: () => void;
   setPreferences: (prefs: AnyNotificationPreferences) => void;
   setOriginalPreferences: (prefs: AnyNotificationPreferences) => void;
@@ -108,6 +109,7 @@ export const useNotificationPreferencesStore = create<NotificationPreferencesSto
   isOpen: false,
   entityType: null,
   entityId: null,
+  entityName: null,
   preferences: { ...DEFAULT_TASK_NOTIFICATION_PREFERENCES },
   originalPreferences: { ...DEFAULT_TASK_NOTIFICATION_PREFERENCES },
   hasChanges: false,
@@ -116,12 +118,13 @@ export const useNotificationPreferencesStore = create<NotificationPreferencesSto
   error: null,
 
   // Actions
-  open: (entityType, entityId) => {
+  open: (entityType, entityId, entityName) => {
     const defaults = getDefaultPreferences(entityType);
     set({
       isOpen: true,
       entityType,
       entityId,
+      entityName: entityName || null,
       error: null,
       // Reset to defaults for this entity type until loaded from Firestore
       preferences: defaults,
@@ -135,6 +138,7 @@ export const useNotificationPreferencesStore = create<NotificationPreferencesSto
       isOpen: false,
       entityType: null,
       entityId: null,
+      entityName: null,
       preferences: { ...DEFAULT_TASK_NOTIFICATION_PREFERENCES },
       originalPreferences: { ...DEFAULT_TASK_NOTIFICATION_PREFERENCES },
       hasChanges: false,

@@ -53,8 +53,8 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   // Handler para abrir el diálogo con el entityType correcto
   const handleOpenNotificationPreferences = useCallback(() => {
     const entityType = isTeamChat ? 'team' : 'task';
-    openNotificationPreferencesDialog(entityType, task.id);
-  }, [isTeamChat, task.id, openNotificationPreferencesDialog]);
+    openNotificationPreferencesDialog(entityType, task.id, task.name);
+  }, [isTeamChat, task.id, task.name, openNotificationPreferencesDialog]);
 
   // ✅ Si no se pasan users como prop, obtenerlos del dataStore centralizado
   const storeUsers = useDataStore((state) => state.users);

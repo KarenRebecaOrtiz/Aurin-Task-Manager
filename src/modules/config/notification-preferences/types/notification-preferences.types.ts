@@ -255,14 +255,14 @@ export interface TeamNotificationPreferenceConfig {
 export const TEAM_NOTIFICATION_PREFERENCES_CONFIG: TeamNotificationPreferenceConfig[] = [
   {
     key: 'newMessage',
-    label: 'Nuevos mensajes',
-    description: 'Cuando alguien envía un mensaje en este equipo',
+    label: 'Mensajes del equipo',
+    description: 'Recibe un correo cada vez que alguien publique en el chat',
     category: 'activity',
   },
   {
     key: 'memberAdded',
-    label: 'Nuevos miembros',
-    description: 'Cuando se agregan personas a este equipo',
+    label: 'Cambios en los miembros',
+    description: 'Avísame cuando alguien se una o salga del equipo',
     category: 'activity',
   },
 ];
