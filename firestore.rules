@@ -138,6 +138,21 @@ service cloud.firestore {
         allow write: if request.auth != null &&
                     (isAdmin() || request.auth.uid == userId);
       }
+
+      // Preferencias de notificaciones por usuario en tareas
+      // Ruta: tasks/{taskId}/notificationPreferences/{userId}
+      match /notificationPreferences/{odUserId} {
+        // PERMITIR LECTURA: Usuario propietario o admin
+        // (Solo el propio usuario debe ver sus preferencias)
+        allow read: if request.auth != null &&
+                   (request.auth.uid == odUserId || isAdmin());
+
+        // PERMITIR ESCRITURA: Usuario propietario que esté involucrado en la tarea
+        // (Solo puede configurar preferencias si es miembro de la tarea)
+        allow write: if request.auth != null &&
+                    request.auth.uid == odUserId &&
+                    isInvolvedInTask(taskId);
+      }
     }
 
     // ============================================================================
@@ -186,6 +201,19 @@ service cloud.firestore {
         allow read: if request.auth != null;
         allow write: if request.auth != null &&
                     (isAdmin() || request.auth.uid == userId);
+      }
+
+      // Preferencias de notificaciones por usuario en equipos
+      // Ruta: teams/{teamId}/notificationPreferences/{userId}
+      match /notificationPreferences/{odUserId} {
+        // PERMITIR LECTURA: Usuario propietario o admin
+        allow read: if request.auth != null &&
+                   (request.auth.uid == odUserId || isAdmin());
+
+        // PERMITIR ESCRITURA: Usuario propietario que sea miembro del equipo
+        allow write: if request.auth != null &&
+                    request.auth.uid == odUserId &&
+                    isTeamMember(teamId);
       }
     }
 

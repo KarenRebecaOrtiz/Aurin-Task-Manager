@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useCallback } from "react";
-import { ChevronDown, Calendar } from "lucide-react";
+import { ChevronDown, Calendar, Bell } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { UserAvatar } from "@/modules/shared/components/atoms/Avatar/UserAvatar";
 import { TODO_ANIMATIONS } from "@/modules/header/components/ui/ToDoDynamic/constants/animation.constants";
@@ -12,6 +12,10 @@ import { ShareButton } from "../atoms/ShareButton";
 import { SharedBadge } from "@/modules/shared/components/ui";
 import { useDataStore } from "@/stores/dataStore";
 import { useAuth } from "@/contexts/AuthContext";
+import {
+  NotificationPreferencesDialog,
+  useNotificationPreferences,
+} from "@/modules/config/notification-preferences";
 import styles from "../../styles/ChatHeader.module.scss";
 import type { Task, Message } from "../../types";
 
@@ -42,6 +46,15 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
 
   // ✅ Auth context para verificar si es admin
   const { isAdmin } = useAuth();
+
+  // ✅ Hook para preferencias de notificaciones
+  const { open: openNotificationPreferencesDialog } = useNotificationPreferences();
+
+  // Handler para abrir el diálogo con el entityType correcto
+  const handleOpenNotificationPreferences = useCallback(() => {
+    const entityType = isTeamChat ? 'team' : 'task';
+    openNotificationPreferencesDialog(entityType, task.id);
+  }, [isTeamChat, task.id, openNotificationPreferencesDialog]);
 
   // ✅ Si no se pasan users como prop, obtenerlos del dataStore centralizado
   const storeUsers = useDataStore((state) => state.users);
@@ -117,6 +130,16 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
         {!isPublicView && (
           <div className={styles.timerWrapper}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {/* Botón de preferencias de notificaciones */}
+              <button
+                type="button"
+                onClick={handleOpenNotificationPreferences}
+                className={styles.notificationButton}
+                aria-label="Preferencias de notificaciones"
+                title="Preferencias de notificaciones"
+              >
+                <Bell size={18} />
+              </button>
               {isAdmin && (
                 <ShareButton
                   taskId={task.id}
@@ -282,6 +305,9 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
         )}
         </AnimatePresence>
       )}
+
+      {/* Diálogo de preferencias de notificaciones */}
+      <NotificationPreferencesDialog />
     </div>
   );
 };

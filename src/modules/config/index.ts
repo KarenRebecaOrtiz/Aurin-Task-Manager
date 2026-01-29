@@ -26,3 +26,6 @@ export * from './hooks';
 
 // Components
 export * from './components';
+
+// Submodules
+export * from './notification-preferences';

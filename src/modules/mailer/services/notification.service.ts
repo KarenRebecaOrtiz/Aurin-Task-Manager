@@ -62,6 +62,53 @@ interface UserBasicInfo {
   firstName?: string;
 }
 
+/**
+ * Per-entity notification preferences structure
+ * Stored in: tasks/{taskId}/notificationPreferences/{userId}
+ * Mirrors the type in config/notification-preferences/types
+ */
+interface EntityNotificationPreferences {
+  updated: boolean;
+  statusChanged: boolean;
+  priorityChanged: boolean;
+  datesChanged: boolean;
+  assignmentChanged: boolean;
+  archived: boolean;
+  unarchived: boolean;
+  deleted: boolean;
+}
+
+/**
+ * Default preferences: all notifications enabled
+ * Used when no preferences document exists for a user in a task
+ */
+const DEFAULT_ENTITY_PREFERENCES: EntityNotificationPreferences = {
+  updated: true,
+  statusChanged: true,
+  priorityChanged: true,
+  datesChanged: true,
+  assignmentChanged: true,
+  archived: true,
+  unarchived: true,
+  deleted: true,
+};
+
+/**
+ * Map NotificationType to the preference key
+ * Note: task_created is NOT mapped because preferences are per-task,
+ * and the user hasn't set preferences when first assigned to a task
+ */
+const NOTIFICATION_TYPE_TO_PREF_KEY: Partial<Record<NotificationType, keyof EntityNotificationPreferences>> = {
+  task_updated: 'updated',
+  task_status_changed: 'statusChanged',
+  task_priority_changed: 'priorityChanged',
+  task_dates_changed: 'datesChanged',
+  task_assignment_changed: 'assignmentChanged',
+  task_archived: 'archived',
+  task_unarchived: 'unarchived',
+  task_deleted: 'deleted',
+};
+
 // --- Helper Functions ---
 
 /**
@@ -99,11 +146,79 @@ async function getTaskInfo(taskId: string): Promise<any | null> {
 }
 
 /**
+ * Fetch user's notification preferences for a specific task
+ * Stored in: tasks/{taskId}/notificationPreferences/{userId}
+ */
+async function getTaskNotificationPreferences(
+  taskId: string,
+  userId: string
+): Promise<EntityNotificationPreferences> {
+  try {
+    const adminDb = getAdminDb();
+    const prefsDoc = await adminDb
+      .collection('tasks')
+      .doc(taskId)
+      .collection('notificationPreferences')
+      .doc(userId)
+      .get();
+
+    if (prefsDoc.exists) {
+      const data = prefsDoc.data() as Partial<EntityNotificationPreferences>;
+      // Merge with defaults to ensure all keys exist
+      return {
+        ...DEFAULT_ENTITY_PREFERENCES,
+        ...data,
+      };
+    }
+
+    // No preferences set - return defaults (all enabled)
+    return DEFAULT_ENTITY_PREFERENCES;
+  } catch (error) {
+    console.error(`[Mailer] Error fetching notification preferences for user ${userId} in task ${taskId}:`, error);
+    // On error, default to sending (fail open)
+    return DEFAULT_ENTITY_PREFERENCES;
+  }
+}
+
+/**
  * Get user's email address
  */
 function getUserEmail(userInfo: UserBasicInfo | null): string | null {
   if (!userInfo) return null;
   return userInfo.email || userInfo.emailAddress || null;
+}
+
+/**
+ * Check if user has enabled notifications for this type in a specific task
+ *
+ * @param taskId - The task ID to check preferences for
+ * @param userId - The user ID to check preferences for
+ * @param notificationType - The type of notification
+ * @returns Promise<boolean> - Whether to send the notification
+ */
+async function shouldSendNotification(
+  taskId: string,
+  userId: string,
+  notificationType: NotificationType
+): Promise<boolean> {
+  // task_created always sends - user hasn't set per-task preferences yet
+  if (notificationType === 'task_created') {
+    return true;
+  }
+
+  // Get the preference key for this notification type
+  const prefKey = NOTIFICATION_TYPE_TO_PREF_KEY[notificationType];
+
+  // If no mapping exists for this type, default to sending
+  if (!prefKey) {
+    return true;
+  }
+
+  // Fetch user's preferences for this task
+  const prefs = await getTaskNotificationPreferences(taskId, userId);
+
+  // Return the preference value (default true if not found)
+  return prefs[prefKey] ?? true;
 }
 
 /**
@@ -211,6 +326,13 @@ public static async sendTaskNotification(
           // Skip sending to the actor
           if (recipientId === data.actorId) {
             return { success: true, skipped: true };
+          }
+
+          // Check user's notification preferences for this task
+          const shouldSend = await shouldSendNotification(data.taskId, recipientId, data.type);
+          if (!shouldSend) {
+            console.log(`[Mailer] User ${recipientId} has disabled ${data.type} notifications for task ${data.taskId}. Skipping.`);
+            return { success: true, skipped: true, reason: 'preference_disabled' };
           }
 
           const recipientInfo = await getUserInfo(recipientId);
