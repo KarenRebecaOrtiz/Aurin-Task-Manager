@@ -66,6 +66,8 @@ interface TaskFormProps {
   users: User[]
   onSubmit?: (data: TaskFormData) => void
   onCreateClient?: () => void
+  onCreateProject?: () => void
+  onClientIdChange?: (clientId: string) => void
   initialData?: TaskFormData | null
   isViewMode?: boolean
 }
@@ -75,6 +77,8 @@ export function TaskForm({
   users,
   onSubmit,
   onCreateClient,
+  onCreateProject,
+  onClientIdChange,
   initialData = null,
   isViewMode = false,
 }: TaskFormProps) {
@@ -108,7 +112,8 @@ export function TaskForm({
 
   const handleClientChange = useCallback((value: string) => {
     setFormData(prev => ({ ...prev, clientId: value, project: "" }))
-  }, [])
+    onClientIdChange?.(value)
+  }, [onClientIdChange])
 
   const handleProjectChange = useCallback((value: string) => {
     setFormData(prev => ({ ...prev, project: value }))
@@ -255,9 +260,11 @@ export function TaskForm({
               onSelectionChange={(selectedIds) => handleProjectChange(selectedIds[0] || "")}
               placeholder="Selecciona una carpeta"
               searchPlaceholder="Buscar carpeta..."
-              emptyMessage="No hay carpetas disponibles"
-              disabled={isViewMode || !formData.clientId || projectOptions.length === 0}
+              emptyMessage={formData.clientId ? "No hay carpetas disponibles" : "Selecciona una cuenta primero"}
+              disabled={isViewMode || !formData.clientId}
               fieldType="project"
+              onCreateNew={formData.clientId ? onCreateProject : undefined}
+              createNewLabel="Crear nuevo proyecto"
               variant="no-icon"
             />
           </motion.div>

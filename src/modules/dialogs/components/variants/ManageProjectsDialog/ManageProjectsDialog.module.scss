@@ -1,0 +1,474 @@
+// ManageProjectsDialog.module.scss
+// Styles for the manage projects dialog
+
+// ============================================================================
+// DIALOG INNER
+// ============================================================================
+
+.dialogInner {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+// ============================================================================
+// HEADER
+// ============================================================================
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px;
+  padding-bottom: 16px;
+}
+
+.clientAvatar {
+  width: 33px;
+  height: 33px;
+  min-width: 33px;
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.clientAvatarImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.headerTitle {
+  flex: 1;
+  font-size: 18px;
+  font-weight: 500;
+  color: #19213D;
+  line-height: 1.3;
+  margin: 0;
+
+  :global(.dark) & {
+    color: #fafafa;
+  }
+}
+
+// ============================================================================
+// DIVIDER
+// ============================================================================
+
+.divider {
+  width: 100%;
+  height: 1px;
+  background: #E3E3E3;
+  margin: 0 20px;
+  width: calc(100% - 40px);
+
+  :global(.dark) & {
+    background: #3f3f46;
+  }
+}
+
+// ============================================================================
+// BODY
+// ============================================================================
+
+.body {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+// ============================================================================
+// PROJECTS LIST
+// ============================================================================
+
+.projectsList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.projectItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px 20px;
+  background: #F0F2F5;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+
+  :global(.dark) & {
+    background: #27272a;
+  }
+
+  &:hover {
+    background: #E8EAED;
+
+    :global(.dark) & {
+      background: #3f3f46;
+    }
+  }
+
+  &.newProject {
+    background: #F0F2F5;
+
+    :global(.dark) & {
+      background: #27272a;
+    }
+  }
+}
+
+.projectContent {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+
+.folderIcon {
+  width: 24px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #638BF1;
+  flex-shrink: 0;
+
+  &.folderIconNew {
+    color: #A1BBFF;
+  }
+}
+
+.projectName {
+  font-size: 14px;
+  font-weight: 500;
+  color: #19213D;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  :global(.dark) & {
+    color: #fafafa;
+  }
+}
+
+.projectInput {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+  color: #19213D;
+  line-height: 1.3;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 0;
+  min-width: 0;
+
+  &::placeholder {
+    color: #9CA3AF;
+  }
+
+  :global(.dark) & {
+    color: #fafafa;
+
+    &::placeholder {
+      color: #71717a;
+    }
+  }
+}
+
+// ============================================================================
+// PROJECT ACTIONS
+// ============================================================================
+
+.actionButton {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #F2F5FB;
+  border: none;
+  border-radius: 4px;
+  color: #525252;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: #E5E7EB;
+    color: #19213D;
+
+    :global(.dark) & {
+      background: #52525b;
+      color: #fafafa;
+    }
+  }
+
+  :global(.dark) & {
+    background: #3f3f46;
+    color: #a1a1aa;
+  }
+}
+
+// ============================================================================
+// EDIT ACTIONS
+// ============================================================================
+
+.editActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.editCancelButton {
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #71717a;
+  background: transparent;
+  border: 1px solid #E5E7EB;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: #F3F4F6;
+    border-color: #D1D5DB;
+  }
+
+  :global(.dark) & {
+    color: #a1a1aa;
+    border-color: #3f3f46;
+
+    &:hover {
+      background: #27272a;
+      border-color: #52525b;
+    }
+  }
+}
+
+.editSaveButton {
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: white;
+  background: #638BF1;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background: #4F7AE8;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// ============================================================================
+// ACTION MENU
+// ============================================================================
+
+.actionMenu {
+  position: fixed;
+  z-index: 10000;
+  min-width: 160px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  padding: 4px;
+  animation: menuFadeIn 0.15s ease;
+
+  :global(.dark) & {
+    background: #27272a;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  }
+}
+
+@keyframes menuFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #19213D;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  text-align: left;
+
+  &:hover {
+    background: #F3F4F6;
+  }
+
+  :global(.dark) & {
+    color: #fafafa;
+
+    &:hover {
+      background: #3f3f46;
+    }
+  }
+
+  &.menuItemDanger {
+    color: #DC2626;
+
+    &:hover {
+      background: #FEE2E2;
+    }
+
+    :global(.dark) & {
+      color: #F87171;
+
+      &:hover {
+        background: rgba(220, 38, 38, 0.2);
+      }
+    }
+  }
+}
+
+// ============================================================================
+// EMPTY STATE
+// ============================================================================
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+  color: #71717a;
+
+  p {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 500;
+    color: #19213D;
+
+    :global(.dark) & {
+      color: #fafafa;
+    }
+  }
+}
+
+.emptyIcon {
+  margin-bottom: 12px;
+  color: #D1D5DB;
+
+  :global(.dark) & {
+    color: #52525b;
+  }
+}
+
+.emptyHint {
+  &.emptyHint {
+    margin-top: 4px;
+    font-size: 13px;
+    font-weight: 400;
+    color: #9CA3AF;
+
+    :global(.dark) & {
+      color: #71717a;
+    }
+  }
+}
+
+// ============================================================================
+// FOOTER
+// ============================================================================
+
+.footer {
+  padding: 16px 20px;
+  border-top: 1px solid #E3E3E3;
+
+  :global(.dark) & {
+    border-top-color: #3f3f46;
+  }
+}
+
+.footerActions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+
+  button {
+    flex: 1;
+  }
+}
+
+.createButton {
+  width: 100%;
+}
+
+// ============================================================================
+// MOBILE DRAWER
+// ============================================================================
+
+.drawerBody {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 16px 24px;
+}
+
+.drawerItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  font-size: 15px;
+  font-weight: 500;
+  color: #19213D;
+  background: transparent;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  text-align: left;
+
+  &:hover {
+    background: #F3F4F6;
+  }
+
+  :global(.dark) & {
+    color: #fafafa;
+
+    &:hover {
+      background: #27272a;
+    }
+  }
+
+  &.drawerItemDanger {
+    color: #DC2626;
+
+    :global(.dark) & {
+      color: #F87171;
+    }
+  }
+}

@@ -33,6 +33,23 @@ function parseInitialPhone(phone?: string | PhoneNumber, phoneCountry?: string):
 }
 
 export function useClientForm({ initialData, onSubmit }: UseClientFormProps = {}) {
+  const getDefaultFormData = (): ClientFormData => ({
+    name: '',
+    email: '',
+    phone: { country: 'MX', number: '' },
+    phoneCountry: 'MX',
+    address: '',
+    industry: '',
+    website: '',
+    taxId: '',
+    notes: '',
+    imageUrl: undefined,
+    gradientId: 'default',
+    gradientColors: undefined,
+    projects: [],
+    isActive: true,
+  });
+
   const [formData, setFormData] = useState<ClientFormData>({
     name: initialData?.name || '',
     email: initialData?.email || '',
@@ -46,13 +63,16 @@ export function useClientForm({ initialData, onSubmit }: UseClientFormProps = {}
     imageUrl: initialData?.imageUrl || undefined,
     gradientId: initialData?.gradientId || 'default',
     gradientColors: initialData?.gradientColors || undefined,
-    projects: initialData?.projects || [''],
+    projects: initialData?.projects || [],
     isActive: initialData?.isActive ?? true,
     createdAt: initialData?.createdAt,
     createdBy: initialData?.createdBy,
     lastModified: initialData?.lastModified,
     lastModifiedBy: initialData?.lastModifiedBy,
   });
+
+  // Store initial data for change tracking
+  const [savedData, setSavedData] = useState<ClientFormData | null>(null);
 
   const [errors, setErrors] = useState<Partial<Record<keyof ClientFormData, string>>>({});
 
@@ -123,24 +143,72 @@ export function useClientForm({ initialData, onSubmit }: UseClientFormProps = {}
   }, [validate, formData, onSubmit]);
 
   const reset = useCallback(() => {
-    setFormData({
-      name: '',
-      email: '',
-      phone: { country: 'MX', number: '' },
-      phoneCountry: 'MX',
-      address: '',
-      industry: '',
-      website: '',
-      taxId: '',
-      notes: '',
-      imageUrl: undefined,
-      gradientId: 'default',
-      gradientColors: undefined,
-      projects: [''],
-      isActive: true,
-    });
+    setFormData(getDefaultFormData());
+    setSavedData(null);
     setErrors({});
   }, []);
+
+  // Set initial data for editing (used for change tracking)
+  const setInitialData = useCallback((data: Partial<ClientFormData>) => {
+    const newData: ClientFormData = {
+      name: data.name || '',
+      email: data.email || '',
+      phone: parseInitialPhone(data.phone, data.phoneCountry),
+      phoneCountry: data.phoneCountry || 'MX',
+      address: data.address || '',
+      industry: data.industry || '',
+      website: data.website || '',
+      taxId: data.taxId || '',
+      notes: data.notes || '',
+      imageUrl: data.imageUrl || undefined,
+      gradientId: data.gradientId || 'default',
+      gradientColors: data.gradientColors || undefined,
+      projects: data.projects || [],
+      isActive: data.isActive ?? true,
+      createdAt: data.createdAt,
+      createdBy: data.createdBy,
+      lastModified: data.lastModified,
+      lastModifiedBy: data.lastModifiedBy,
+    };
+    setFormData(newData);
+    setSavedData(newData);
+    setErrors({});
+  }, []);
+
+  // Discard changes and revert to saved data
+  const discardChanges = useCallback(() => {
+    if (savedData) {
+      setFormData(savedData);
+      setErrors({});
+    }
+  }, [savedData]);
+
+  // Check if form has unsaved changes
+  const hasChanges = useCallback((): boolean => {
+    if (!savedData) return false;
+
+    // Compare relevant fields
+    const fieldsToCompare: (keyof ClientFormData)[] = [
+      'name', 'email', 'address', 'industry', 'website', 'taxId', 'notes',
+      'imageUrl', 'gradientId', 'isActive'
+    ];
+
+    for (const field of fieldsToCompare) {
+      if (formData[field] !== savedData[field]) return true;
+    }
+
+    // Compare phone
+    const currentPhone = typeof formData.phone === 'string' ? formData.phone : formData.phone?.number || '';
+    const savedPhone = typeof savedData.phone === 'string' ? savedData.phone : savedData.phone?.number || '';
+    if (currentPhone !== savedPhone) return true;
+
+    // Compare gradient colors
+    const currentColors = JSON.stringify(formData.gradientColors || []);
+    const savedColors = JSON.stringify(savedData.gradientColors || []);
+    if (currentColors !== savedColors) return true;
+
+    return false;
+  }, [formData, savedData]);
 
   // Get client initials from name
   const getClientInitials = useCallback((): string => {
@@ -197,5 +265,8 @@ export function useClientForm({ initialData, onSubmit }: UseClientFormProps = {}
     handleSubmit,
     reset,
     getClientInitials,
+    setInitialData,
+    discardChanges,
+    hasChanges,
   };
 }

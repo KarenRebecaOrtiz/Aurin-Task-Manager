@@ -54,6 +54,8 @@ export { ManualTimeDialog } from './components/variants/ManualTimeDialog';
 export { ShareDialog } from './components/variants/ShareDialog';
 export { ChatDialog } from './components/variants/ChatDialog';
 export { UsersDialog, CreateUserDialog } from './components/variants/UsersDialog';
+export { ClientsDialog } from './components/variants/ClientsDialog';
+export { ManageProjectsDialog } from './components/variants/ManageProjectsDialog';
 
 // Components - Atoms
 export {

@@ -67,9 +67,9 @@
   justify-content: flex-start;
   align-items: center;
   gap: 10px;
-  padding: 20px 10px;
+  padding: 8px;
   flex-wrap: nowrap;
-  overflow: hidden;
+  overflow: visible;
 
   // Hide last items progressively on smaller viewports
   // Starting at 650px, hide one more avatar every 80px decrease
@@ -116,11 +116,12 @@
   border: none;
   padding: 0;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
   outline: none;
 
   &:hover {
-    transform: scale(1.15);
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   }
 
   &:focus-visible {

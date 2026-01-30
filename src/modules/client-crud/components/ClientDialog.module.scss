@@ -1,0 +1,58 @@
+// ClientDialog.module.scss
+// Styles for the client create/edit dialog
+
+// ============================================================================
+// CONTENT
+// ============================================================================
+
+.content {
+  padding: 24px;
+  padding-top: 16px;
+  overflow-y: auto;
+  overflow-x: visible;
+  flex: 1;
+
+  @media (max-width: 600px) {
+    padding: 16px;
+    padding-top: 12px;
+  }
+}
+
+// ============================================================================
+// FOOTER
+// ============================================================================
+
+.footer {
+  padding: 16px 24px;
+  border-top: 1px solid #E3E3E3;
+
+  :global(.dark) & {
+    border-top-color: #3f3f46;
+  }
+
+  @media (max-width: 600px) {
+    padding: 16px;
+  }
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+
+  // Ensure buttons have consistent sizing
+  button {
+    min-width: 140px;
+  }
+
+  // On mobile, stack buttons with primary action on top
+  @media (max-width: 767px) {
+    flex-direction: column-reverse;
+    width: 100%;
+
+    button {
+      width: 100%;
+    }
+  }
+}

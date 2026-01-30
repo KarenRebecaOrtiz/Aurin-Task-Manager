@@ -7,7 +7,7 @@ export { FormDialog } from './FormDialog';
 
 // New centralized variants
 export { TaskDialog } from './TaskDialog';
-export { ClientDialog } from './ClientDialog';
+export { ClientDialog } from '@/modules/client-crud/components/ClientDialog';
 export { AddNoteDialog } from './AddNoteDialog';
 export { ManualTimeDialog } from './ManualTimeDialog';
 export { ChatDialog } from './ChatDialog';

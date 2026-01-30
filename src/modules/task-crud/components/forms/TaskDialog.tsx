@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/modules/dialogs"
 import { VisuallyHidden } from "@/components/ui"
 import { TaskForm, type TaskFormData } from "./TaskForm"
 import { ClientDialog } from "@/modules/client-crud"
+import { ManageProjectsDialog } from "@/modules/dialogs/components/variants/ManageProjectsDialog"
 import { useState, useCallback, useEffect, useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useTaskFormData } from "../../hooks/data/useTaskData"
@@ -15,6 +16,8 @@ import { FormFooter } from "./FormFooter"
 import { DialogHeader } from "@/modules/dialogs/components/molecules"
 import styles from "@/modules/dialogs/styles/Dialog.module.scss"
 import { useTaskState } from "@/hooks/useTaskData"
+import { useAuth } from "@/contexts/AuthContext"
+import { Client } from "@/types"
 
 const modalVariants = {
   hidden: { opacity: 0, scale: 0.95, y: 20 },
@@ -40,7 +43,10 @@ export function TaskDialog({
   const { clients, users } = useTaskFormData()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isClientDialogOpen, setIsClientDialogOpen] = useState(false)
+  const [isProjectsDialogOpen, setIsProjectsDialogOpen] = useState(false)
+  const [selectedClientForProject, setSelectedClientForProject] = useState<Client | null>(null)
   const { success: showSuccess, error: showError } = useSonnerToast()
+  const { isAdmin } = useAuth()
 
   const isEditMode = !!taskId
 
@@ -190,6 +196,29 @@ export function TaskDialog({
     // Refresh will happen automatically in ClientDialog
   }, [])
 
+  // Track selected client ID from the form for project creation
+  const [formClientId, setFormClientId] = useState<string>('')
+
+  // Initialize formClientId when in edit mode
+  useEffect(() => {
+    if (initialData?.clientId) {
+      setFormClientId(initialData.clientId)
+    }
+  }, [initialData?.clientId])
+
+  const handleCreateProject = useCallback(() => {
+    // Find the currently selected client to open projects dialog
+    const client = clients.find(c => c.id === formClientId)
+    if (client) {
+      setSelectedClientForProject(client as Client)
+      setIsProjectsDialogOpen(true)
+    }
+  }, [clients, formClientId])
+
+  const handleProjectsUpdated = useCallback(() => {
+    // Projects updated, will refresh via store
+  }, [])
+
   // Show loading state when loading task data
   if (isLoadingTask) {
     return (
@@ -237,7 +266,9 @@ export function TaskDialog({
                     clients={clients}
                     users={users}
                     onSubmit={handleSubmit}
-                    onCreateClient={handleCreateClient}
+                    onCreateClient={isAdmin ? handleCreateClient : undefined}
+                    onCreateProject={isAdmin ? handleCreateProject : undefined}
+                    onClientIdChange={setFormClientId}
                     initialData={initialData}
                   />
                 </div>
@@ -261,6 +292,16 @@ export function TaskDialog({
         onClientCreated={handleClientCreated}
         mode="create"
       />
+
+      {/* Manage Projects Dialog - only for admins */}
+      {selectedClientForProject && (
+        <ManageProjectsDialog
+          isOpen={isProjectsDialogOpen}
+          onOpenChange={setIsProjectsDialogOpen}
+          client={selectedClientForProject}
+          onProjectsUpdated={handleProjectsUpdated}
+        />
+      )}
     </>
   )
 }

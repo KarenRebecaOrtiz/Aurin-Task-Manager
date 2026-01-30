@@ -394,8 +394,8 @@ const CrystalSearchableDropdown = React.forwardRef<HTMLDivElement, CrystalSearch
                       </div>
                     )}
 
-                    {/* Create New Button - Only for client fieldType */}
-                    {onCreateNew && fieldType === 'client' && (
+                    {/* Create New Button - For client or project fieldType */}
+                    {onCreateNew && (fieldType === 'client' || fieldType === 'project') && (
                       <motion.div
                         {...dropdownAnimations.item(filteredItems.length)}
                         onClick={(e) => {
@@ -449,8 +449,8 @@ const CrystalSearchableDropdown = React.forwardRef<HTMLDivElement, CrystalSearch
                     </div>
                   )}
 
-                  {/* Create New Button - Only for client fieldType */}
-                  {onCreateNew && fieldType === 'client' && (
+                  {/* Create New Button - For client or project fieldType */}
+                  {onCreateNew && (fieldType === 'client' || fieldType === 'project') && (
                     <div
                       onClick={(e) => {
                         e.stopPropagation();

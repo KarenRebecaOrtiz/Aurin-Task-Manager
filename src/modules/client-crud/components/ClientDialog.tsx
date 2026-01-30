@@ -1,7 +1,8 @@
 /**
  * Client Dialog Component
- * Main orchestrator for creating/viewing/editing clients
- * Modular structure following task-crud pattern
+ *
+ * Uses ResponsiveDialog system for automatic drawer on mobile.
+ * Simplified UX - no separate view/edit modes, directly editable.
  */
 
 'use client';
@@ -9,18 +10,25 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
-import { CrudDialog } from '@/modules/dialogs/components/organisms';
 import { DestructiveConfirmDialog } from '@/modules/dialogs/components/variants';
+import {
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogBody,
+  ResponsiveDialogFooter,
+  ResponsiveDialogTitle,
+} from '@/modules/dialogs/components/DialogPrimitives';
+import { Button } from '@/components/ui/buttons';
+import { Trash2 } from 'lucide-react';
 import { clientService } from '../services/clientService';
 import { useClientForm } from '../hooks/form/useClientForm';
-import { ClientForm } from './forms/ClientForm';
-import { ClientDialogActions } from './forms/ClientDialogActions';
+import { ClientFormSimple } from './forms/ClientFormSimple';
 import { ClientDialogProps } from '../types/form';
 import { TOAST_MESSAGES } from '../config';
-import { phoneToStorageString, type PhoneNumber } from '../utils/validation';
 import { useDataStore } from '@/stores/dataStore';
 import { useClientsDataStore } from '@/stores/clientsDataStore';
 import { invalidateClientsCache } from '@/lib/cache-utils';
+import styles from './ClientDialog.module.scss';
 
 export function ClientDialog({
   isOpen,
@@ -30,20 +38,17 @@ export function ClientDialog({
   clientId,
   mode: initialMode = 'create',
 }: ClientDialogProps) {
-  // eslint-disable-next-line no-console
-  // console.log('[ClientDialog] Rendering - isOpen:', isOpen, 'mode:', initialMode, 'clientId:', clientId);
-  
   const { user } = useUser();
   const { success: showSuccess, error: showError } = useSonnerToast();
 
-  // Check if user is admin (check both 'role' and 'access' fields for compatibility)
+  // Check if user is admin
   const isAdmin =
     user?.publicMetadata?.role === 'admin' ||
     user?.publicMetadata?.role === 'Admin' ||
     user?.publicMetadata?.access === 'admin' ||
     user?.publicMetadata?.access === 'Admin';
 
-  // Get clients from dataStore (already loaded, no API call needed)
+  // Get clients from dataStore
   const allClients = useDataStore((state) => state.clients);
   const setClients = useDataStore((state) => state.setClients);
   const removeClientFromStore = useClientsDataStore((state) => state.removeClient);
@@ -54,47 +59,44 @@ export function ClientDialog({
     return allClients.find((c) => c.id === clientId) || null;
   }, [clientId, initialMode, allClients]);
 
+  // Determine if this is create mode
+  const isCreateMode = initialMode === 'create' || !clientId;
+
   // State
-  const [mode, setMode] = useState<'create' | 'view' | 'edit'>(initialMode);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
 
-  // Form hook
+  // Form hook with change tracking
   const {
     formData,
     errors,
     updateField,
-    updateProject,
-    addProject,
-    removeProject,
-    updatePhone,
     handleRFCBlur,
     validate,
     reset: resetForm,
-    getClientInitials,
+    setInitialData,
+    discardChanges,
+    hasChanges,
   } = useClientForm();
 
-  // Load client data from store when in view/edit mode (instant, no API call)
+  // Check if there are unsaved changes
+  const formHasChanges = useMemo(() => {
+    if (isCreateMode) {
+      return formData.name.trim().length > 0;
+    }
+    return hasChanges();
+  }, [isCreateMode, formData.name, hasChanges]);
+
+  // Load client data from store when opening for existing client
   useEffect(() => {
-    if (isOpen && clientFromStore && initialMode !== 'create' && !isDataLoaded) {
-      // Update form with client data from store
-      Object.entries(clientFromStore).forEach(([key, value]) => {
-        if (key in formData) {
-          updateField(key as keyof typeof formData, value);
-        }
-      });
+    if (isOpen && clientFromStore && !isCreateMode && !isDataLoaded) {
+      setInitialData(clientFromStore);
       setIsDataLoaded(true);
     }
-  }, [isOpen, clientFromStore, initialMode, isDataLoaded, formData, updateField]);
-
-  // Sync mode with initialMode when dialog opens
-  useEffect(() => {
-    if (isOpen) {
-      setMode(initialMode);
-    }
-  }, [isOpen, initialMode]);
+  }, [isOpen, clientFromStore, isCreateMode, isDataLoaded, setInitialData]);
 
   // Reset on close
   useEffect(() => {
@@ -112,15 +114,36 @@ export function ClientDialog({
     }
   }, [updateField]);
 
-  // Handle image upload from GradientAvatarSelector
+  // Handle image upload
   const handleImageUpload = useCallback((url: string) => {
     updateField('imageUrl', url);
   }, [updateField]);
 
-  // Dialog close handler
-  const handleDialogClose = useCallback(() => {
+  // Close handler - check for unsaved changes
+  const handleClose = useCallback((open: boolean) => {
+    if (!open && formHasChanges) {
+      setShowDiscardConfirm(true);
+    } else {
+      onOpenChange(open);
+    }
+  }, [formHasChanges, onOpenChange]);
+
+  // Force close without checking changes
+  const handleForceClose = useCallback(() => {
+    setShowDiscardConfirm(false);
+    resetForm();
     onOpenChange(false);
-  }, [onOpenChange]);
+  }, [resetForm, onOpenChange]);
+
+  // Discard changes handler
+  const handleDiscardChanges = useCallback(() => {
+    if (isCreateMode) {
+      handleForceClose();
+    } else {
+      discardChanges();
+      setShowDiscardConfirm(false);
+    }
+  }, [isCreateMode, handleForceClose, discardChanges]);
 
   // Submit handler
   const handleSubmit = useCallback(async () => {
@@ -138,53 +161,35 @@ export function ClientDialog({
     setIsSubmitting(true);
 
     try {
-      // Transform phone to storage format
-      const phoneForStorage = formData.phone
-        ? typeof formData.phone === 'string'
-          ? formData.phone
-          : phoneToStorageString(formData.phone as PhoneNumber)
-        : undefined;
+      // Transform phone to string if needed
+      const phoneForStorage = typeof formData.phone === 'string'
+        ? formData.phone
+        : formData.phone?.number || '';
 
       const clientData = {
         ...formData,
         phone: phoneForStorage,
-        projects: (formData.projects || []).filter((p) => p.trim()),
       };
 
-      if (mode === 'create') {
+      if (isCreateMode) {
         await clientService.createClient(clientData);
-        showSuccess(`El cliente "${formData.name}" se ha creado exitosamente.`);
+        showSuccess(`La cuenta "${formData.name}" se ha creado exitosamente.`);
         if (onClientCreated) onClientCreated();
-      } else if (mode === 'edit' && clientId) {
+      } else if (clientId) {
         await clientService.updateClient(clientId, clientData);
-        showSuccess(`El cliente "${formData.name}" se ha actualizado exitosamente.`);
+        showSuccess(`La cuenta "${formData.name}" se ha actualizado exitosamente.`);
         if (onClientUpdated) onClientUpdated();
       }
 
       resetForm();
       onOpenChange(false);
-      window.location.reload();
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
       showError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
-  }, [isSubmitting, user, formData, mode, clientId, validate, showSuccess, showError, onClientCreated, onClientUpdated, onOpenChange, resetForm]);
-
-  const handleCancel = useCallback(() => {
-    resetForm();
-    onOpenChange(false);
-  }, [resetForm, onOpenChange]);
-
-  const handleEdit = useCallback(() => {
-    setMode('edit');
-  }, []);
-
-  const handleCancelEdit = useCallback(() => {
-    setMode('view');
-    // Reload client data would go here
-  }, []);
+  }, [isSubmitting, user, formData, isCreateMode, clientId, validate, showSuccess, showError, onClientCreated, onClientUpdated, onOpenChange, resetForm]);
 
   // Delete handlers
   const handleDeleteClick = useCallback(() => {
@@ -200,27 +205,16 @@ export function ClientDialog({
     setIsDeleting(true);
 
     try {
-      // Call API to delete from Firestore
       await clientService.deleteClient(clientId);
-
-      // Update clientsDataStore
       removeClientFromStore(clientId);
 
-      // Update dataStore (legacy store)
       const updatedClients = allClients.filter((c) => c.id !== clientId);
       setClients(updatedClients);
-
-      // Invalidate cache
       invalidateClientsCache();
 
       showSuccess('La cuenta ha sido eliminada exitosamente.');
-
-      // Close dialogs
       setShowDeleteConfirm(false);
       onOpenChange(false);
-
-      // Reload to refresh the list
-      window.location.reload();
     } catch (error) {
       console.error('Error deleting client:', error);
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
@@ -230,79 +224,106 @@ export function ClientDialog({
     }
   }, [isAdmin, clientId, removeClientFromStore, allClients, setClients, showSuccess, showError, onOpenChange]);
 
-  // Dialog title/description
-  const getTitle = () => {
-    if (mode === 'create') return 'Crear Nueva Cuenta';
-    if (mode === 'edit') return 'Editar Cuenta';
-    return 'Información de la Cuenta';
-  };
-
-  const getDescription = () => {
-    if (mode === 'create') return 'Completa el formulario para crear una nueva cuenta en el sistema.';
-    if (mode === 'edit') return 'Actualiza la información de la cuenta.';
-    return 'Detalles completos de la cuenta del cliente.';
-  };
-
-  const isReadOnly = mode === 'view';
+  const isDisabled = isSubmitting || isDeleting;
 
   return (
-    <CrudDialog
-      isOpen={isOpen}
-      onOpenChange={onOpenChange}
-      title={getTitle()}
-      description={getDescription()}
-      mode={mode === 'create' ? 'create' : 'view'}
-      size="xl"
-      isLoading={false}
-      loadingMessage="Cargando información del cliente..."
-      closeOnOverlayClick={false}
-      closeOnEscape={true}
-      showCloseButton={true}
-      footer={null}
-    >
-      <div className="flex-1 overflow-y-auto flex flex-col">
-        <ClientForm
-          formData={formData}
-          errors={errors}
-          isReadOnly={isReadOnly}
-          isSubmitting={isSubmitting}
-          isAdmin={isAdmin}
-          clientId={clientId}
-          clientInitials={getClientInitials()}
-          onFieldChange={updateField}
-          onGradientSelect={handleGradientSelect}
-          onImageUpload={handleImageUpload}
-          onProjectChange={updateProject}
-          onAddProject={addProject}
-          onRemoveProject={removeProject}
-          onPhoneChange={updatePhone}
-          onRFCBlur={handleRFCBlur}
-        />
-        
-        <ClientDialogActions
-          mode={mode}
-          isSubmitting={isSubmitting}
-          isDeleting={isDeleting}
-          isAdmin={isAdmin}
-          onCancel={handleCancel}
-          onSubmit={handleSubmit}
-          onEdit={handleEdit}
-          onCancelEdit={handleCancelEdit}
-          onClose={handleDialogClose}
-          onDelete={clientId ? handleDeleteClick : undefined}
-        />
+    <>
+      <ResponsiveDialog open={isOpen} onOpenChange={handleClose}>
+        <ResponsiveDialogContent
+          size="lg"
+          closeOnOverlayClick={!formHasChanges}
+          showCloseButton={true}
+        >
+          {/* Accessible title for screen readers */}
+          <ResponsiveDialogTitle className="sr-only">
+            {isCreateMode ? 'Crear Cliente' : 'Editar Cliente'}
+          </ResponsiveDialogTitle>
 
-        {/* Delete Confirmation Dialog */}
-        <DestructiveConfirmDialog
-          open={showDeleteConfirm}
-          onOpenChange={setShowDeleteConfirm}
-          title="Eliminar Cuenta"
-          itemName={formData.name}
-          warningMessage="Las tareas sin cuenta asignada no aparecerán en los filtros del sistema ni podrán ser relacionadas con otras tareas hasta ser reasignadas."
-          onConfirm={handleConfirmDelete}
-          isLoading={isDeleting}
-        />
-      </div>
-    </CrudDialog>
+          {/* Scrollable Content */}
+          <ResponsiveDialogBody className={styles.content}>
+            <ClientFormSimple
+              formData={formData}
+              errors={errors}
+              isSubmitting={isSubmitting}
+              onFieldChange={updateField}
+              onGradientSelect={handleGradientSelect}
+              onImageUpload={handleImageUpload}
+              onRFCBlur={handleRFCBlur}
+            />
+          </ResponsiveDialogBody>
+
+          {/* Fixed Footer */}
+          <ResponsiveDialogFooter className={styles.footer}>
+            <div className={styles.actions}>
+              {isCreateMode ? (
+                <>
+                  <Button
+                    intent="secondary"
+                    onClick={handleForceClose}
+                    disabled={isDisabled}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    intent="primary"
+                    onClick={handleSubmit}
+                    disabled={isDisabled || !formData.name.trim()}
+                    isLoading={isSubmitting}
+                    loadingText="Guardando..."
+                  >
+                    Guardar
+                  </Button>
+                </>
+              ) : (
+                <>
+                  {isAdmin && clientId && (
+                    <Button
+                      intent="danger"
+                      onClick={handleDeleteClick}
+                      disabled={isDisabled}
+                      leftIcon={Trash2}
+                    >
+                      Eliminar cuenta
+                    </Button>
+                  )}
+                  <Button
+                    intent="primary"
+                    onClick={handleSubmit}
+                    disabled={isDisabled || !formHasChanges}
+                    isLoading={isSubmitting}
+                    loadingText="Guardando..."
+                  >
+                    Guardar cambios
+                  </Button>
+                </>
+              )}
+            </div>
+          </ResponsiveDialogFooter>
+        </ResponsiveDialogContent>
+      </ResponsiveDialog>
+
+      {/* Delete Confirmation Dialog */}
+      <DestructiveConfirmDialog
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        title="Eliminar Cuenta"
+        itemName={formData.name}
+        warningMessage="Esta acción eliminará permanentemente la cuenta. Las tareas asociadas perderán su referencia de cliente."
+        onConfirm={handleConfirmDelete}
+        isLoading={isDeleting}
+      />
+
+      {/* Discard Changes Confirmation Dialog */}
+      <DestructiveConfirmDialog
+        open={showDiscardConfirm}
+        onOpenChange={setShowDiscardConfirm}
+        title="Descartar Cambios"
+        itemName="los cambios realizados"
+        warningMessage="Perderás todos los cambios que no hayas guardado."
+        onConfirm={handleDiscardChanges}
+        confirmText="Descartar"
+        isLoading={false}
+      />
+    </>
   );
 }

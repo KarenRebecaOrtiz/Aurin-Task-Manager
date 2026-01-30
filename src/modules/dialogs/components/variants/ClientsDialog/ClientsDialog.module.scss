@@ -1,0 +1,227 @@
+// ClientsDialog specific styles
+// Reuses UsersDialog styles, adds action menu and discrete button
+
+// ============================================================================
+// ACTION BUTTON (three dots)
+// ============================================================================
+
+.actionButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: none;
+  background-color: transparent;
+  border-radius: 0.375rem;
+  color: #a1a1aa;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+
+  &:hover:not(:disabled) {
+    background-color: #f4f4f5;
+    color: #52525b;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  :global(.dark) & {
+    color: #71717a;
+
+    &:hover:not(:disabled) {
+      background-color: #27272a;
+      color: #a1a1aa;
+    }
+  }
+}
+
+// ============================================================================
+// ACTION MENU (desktop dropdown)
+// ============================================================================
+
+.actionMenu {
+  position: fixed;
+  z-index: 10000;
+  min-width: 160px;
+  background-color: white;
+  border: 1px solid #e4e4e7;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+
+  :global(.dark) & {
+    background-color: #18181b;
+    border-color: #3f3f46;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  }
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  border: none;
+  background-color: transparent;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #52525b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+
+  &:hover {
+    background-color: #f4f4f5;
+    color: #18181b;
+  }
+
+  :global(.dark) & {
+    color: #a1a1aa;
+
+    &:hover {
+      background-color: #27272a;
+      color: #fafafa;
+    }
+  }
+}
+
+.menuItemDanger {
+  color: #dc2626;
+
+  &:hover {
+    background-color: #fef2f2;
+    color: #b91c1c;
+  }
+
+  :global(.dark) & {
+    color: #f87171;
+
+    &:hover {
+      background-color: rgba(220, 38, 38, 0.15);
+      color: #fca5a5;
+    }
+  }
+}
+
+.menuSeparator {
+  height: 1px;
+  margin: 0.25rem 0;
+  background-color: #e4e4e7;
+
+  :global(.dark) & {
+    background-color: #3f3f46;
+  }
+}
+
+// ============================================================================
+// MOBILE DRAWER
+// ============================================================================
+
+.drawerBody {
+  display: flex;
+  flex-direction: column;
+  padding: 0.5rem 1rem 1.5rem;
+}
+
+.drawerItem {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  width: 100%;
+  padding: 0.875rem 1rem;
+  border: none;
+  background-color: transparent;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: #18181b;
+  cursor: pointer;
+  border-radius: 0.5rem;
+  transition: all 0.15s ease;
+  text-align: left;
+
+  &:hover {
+    background-color: #f4f4f5;
+  }
+
+  :global(.dark) & {
+    color: #fafafa;
+
+    &:hover {
+      background-color: #27272a;
+    }
+  }
+}
+
+.drawerItemDanger {
+  color: #dc2626;
+
+  &:hover {
+    background-color: #fef2f2;
+  }
+
+  :global(.dark) & {
+    color: #f87171;
+
+    &:hover {
+      background-color: rgba(220, 38, 38, 0.15);
+    }
+  }
+}
+
+.drawerSeparator {
+  height: 1px;
+  margin: 0.5rem 0;
+  background-color: #e4e4e7;
+
+  :global(.dark) & {
+    background-color: #3f3f46;
+  }
+}
+
+// ============================================================================
+// DISCRETE CREATE BUTTON
+// ============================================================================
+
+.createButtonDiscrete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.75rem 1.25rem;
+  background-color: transparent;
+  border: 1px dashed #d4d4d8;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #71717a;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background-color: #fafafa;
+    border-color: #a1a1aa;
+    color: #52525b;
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  :global(.dark) & {
+    border-color: #3f3f46;
+    color: #a1a1aa;
+
+    &:hover {
+      background-color: #27272a;
+      border-color: #52525b;
+      color: #fafafa;
+    }
+  }
+}

@@ -3,7 +3,7 @@
  * Public API for client creation, viewing, and editing
  */
 
-// ClientDialog is now centralized in @/modules/dialogs
-export { ClientDialog } from '@/modules/dialogs';
+// ClientDialog - the new simplified version with ResponsiveDialog
+export { ClientDialog } from './components/ClientDialog';
 export { clientService } from './services/clientService';
 export type { ClientFormData, ClientDialogProps } from './types/form';

@@ -9,7 +9,11 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import Image from 'next/image';
+import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
 import styles from './GradientAvatarSelector.module.scss';
+
+// Max file size in bytes (2MB)
+const MAX_FILE_SIZE = 2 * 1024 * 1024;
 
 interface GradientConfig {
   colors: string[];
@@ -55,6 +59,7 @@ export function GradientAvatarSelector({
   const [isShuffling, setIsShuffling] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { error: showError } = useSonnerToast();
 
   const handleShuffle = useCallback(() => {
     setIsShuffling(true);
@@ -69,6 +74,29 @@ export function GradientAvatarSelector({
     const file = e.target.files?.[0];
     if (!file || !onImageUpload) return;
 
+    // Check file size before uploading
+    if (file.size > MAX_FILE_SIZE) {
+      const fileSizeMB = (file.size / (1024 * 1024)).toFixed(1);
+      showError(
+        `La imagen es demasiado grande (${fileSizeMB}MB). El tamaño máximo permitido es 2MB.`,
+        'Reduce el tamaño de la imagen e intenta de nuevo.'
+      );
+      // Reset input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      return;
+    }
+
+    // Check file type
+    if (!file.type.startsWith('image/')) {
+      showError('Formato no válido', 'Por favor selecciona un archivo de imagen (PNG, JPG, etc.).');
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      return;
+    }
+
     setIsUploading(true);
     try {
       const formData = new FormData();
@@ -80,31 +108,32 @@ export function GradientAvatarSelector({
         body: formData,
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error('Error al subir la imagen');
+        // Parse error message from API
+        const errorMessage = data.error || 'Error al subir la imagen';
+        if (errorMessage.includes('2MB') || errorMessage.includes('limit')) {
+          showError('Imagen demasiado grande', 'El tamaño máximo permitido es 2MB.');
+        } else {
+          showError('Error al subir imagen', errorMessage);
+        }
+        return;
       }
 
-      const data = await response.json();
       const uploadedUrl = data.data?.url;
-
-      // Debug logging
-      console.log('[GradientAvatarSelector] Upload response:', {
-        success: data.success,
-        url: uploadedUrl,
-        fullResponse: data
-      });
 
       if (!uploadedUrl) {
         console.error('[GradientAvatarSelector] No URL in upload response:', data);
-        throw new Error('No URL returned from upload');
+        showError('Error al subir imagen', 'No se recibió la URL de la imagen.');
+        return;
       }
 
       onImageUpload(uploadedUrl);
       onSelect('custom-image'); // Select the custom image
-
-      console.log('[GradientAvatarSelector] Image upload complete, called onImageUpload with:', uploadedUrl);
     } catch (error) {
       console.error('[GradientAvatarSelector] Error uploading image:', error);
+      showError('Error al subir imagen', 'Ocurrió un error inesperado. Intenta de nuevo.');
     } finally {
       setIsUploading(false);
       // Reset input
@@ -112,7 +141,7 @@ export function GradientAvatarSelector({
         fileInputRef.current.value = '';
       }
     }
-  }, [onImageUpload, onSelect]);
+  }, [onImageUpload, onSelect, showError]);
 
   const handleUploadClick = useCallback(() => {
     fileInputRef.current?.click();

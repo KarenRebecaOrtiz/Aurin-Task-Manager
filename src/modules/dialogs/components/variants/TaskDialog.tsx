@@ -9,8 +9,11 @@ import { useTaskFormData } from "@/modules/task-crud/hooks/data/useTaskData"
 import { taskService } from "@/modules/task-crud/services/taskService"
 import { validateTaskDates } from "@/modules/task-crud/utils/validation"
 import { FormFooter } from "@/modules/task-crud/components/forms/FormFooter"
-import { ClientDialog } from "./ClientDialog"
+import { ClientDialog } from "@/modules/client-crud"
+import { ManageProjectsDialog } from "./ManageProjectsDialog"
 import { useTaskState } from "@/hooks/useTaskData"
+import { useAuth } from "@/contexts/AuthContext"
+import { Client } from "@/types"
 
 interface TaskDialogProps {
   isOpen: boolean
@@ -29,7 +32,11 @@ export function TaskDialog({
   const { clients, users } = useTaskFormData()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isClientDialogOpen, setIsClientDialogOpen] = useState(false)
+  const [isProjectsDialogOpen, setIsProjectsDialogOpen] = useState(false)
+  const [selectedClientForProject, setSelectedClientForProject] = useState<Client | null>(null)
+  const [formClientId, setFormClientId] = useState<string>('')
   const { success: showSuccess, error: showError } = useSonnerToast()
+  const { isAdmin } = useAuth()
 
   const isEditMode = !!taskId
 
@@ -179,6 +186,26 @@ export function TaskDialog({
     // Refresh will happen automatically in ClientDialog
   }, [])
 
+  // Initialize formClientId when in edit mode
+  useEffect(() => {
+    if (initialData?.clientId) {
+      setFormClientId(initialData.clientId)
+    }
+  }, [initialData?.clientId])
+
+  const handleCreateProject = useCallback(() => {
+    // Find the currently selected client to open projects dialog
+    const client = clients.find(c => c.id === formClientId)
+    if (client) {
+      setSelectedClientForProject(client as Client)
+      setIsProjectsDialogOpen(true)
+    }
+  }, [clients, formClientId])
+
+  const handleProjectsUpdated = useCallback(() => {
+    // Projects updated, will refresh via store
+  }, [])
+
   // Footer personalizado con FormFooter
   const customFooter = (
     <FormFooter
@@ -210,7 +237,9 @@ export function TaskDialog({
           clients={clients}
           users={users}
           onSubmit={handleSubmit}
-          onCreateClient={handleCreateClient}
+          onCreateClient={isAdmin ? handleCreateClient : undefined}
+          onCreateProject={isAdmin ? handleCreateProject : undefined}
+          onClientIdChange={setFormClientId}
           initialData={initialData}
         />
       </CrudDialog>
@@ -221,6 +250,16 @@ export function TaskDialog({
         onClientCreated={handleClientCreated}
         mode="create"
       />
+
+      {/* Manage Projects Dialog - only for admins */}
+      {selectedClientForProject && (
+        <ManageProjectsDialog
+          isOpen={isProjectsDialogOpen}
+          onOpenChange={setIsProjectsDialogOpen}
+          client={selectedClientForProject}
+          onProjectsUpdated={handleProjectsUpdated}
+        />
+      )}
     </>
   )
 }
