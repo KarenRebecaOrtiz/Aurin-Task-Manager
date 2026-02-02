@@ -1,89 +1,88 @@
-@use '@/app/styles/variables' as *;
-@use '@/app/styles/mixins' as *;
-
-// Estilos de ProfileSection
+// Estilos de ProfileSection - Hardcoded values matching ToDoDropdown
 
 // Sección principal
 .section {
-  margin-bottom: 2rem;
+  margin-bottom: 24px;
 }
 
 .sectionContent {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 16px;
 }
 
 .sectionHeader {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
-  padding-bottom: 15px;
-  border-bottom: solid rgba(255, 255, 255, 0.11) 1px;
+  gap: 4px;
+  margin-bottom: 8px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(209, 217, 230, 0.3);
+
+  :global(.dark) & {
+    border-bottom-color: #3f3f46;
+  }
 }
 
 .sectionTitle {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  font-size: text-lg; 
+  gap: 8px;
+  font-size: 16px;
   font-weight: 600;
-  color: #1f2937;
+  color: #0f172a;
+  line-height: 1.4;
   margin: 0;
 
   :global(.dark) & {
-    color: #f3f4f6; // text-gray-100
+    color: rgba(255, 255, 255, 0.7);
   }
 }
 
 .sectionIcon {
-  width: 20px;
-  height: 20px;
-  color: #1f2937;
+  width: 16px;
+  height: 16px;
+  color: #0f172a;
 
   svg {
     color: inherit;
   }
 
   :global(body.dark) & {
-    color: #f3f4f6;
+    color: rgba(255, 255, 255, 0.7);
   }
 }
 
 .stackDescription {
-  font-size: text-sm;
-  color: #6b7280; 
+  font-size: 12px;
+  font-weight: 400;
+  color: #64748b;
   line-height: 1.5;
 
   :global(.dark) & {
-    color: #d1d5db; // text-gray-300
+    color: #a1a1aa;
   }
 }
 
-// Grid de dos columnas para los campos
+// Grid de campos - siempre una columna como drawer
 .fieldGroupRow {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
-
-  @media (max-width: 768px) {
-    grid-template-columns: 1fr;
-  }
+  grid-template-columns: 1fr;
+  gap: 16px;
 }
 
 // Campo individual
 .fieldGroup {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 8px;
 }
 
 // Campo que ocupa toda la fila
 .fieldGroupFull {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 8px;
   width: 100%;
 }
 
@@ -91,19 +90,25 @@
 .socialLinksGrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 1rem;
-  margin-top: 1rem;
+  gap: 16px;
+  margin-top: 16px;
 }
 
 .socialLinkField {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  
+  gap: 8px;
+
   .label {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 8px;
+    font-size: 14px;
     font-weight: 500;
+    color: #0f172a;
+
+    :global(.dark) & {
+      color: #d1d1d1;
+    }
   }
 }

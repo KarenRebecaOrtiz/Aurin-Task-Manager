@@ -61,6 +61,16 @@ const AvatarFallback = React.forwardRef<
 ));
 AvatarFallback.displayName = AvatarPrimitive.Fallback.displayName;
 
+/**
+ * Checks if the imageUrl is a valid custom image (not a fallback)
+ */
+function isValidCustomImage(imageUrl?: string): boolean {
+  if (!imageUrl) return false;
+  if (imageUrl === '/empty-image.png') return false;
+  if (imageUrl.includes('empty-image')) return false;
+  return imageUrl.startsWith('http') || imageUrl.startsWith('/');
+}
+
 export const ClientAvatar: React.FC<ClientAvatarProps> = ({
   src,
   alt = 'Client avatar',
@@ -101,6 +111,15 @@ export const ClientAvatar: React.FC<ClientAvatarProps> = ({
         .slice(0, 2)
     : fallback;
 
+  // Check if we should show gradient
+  const showGradient = React.useMemo(() => {
+    if (isValidCustomImage(imageSource)) return false;
+    return client?.gradientId &&
+           client.gradientId !== 'default' &&
+           client?.gradientColors &&
+           client.gradientColors.length >= 3;
+  }, [imageSource, client?.gradientId, client?.gradientColors]);
+
   return (
     <div
       className={`relative ${onClick ? 'cursor-pointer' : ''} ${className}`}
@@ -110,10 +129,46 @@ export const ClientAvatar: React.FC<ClientAvatarProps> = ({
       role={onClick ? 'button' : undefined}
       title={client ? `Ver detalles de ${client.name}` : alt}
     >
-      <Avatar className={`${sizeMap[size]}`}>
-        <AvatarImage src={imageSource} alt={avatarAlt} />
-        <AvatarFallback>{avatarFallback}</AvatarFallback>
-      </Avatar>
+      {showGradient && client?.gradientColors ? (
+        // Gradient avatar
+        <div
+          className={cn(
+            'relative flex shrink-0 overflow-hidden rounded-full',
+            sizeMap[size]
+          )}
+        >
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `linear-gradient(135deg, ${client.gradientColors[0]}, ${client.gradientColors[1]}, ${client.gradientColors[2]})`,
+            }}
+          />
+          {/* Noise overlay for texture */}
+          <svg className="absolute inset-0 w-full h-full opacity-30 mix-blend-multiply">
+            <filter id={`noise-client-${client.gradientId}`}>
+              <feTurbulence
+                type="fractalNoise"
+                baseFrequency="0.9"
+                numOctaves="4"
+                stitchTiles="stitch"
+              />
+              <feColorMatrix type="saturate" values="0" />
+              <feBlend mode="multiply" in="SourceGraphic" />
+            </filter>
+            <rect
+              width="100%"
+              height="100%"
+              filter={`url(#noise-client-${client.gradientId})`}
+            />
+          </svg>
+        </div>
+      ) : (
+        // Standard avatar with image or fallback
+        <Avatar className={`${sizeMap[size]}`}>
+          <AvatarImage src={imageSource} alt={avatarAlt} />
+          <AvatarFallback>{avatarFallback}</AvatarFallback>
+        </Avatar>
+      )}
     </div>
   );
 };

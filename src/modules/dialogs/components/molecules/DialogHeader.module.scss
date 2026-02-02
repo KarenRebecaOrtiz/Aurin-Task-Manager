@@ -1,60 +1,59 @@
 // DialogHeader.module.scss
-// Estilos para el header de diálogos
+// Estilos para el header de diálogos - Hardcoded values
 
 .header {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem; // gap-2
-  padding: 1.25rem 0 1.25rem 0 ;
-  
+  gap: 4px;
+  padding: 16px 20px 20px 0;
 
-  
   // Alineación
   &.alignLeft {
     text-align: left;
-    
+
     // En mobile (drawers), centrar siempre
     @media (max-width: 767px) {
       text-align: center;
     }
   }
-  
+
   &.alignCenter {
     text-align: center;
   }
 }
 
 .title {
-  font-size: 1.8rem; // text-lg
-  line-height: 1; // leading-none
-  font-weight: 600; // font-semibold
-  color: var(--foreground, hsl(var(--foreground)));
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #0f172a;
+
+  :global(.dark) & {
+    color: rgba(255, 255, 255, 0.7);
+  }
 }
 
 .description {
-  font-size: 1rem; // text-sm
-  color: var(--muted-foreground, hsl(var(--muted-foreground)));
+  font-size: 12px;
+  font-weight: 400;
+  color: #64748b;
   line-height: 1.5;
-  
+
+  :global(.dark) & {
+    color: #a1a1aa;
+  }
+
   // En mobile (drawers), ocultar descripción
   @media (max-width: 767px) {
     display: none;
   }
 }
 
-// Dark mode
+// Dark mode - bordered variant
 :global(.dark) {
   .header {
     &.bordered {
-      border-bottom-color: var(--border-dark, hsl(var(--border)));
+      border-bottom-color: #3f3f46;
     }
-  }
-
-  .title {
-    color: var(--foreground-dark, hsl(var(--foreground)));
-  }
-
-  .description {
-    color: var(--muted-foreground-dark, hsl(var(--muted-foreground)));
   }
 }

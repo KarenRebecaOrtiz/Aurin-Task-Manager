@@ -306,9 +306,16 @@ export async function archiveTask(taskId: string, userId: string): Promise<void>
     // 6. Commit successful - remove from registry
     optimisticUpdates.delete(updateId);
 
-    // 7. Refresh cache with fresh data AND update dataStore
-    const freshTasks = await fetchTasksFromFirebase();
-    useDataStore.getState().setTasks(freshTasks);
+    // 7. Update dataStore directly instead of full refresh (much faster)
+    // The optimistic update was already applied to the cache, now sync with dataStore
+    const { tasks, setTasks } = useDataStore.getState();
+    const updatedTasks = tasks.map(t =>
+      t.id === taskId
+        ? { ...t, archived: true, archivedAt: new Date().toISOString(), archivedBy: userId }
+        : t
+    );
+    setTasks(updatedTasks);
+
   } catch (error) {
     console.error('[taskService] Error archiving task:', error);
 
@@ -402,13 +409,17 @@ export async function unarchiveTask(taskId: string): Promise<void> {
       archivedBy: null,
     });
 
-    console.log('[taskService] Successfully unarchived task:', taskId);
-
     optimisticUpdates.delete(updateId);
 
-    // Refresh cache with fresh data AND update dataStore
-    const freshTasks = await fetchTasksFromFirebase();
-    useDataStore.getState().setTasks(freshTasks);
+    // Update dataStore directly instead of full refresh (much faster)
+    const { tasks, setTasks } = useDataStore.getState();
+    const updatedTasks = tasks.map(t =>
+      t.id === taskId
+        ? { ...t, archived: false, archivedAt: undefined, archivedBy: undefined }
+        : t
+    );
+    setTasks(updatedTasks);
+
   } catch (error) {
     console.error('[taskService] Error unarchiving task:', error);
 

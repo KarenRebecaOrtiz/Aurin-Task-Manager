@@ -28,6 +28,7 @@ import { useMediaQuery } from '../../../hooks/useMediaQuery';
 import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
 import { clientService } from '@/modules/client-crud/services/clientService';
 import { useDataStore } from '@/stores/dataStore';
+import { useClientsDataStore } from '@/stores/clientsDataStore';
 import { invalidateClientsCache } from '@/lib/cache-utils';
 import { Client } from '@/types';
 import { Button } from '@/components/ui/buttons';
@@ -99,6 +100,7 @@ export function ManageProjectsDialog({
   // Get clients from store for updates
   const allClients = useDataStore((state) => state.clients);
   const setClients = useDataStore((state) => state.setClients);
+  const setClientsInClientsStore = useClientsDataStore((state) => state.setClients);
 
   // State
   const [projects, setProjects] = useState<string[]>(client.projects || []);
@@ -190,11 +192,12 @@ export function ManageProjectsDialog({
         projects: updatedProjects
       });
 
-      // Update store (projectCount is computed from projects.length)
+      // Update both stores (projectCount is computed from projects.length)
       const updatedClients = allClients.map((c) =>
         c.id === client.id ? { ...c, projects: updatedProjects, projectCount: updatedProjects.length } : c
       );
       setClients(updatedClients);
+      setClientsInClientsStore(updatedClients);
       invalidateClientsCache();
 
       setProjects(updatedProjects);
@@ -209,7 +212,7 @@ export function ManageProjectsDialog({
     } finally {
       setIsSubmitting(false);
     }
-  }, [client.id, allClients, setClients, onProjectsUpdated, showError]);
+  }, [client.id, allClients, setClients, setClientsInClientsStore, onProjectsUpdated, showError]);
 
   // Handle create new project
   const handleStartCreate = useCallback(() => {

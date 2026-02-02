@@ -381,6 +381,8 @@ export const ToDoDropdown: React.FC<ToDoDropdownProps> = ({
                   {...TODO_ANIMATIONS.todoItem}
                   transition={{ ...TODO_ANIMATIONS.todoItem.transition, delay: index * 0.03 }}
                 >
+                  <span className={styles.todoText}>{todo.text}</span>
+
                   <button
                     className={styles.todoToggle}
                     onClick={createToggleHandler(todo.id, todo.completed)}
@@ -398,8 +400,6 @@ export const ToDoDropdown: React.FC<ToDoDropdownProps> = ({
                       )}
                     </div>
                   </button>
-                  
-                  <span className={styles.todoText}>{todo.text}</span>
                 </motion.div>
               ))}
             </AnimatePresence>

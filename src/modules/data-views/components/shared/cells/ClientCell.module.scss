@@ -3,9 +3,13 @@
 
 .clientWrapper {
   @include flex-center;
+  justify-content: center;
   cursor: pointer;
   transition: transform 0.2s ease, opacity 0.2s ease;
   position: relative;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
 
   &:hover {
     transform: scale(1.1);
@@ -39,12 +43,20 @@
 }
 
 .noClient {
-  color: #64748b;
-  font-size: 14px;
-  font-style: italic;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  color: #9ca3af;
+  font-size: 12px;
+  font-weight: 500;
 
   :global(body.dark) & {
-    color: #9ca3af;
+    background: #374151;
+    color: #6b7280;
   }
 }
 

@@ -13,7 +13,6 @@ import styles from './AvatarDropdown.module.scss';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAvailabilityStatus } from '@/hooks/useAvailabilityStatus';
 import { ProfileCard } from '@/modules/profile-card';
-import { Small, Muted } from '@/components/ui/Typography';
 import { dropdownAnimations } from '@/modules/shared/components/molecules/Dropdown/animations';
 import { ConfigDialog } from '@/modules/config';
 import { LogOut } from '@/components/animate-ui/icons';
@@ -233,8 +232,8 @@ const AvatarDropdown = () => {
             >
               {/* 1. Cabecera (Identidad) */}
               <div className={styles.dropdownHeader}>
-                <Small className={styles.userName}>{displayName}</Small>
-                <Muted className={styles.userEmail}>{email}</Muted>
+                <span className={styles.userName}>{displayName}</span>
+                <span className={styles.userEmail}>{email}</span>
               </div>
 
               {/* 2. Zona de Administración (Solo visible para Admins) */}

@@ -28,7 +28,7 @@ import { useTasksTableActionsStore } from '@/modules/data-views/tasks/stores/tas
 import { usePinnedTasksStore } from '@/modules/data-views/tasks/stores/pinnedTasksStore';
 
 // Utils and components
-import { StatusCell, PriorityCell, UserCell } from '@/modules/data-views/components/shared/cells';
+import { StatusCell, PriorityCell, UserCell, ClientCell } from '@/modules/data-views/components/shared/cells';
 
 const cleanupTasksTableListeners = () => {
   // Placeholder for cleanup logic
@@ -227,6 +227,11 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
   const renderStatusColumn = useCallback((task: Task) => <StatusCell status={task.status} />, []);
   const renderPriorityColumn = useCallback((task: Task) => <PriorityCell priority={task.priority} />, []);
 
+  const renderClientColumn = useCallback((task: Task) => {
+    const client = tableState.effectiveClients.find(c => c.id === task.clientId);
+    return <ClientCell client={client} />;
+  }, [tableState.effectiveClients]);
+
   const handleEditTask = useCallback((taskId: string) => {
     openEditTask(taskId);
     tableState.setActionMenuOpenId(null);
@@ -263,9 +268,10 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
   }, []);
 
   const renderActionColumn = useCallback((task: Task) => {
-    const shouldShowActionMenu = isAdmin || task.CreatedBy === userId;
-    if (!shouldShowActionMenu) return null;
-
+    // El ActionMenu ahora maneja internamente los permisos:
+    // - Usuarios involucrados (AssignedTo, LeadedBy, CreatedBy) pueden ver el menú y fijar
+    // - Solo Admin o Creator pueden editar/archivar/eliminar
+    // Pasamos el userId y dejamos que ActionMenu decida qué mostrar
     return (
       <ActionMenu
         task={task}
@@ -279,22 +285,24 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
         actionButtonRef={handleActionButtonRef(task.id)}
       />
     );
-  }, [isAdmin, userId, handleEditTaskForActionMenu, handleDeleteTaskForActionMenu, handleArchiveTaskForActionMenu, animateClick, actionMenuRef, handleActionButtonRef]);
+  }, [userId, handleEditTaskForActionMenu, handleDeleteTaskForActionMenu, handleArchiveTaskForActionMenu, animateClick, actionMenuRef, handleActionButtonRef]);
 
-  // Columnas ordenadas: Tarea, Asignados, Proyecto, Estado, Prioridad, Acciones
+  // Columnas ordenadas: Cuenta, Tarea, Asignados, Proyecto, Estado, Prioridad, Acciones
   // Mobile: solo Tarea, Proyecto y Acciones visibles
-  // Desktop: 35% + 15% + 18% + 12% + 10% + 10% = 100%
+  // Desktop: 60px + 28% + 15% + 20% + 13% + 12% + 8% (uses min-width for table)
   // Mobile: 50% + 35% + 15% = 100%
   const baseColumns = [
-    { key: 'name', label: 'Tarea', width: '35%', mobileVisible: true, mobileWidth: '50%', sortable: true },
+    { key: 'client', label: 'Cuenta', width: '60px', mobileVisible: false, sortable: false },
+    { key: 'name', label: 'Tarea', width: '28%', mobileVisible: true, mobileWidth: '50%', sortable: true },
     { key: 'assignedTo', label: 'Asignados', width: '15%', mobileVisible: false, sortable: true },
-    { key: 'project', label: 'Proyecto', width: '18%', mobileVisible: true, mobileWidth: '35%', sortable: true },
-    { key: 'status', label: 'Estado', width: '12%', mobileVisible: false, sortable: true },
-    { key: 'priority', label: 'Prioridad', width: '10%', mobileVisible: false, sortable: true },
-    { key: 'action', label: 'Acciones', width: '10%', mobileVisible: true, mobileWidth: '15%', sortable: false },
+    { key: 'project', label: 'Proyecto', width: '20%', mobileVisible: true, mobileWidth: '35%', sortable: true },
+    { key: 'status', label: 'Estado', width: '13%', mobileVisible: false, sortable: true },
+    { key: 'priority', label: 'Prioridad', width: '12%', mobileVisible: false, sortable: true },
+    { key: 'action', label: 'Acciones', width: '8%', mobileVisible: true, mobileWidth: '15%', sortable: false },
   ];
 
   const columns = baseColumns.map((col) => {
+    if (col.key === 'client') return { ...col, render: renderClientColumn };
     if (col.key === 'name') return { ...col, render: renderTaskNameColumn };
     if (col.key === 'assignedTo') return { ...col, render: renderAssignedToColumn };
     if (col.key === 'project') return { ...col, render: renderProjectColumn };
@@ -393,14 +401,54 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
         </div>
       )}
       {showUndo && undoStack.length > 0 && (
-        <div className={styles.undoNotification}>
-          <span>
-            {undoStack[undoStack.length - 1]?.action === 'unarchive'
-              ? 'Tarea desarchivada'
-              : 'Tarea archivada'}
-          </span>
+        <div
+          style={{
+            position: 'fixed',
+            bottom: '20px',
+            right: '20px',
+            backgroundColor: '#10b981',
+            color: 'white',
+            padding: '16px 20px',
+            borderRadius: '12px',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '16px',
+            fontSize: '14px',
+            fontWeight: 500,
+            minWidth: '280px',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(255, 255, 255, 0.1)'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{
+              width: '8px',
+              height: '8px',
+              backgroundColor: 'white',
+              borderRadius: '50%'
+            }} />
+            <span>
+              {undoStack[undoStack.length - 1]?.action === 'unarchive'
+                ? 'Tarea desarchivada'
+                : 'Tarea archivada'}
+            </span>
+          </div>
           <button
             onClick={handleUndoClick}
+            style={{
+              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+              border: 'none',
+              color: 'white',
+              padding: '8px 16px',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '13px',
+              fontWeight: 600,
+              transition: 'all 0.2s ease',
+              whiteSpace: 'nowrap'
+            }}
             onMouseEnter={handleUndoMouseEnter}
             onMouseLeave={handleUndoMouseLeave}
           >

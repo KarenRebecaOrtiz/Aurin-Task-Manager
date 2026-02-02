@@ -51,7 +51,10 @@ export function ClientDialog({
   // Get clients from dataStore
   const allClients = useDataStore((state) => state.clients);
   const setClients = useDataStore((state) => state.setClients);
+  const addClient = useDataStore((state) => state.addClient);
+  const updateClientInStore = useDataStore((state) => state.updateClient);
   const removeClientFromStore = useClientsDataStore((state) => state.removeClient);
+  const setClientsInClientsStore = useClientsDataStore((state) => state.setClients);
 
   // Find the client data from the store
   const clientFromStore = useMemo(() => {
@@ -106,17 +109,22 @@ export function ClientDialog({
     }
   }, [isOpen, resetForm]);
 
-  // Handle gradient selection
+  // Handle gradient selection - clears imageUrl for mutual exclusivity
   const handleGradientSelect = useCallback((gradientId: string, colors?: string[]) => {
     updateField('gradientId', gradientId);
     if (colors) {
       updateField('gradientColors', colors);
     }
+    // Clear image when selecting gradient (mutual exclusivity)
+    updateField('imageUrl', '');
   }, [updateField]);
 
-  // Handle image upload
+  // Handle image upload - clears gradient for mutual exclusivity
   const handleImageUpload = useCallback((url: string) => {
     updateField('imageUrl', url);
+    // Clear gradient when uploading image (mutual exclusivity)
+    updateField('gradientId', '');
+    updateField('gradientColors', []);
   }, [updateField]);
 
   // Close handler - check for unsaved changes
@@ -172,11 +180,33 @@ export function ClientDialog({
       };
 
       if (isCreateMode) {
-        await clientService.createClient(clientData);
+        const response = await clientService.createClient(clientData);
+
+        // Update stores with the new client
+        if (response.success && response.data) {
+          addClient(response.data);
+          // Also update clientsDataStore by refreshing all clients
+          const updatedClients = [...allClients, response.data];
+          setClientsInClientsStore(updatedClients);
+          invalidateClientsCache();
+        }
+
         showSuccess(`La cuenta "${formData.name}" se ha creado exitosamente.`);
         if (onClientCreated) onClientCreated();
       } else if (clientId) {
-        await clientService.updateClient(clientId, clientData);
+        const response = await clientService.updateClient(clientId, clientData);
+
+        // Update stores with the updated client
+        if (response.success && response.data) {
+          updateClientInStore(clientId, response.data);
+          // Also update clientsDataStore
+          const updatedClients = allClients.map((c) =>
+            c.id === clientId ? response.data! : c
+          );
+          setClientsInClientsStore(updatedClients);
+          invalidateClientsCache();
+        }
+
         showSuccess(`La cuenta "${formData.name}" se ha actualizado exitosamente.`);
         if (onClientUpdated) onClientUpdated();
       }
@@ -189,7 +219,7 @@ export function ClientDialog({
     } finally {
       setIsSubmitting(false);
     }
-  }, [isSubmitting, user, formData, isCreateMode, clientId, validate, showSuccess, showError, onClientCreated, onClientUpdated, onOpenChange, resetForm]);
+  }, [isSubmitting, user, formData, isCreateMode, clientId, validate, showSuccess, showError, onClientCreated, onClientUpdated, onOpenChange, resetForm, addClient, updateClientInStore, allClients, setClientsInClientsStore]);
 
   // Delete handlers
   const handleDeleteClick = useCallback(() => {

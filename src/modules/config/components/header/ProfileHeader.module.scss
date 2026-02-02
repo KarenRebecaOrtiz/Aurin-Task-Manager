@@ -1,28 +1,28 @@
-@import '@/styles/variables';
+// ProfileHeader - Hardcoded values
 
 .coverPhoto {
   position: relative;
   width: 100%;
-  height: 200px;
+  height: 400px;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  border-radius: 1rem 1rem 0 0;
+  border-radius: 10px 10px 0 0;
   overflow: hidden;
 
-  @media (max-width: 768px) {
-    height: 150px;
+  @media (max-width: 767px) {
+    height: 120px;
   }
 }
 
 .editCoverButton {
   position: absolute;
-  top: 1rem;
-  right: 1rem;
+  top: 12px;
+  right: 12px;
   background-color: rgba(255, 255, 255, 0.9);
-  width: 40px;
+  width: 32px;
   border-radius: 8px;
-  height: 40px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -30,6 +30,11 @@
   z-index: 10;
   border: none;
   transition: background-color 0.2s ease;
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
 
   &:hover {
     background-color: rgba(255, 255, 255, 1);
@@ -53,26 +58,18 @@
 }
 
 .profileInfo {
-  padding: 0 2rem 1rem 2rem;
-  margin-top: -25px;
+  padding: 0 20px 16px 20px;
+  margin-top: -30px;
   position: relative;
   z-index: 5;
-
-  @media (max-width: 768px) {
-    padding: 0 1rem 1rem 1rem;
-  }
 }
 
 .profileContent {
   display: flex;
-  align-items: flex-end;
-  gap: 1.5rem;
-
-  @media (max-width: 768px) {
-    flex-direction: column;
-    align-items: center;
-    gap: 1rem;
-  }
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
 }
 
 .profilePhotoContainer {
@@ -81,29 +78,39 @@
 }
 
 .profilePhoto {
-  width: 94px;
-  height: 94px;
+  width: 72px;
+  height: 72px;
   border-radius: 50%;
-  border: 4px solid var(--bg-primary);
+  border: 3px solid #ffffff;
   object-fit: cover;
-  background-color: var(--bg-secondary);
+  background-color: #f1f5f9;
+
+  :global(.dark) & {
+    border-color: #171717;
+    background-color: #27272a;
+  }
 }
 
 .editProfilePhotoButton {
   position: absolute;
-  bottom: 5px;
-  right: 5px;
-  width: 32px;
-  height: 32px;
+  bottom: 0;
+  right: 0;
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   z-index: 10;
   background-color: rgba(255, 255, 255, 0.9);
-  border-radius: 8px;
+  border-radius: 6px;
   border: none;
   transition: background-color 0.2s ease;
+
+  svg {
+    width: 12px;
+    height: 12px;
+  }
 
   &:hover {
     background-color: rgba(255, 255, 255, 1);
@@ -129,37 +136,35 @@
 .userInfo {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  padding-bottom: 0.5rem;
-
-  @media (max-width: 768px) {
-    align-items: center;
-    text-align: center;
-  }
+  align-items: center;
+  gap: 4px;
+  padding-bottom: 8px;
+  text-align: center;
 }
 
 .mainName {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  font-size: 2rem;
-  font-weight: 700;
-  color: var(--text-primary);
+  justify-content: center;
+  gap: 8px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #0f172a;
   line-height: 1.2;
 
-  @media (max-width: 768px) {
-    font-size: 1.75rem;
+  :global(.dark) & {
+    color: rgba(255, 255, 255, 0.9);
   }
 }
 
 .mainNameText {
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: var(--text-primary);
+  font-size: 18px;
+  font-weight: 600;
+  color: #0f172a;
   line-height: 1.2;
 
-  @media (max-width: 768px) {
-    font-size: 1.5rem;
+  :global(.dark) & {
+    color: rgba(255, 255, 255, 0.9);
   }
 }
 
@@ -179,10 +184,14 @@
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  background-color: var(--bg-primary);
+  background-color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
+
+  :global(.dark) & {
+    background-color: #171717;
+  }
 }
 
 .adminBadgeIcon {
@@ -192,11 +201,15 @@
 }
 
 .userEmail {
-  font-size: 1.125rem;
-  color: var(--text-secondary);
+  font-size: 14px;
   font-weight: 400;
+  color: #64748b;
+
+  :global(.dark) & {
+    color: #a1a1aa;
+  }
 
   @media (max-width: 768px) {
-    font-size: 1rem;
+    font-size: 12px;
   }
 }

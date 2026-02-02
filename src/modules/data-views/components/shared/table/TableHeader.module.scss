@@ -1,14 +1,13 @@
-@use '@/app/styles/variables' as *;
-@use '@/app/styles/mixins' as *;
-@use '@/app/styles/components' as *;
+// TableHeader - Hardcoded values
 
 /* CABECERA DE TABLA */
 .header {
-  @include flex-center;
-  border-bottom: 1px solid $color-border-light;
-  
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid rgba(209, 217, 230, 0.3);
+
   :global(body.dark) & {
-    border-bottom: 1px solid $color-border-dark;
+    border-bottom: 1px solid #3f3f46;
   }
 
   @media (max-width: 768px) {
@@ -18,69 +17,68 @@
 
 /* CELDA DE CABECERA */
 .headerCell {
-  padding: $spacing-md $spacing-2xl;
-  padding-right: calc($spacing-2xl + 10px);
-  @include typography(11px, $font-weight-semibold, $color-text-primary);
+  padding: 12px 20px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748b;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 10px;
+  gap: 8px;
   user-select: none;
-  line-height: $leading-normal;
-  max-width: 250px!important;
+  line-height: 1.5;
+  max-width: 250px !important;
   position: relative;
   transition: all 0.15s ease;
-  
+
   /* Estados de visibilidad */
   &.hidden {
     opacity: 0.3;
-    
+
     .sortContainer {
       pointer-events: none;
     }
   }
-  
+
   /* Estado ordenado */
   &.sorted {
     background: rgba(59, 130, 246, 0.05);
-    color: rgb(59, 130, 246);
-    border-radius: $radius-md;
-    
+    color: #2563eb;
+    border-radius: 8px;
+
     :global(body.dark) & {
       background: rgba(59, 130, 246, 0.1);
-      color: rgb(96, 165, 250);
+      color: #60a5fa;
     }
   }
-  
+
   /* Hover para celdas ordenables */
   &.sortable {
     cursor: pointer;
-    
+
     &:hover {
-      background: rgba(59, 130, 246, 0.04); // Reducido de 0.08
-      transform: translateY(0); // Eliminado el efecto de elevación
-      
+      background: rgba(59, 130, 246, 0.04);
+
       :global(body.dark) & {
-        background: rgba(59, 130, 246, 0.08); // Reducido de 0.12
+        background: rgba(59, 130, 246, 0.08);
       }
     }
-    
+
     &:active {
-      transform: translateY(0);
       background: rgba(59, 130, 246, 0.12);
-      
+
       :global(body.dark) & {
         background: rgba(59, 130, 246, 0.18);
       }
     }
   }
-  
+
   :global(body.dark) & {
-    color: #c3c3c3;
+    color: #a1a1aa;
   }
-  
+
   /* Quitar padding en mobile */
   @media (max-width: 768px) {
     padding: 0;
@@ -91,14 +89,14 @@
 .sortContainer {
   display: flex;
   align-items: center;
-  gap: $spacing-xs;
+  gap: 4px;
   flex: 1;
   outline: none;
-  border-radius: $radius-sm;
-  
+  border-radius: 4px;
+
   /* Focus state para accesibilidad */
   &:focus-visible {
-    outline: 2px solid rgb(59, 130, 246);
+    outline: 2px solid #3b82f6;
     outline-offset: 2px;
   }
 }
@@ -132,7 +130,7 @@
 
 .arrowIcon {
   transition: all 0.15s ease;
-  
+
   :global(body.dark) & {
     filter: invert(1) brightness(0.8);
   }
@@ -142,7 +140,7 @@
 .visibilityContainer {
   display: flex;
   align-items: center;
-  margin-left: $spacing-xs;
+  margin-left: 4px;
 }
 
 /* BOTÓN DE VISIBILIDAD */
@@ -154,7 +152,7 @@
   height: 16px;
   border: none;
   background: transparent;
-  border-radius: $radius-sm;
+  border-radius: 4px;
   cursor: pointer;
   transition: all 0.15s ease;
   opacity: 0.4;
@@ -162,28 +160,28 @@
   top: 2px;
   right: 22px;
   z-index: 10;
-  
+
   &:hover {
     background: rgba(0, 0, 0, 0.05);
     opacity: 0.8;
     transform: scale(1.05);
-    
+
     :global(body.dark) & {
       background: rgba(255, 255, 255, 0.05);
     }
   }
-  
+
   &:active {
     transform: scale(0.95);
     background: rgba(0, 0, 0, 0.1);
-    
+
     :global(body.dark) & {
       background: rgba(255, 255, 255, 0.1);
     }
   }
-  
+
   &:focus-visible {
-    outline: 2px solid rgb(59, 130, 246);
+    outline: 2px solid #3b82f6;
     outline-offset: 2px;
   }
 }
@@ -195,7 +193,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  
+
   :global(body.dark) & {
     filter: invert(1) brightness(0.7);
   }
@@ -207,16 +205,16 @@
   z-index: 9999;
   background: rgba(0, 0, 0, 0.9);
   color: white;
-  padding: $spacing-xs $spacing-sm;
-  border-radius: $radius-sm;
+  padding: 4px 8px;
+  border-radius: 4px;
   font-size: 12px;
-  font-weight: $font-weight-medium;
+  font-weight: 500;
   white-space: nowrap;
   pointer-events: none;
   backdrop-filter: blur(8px);
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-  
+
   :global(body.dark) & {
     background: rgba(255, 255, 255, 0.9);
     color: rgba(0, 0, 0, 0.9);
@@ -234,7 +232,7 @@
   border-left: 6px solid transparent;
   border-right: 6px solid transparent;
   border-top: 6px solid rgba(0, 0, 0, 0.9);
-  
+
   :global(body.dark) & {
     border-top-color: rgba(255, 255, 255, 0.9);
   }
@@ -242,7 +240,9 @@
 
 /* RESPONSIVE - OCULTAR EN MOBILE */
 .hideOnMobile {
-  @include hide-on-mobile;
+  @media (max-width: 768px) {
+    display: none !important;
+  }
 }
 
 /* ANIMACIONES ADICIONALES */
@@ -263,35 +263,35 @@
       opacity: 0.5;
     }
   }
-  
+
   /* Columna de estado */
   &[data-column="status"] {
     .columnLabel {
-      color: rgb(99, 102, 241);
-      
+      color: #6366f1;
+
       :global(body.dark) & {
-        color: rgb(129, 140, 248);
+        color: #818cf8;
       }
     }
   }
-  
+
   /* Columna de prioridad */
   &[data-column="priority"] {
     .columnLabel {
-      color: rgb(239, 68, 68);
-      
+      color: #ef4444;
+
       :global(body.dark) & {
-        color: rgb(248, 113, 113);
+        color: #f87171;
       }
     }
   }
-  
+
   /* Columna de acciones - nunca ordenable */
   &[data-column="action"] {
     opacity: 0.6;
-    
+
     .visibilityButton {
-      display: none; // Las acciones no se pueden ocultar
+      display: none;
     }
   }
 }
@@ -325,11 +325,11 @@
 .debug {
   .headerCell {
     border: 1px dashed rgba(255, 0, 0, 0.3);
-    
+
     &.sorted {
       border-color: rgba(0, 255, 0, 0.5);
     }
-    
+
     &.hidden {
       border-color: rgba(255, 255, 0, 0.5);
     }

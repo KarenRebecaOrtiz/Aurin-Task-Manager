@@ -207,15 +207,15 @@ export const useTaskArchiving = (props: UseTaskArchivingProps = {}): UseTaskArch
 
   // Función principal para desarchivar
   const handleUnarchiveTask = useCallback(async (
-    task: Task, 
-    userId: string, 
+    task: Task,
+    userId: string,
     isAdmin: boolean
   ): Promise<boolean> => {
     if (isProcessing) return false;
-    
+
     try {
       setIsProcessing(true);
-      
+
       // 1. Verificar permisos
       if (!isAdmin && task.CreatedBy !== userId) {
         throw new Error('No tienes permisos para desarchivar esta tarea');

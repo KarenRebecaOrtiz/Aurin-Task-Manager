@@ -3,7 +3,7 @@
 import { useEffect, useCallback } from "react"
 import { useUser } from "@clerk/nextjs"
 import { useSonnerToast } from "@/modules/sonner/hooks/useSonnerToast"
-import { CrudDialog, DialogHeader, DialogActions } from "@/modules/dialogs"
+import { CrudDialog, DialogActions } from "@/modules/dialogs"
 import { useConfigPageStore } from "../../stores"
 import { useProfileFormStore } from "../../stores"
 import { useProfileForm } from "../../hooks"
@@ -102,23 +102,17 @@ export function ConfigDialog({
       mode="edit"
       title="Editar Perfil"
       description="Actualiza tu información pública y detalles de cuenta."
-      size="xl"
+      size="md"
       footer={customFooter}
-      // Use DialogHeader standard + ProfileHeader
+      // Solo ProfileHeader como en el drawer
       header={
         !isLoading ? (
-          <>
-            <DialogHeader
-              title="Editar Perfil"
-              description="Actualiza tu información pública y detalles de cuenta."
-            />
-            <ProfileHeader
-              userId={userId}
-              isOwnProfile={user.id === userId}
-              onSuccess={showSuccess}
-              onError={showError}
-            />
-          </>
+          <ProfileHeader
+            userId={userId}
+            isOwnProfile={user.id === userId}
+            onSuccess={showSuccess}
+            onError={showError}
+          />
         ) : undefined
       }
     >

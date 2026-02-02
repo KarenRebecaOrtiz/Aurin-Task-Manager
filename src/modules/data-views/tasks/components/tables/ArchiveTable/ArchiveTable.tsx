@@ -202,21 +202,15 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
 
     // ✅ CENTRALIZADO: Usar hook centralizado para desarchivar tareas
     const handleUnarchiveTask = useCallback(async (task: Task) => {
-      // ✅ CORREGIDO: Permitir desarchivar a admins Y creadores de la tarea
+      // ✅ Permitir desarchivar a admins Y creadores de la tarea
       if (!isAdmin && task.CreatedBy !== userId) {
-        // eslint-disable-next-line no-console
-        console.warn('[ArchiveTable] Unarchive intentado por usuario sin permisos:', { 
-          isAdmin, 
-          taskCreatedBy: task.CreatedBy, 
-          currentUserId: userId 
-        });
+        console.warn('[ArchiveTable] Unarchive sin permisos:', { isAdmin, taskCreatedBy: task.CreatedBy, userId });
         return;
       }
 
       try {
         await unarchiveTaskCentralized(task, userId, isAdmin);
       } catch (error) {
-        // eslint-disable-next-line no-console
         console.error('[ArchiveTable] Error unarchiving task:', error);
         if (onDataRefresh) {
           onDataRefresh();
@@ -454,23 +448,22 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
         return {
           ...col,
           render: (task: Task) => {
-            // Admins y creadores pueden ver el ActionMenu en ArchiveTable
-            const shouldShowActionMenu = isAdmin || task.CreatedBy === userId;
-            if (!shouldShowActionMenu) {
-              return null;
-            }
+            // El ActionMenu ahora maneja internamente los permisos:
+            // - Usuarios involucrados pueden ver el menú y fijar
+            // - Solo Admin o Creator pueden editar/desarchivar/eliminar
             return (
-                <ActionMenu
-                  task={task}
-                  userId={userId}
-                  onEdit={createEditHandler(task.id)}
-                  onDelete={createDeleteHandler(task.id)}
-                  onArchive={createArchiveHandler(task)}
-                  animateClick={animateClick}
-                  actionMenuRef={actionMenuRef}
-                  actionButtonRef={createActionButtonRefHandler(task.id)}
-                />
-              );
+              <ActionMenu
+                task={task}
+                userId={userId}
+                onEdit={createEditHandler(task.id)}
+                onDelete={createDeleteHandler(task.id)}
+                onArchive={createArchiveHandler(task)}
+                showPinOption={false}
+                animateClick={animateClick}
+                actionMenuRef={actionMenuRef}
+                actionButtonRef={createActionButtonRefHandler(task.id)}
+              />
+            );
           },
         };
       }

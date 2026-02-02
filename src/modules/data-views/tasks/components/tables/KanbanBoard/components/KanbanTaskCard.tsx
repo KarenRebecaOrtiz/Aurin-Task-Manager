@@ -132,30 +132,32 @@ export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
         <div className={styles.taskNameWrapper}>
           <span className={styles.taskName}>{task.name}</span>
         </div>
-        {(isAdmin || task.CreatedBy === userId) && (
-          <ActionMenu
-            task={task}
-            userId={userId}
-            onEdit={() => onEditTaskOpen(task.id)}
-            onDelete={() => onDeleteTaskOpen(task.id)}
-            onArchive={async () => {
-              try {
-                await onArchiveTask(task);
-              } catch (error) {
-                console.error('[KanbanTaskCard] Error archiving task:', error);
-              }
-            }}
-            animateClick={animateClick}
-            actionMenuRef={actionMenuRef}
-            actionButtonRef={(el) => {
-              if (el) {
-                actionButtonRefs.current.set(task.id, el);
-              } else {
-                actionButtonRefs.current.delete(task.id);
-              }
-            }}
-          />
-        )}
+        {/* El ActionMenu maneja internamente los permisos:
+            - Usuarios involucrados pueden ver el menú y fijar
+            - Solo Admin o Creator pueden editar/archivar/eliminar */}
+        <ActionMenu
+          task={task}
+          userId={userId}
+          onEdit={() => onEditTaskOpen(task.id)}
+          onDelete={() => onDeleteTaskOpen(task.id)}
+          onArchive={async () => {
+            try {
+              await onArchiveTask(task);
+            } catch (error) {
+              console.error('[KanbanTaskCard] Error archiving task:', error);
+            }
+          }}
+          showPinOption={true}
+          animateClick={animateClick}
+          actionMenuRef={actionMenuRef}
+          actionButtonRef={(el) => {
+            if (el) {
+              actionButtonRefs.current.set(task.id, el);
+            } else {
+              actionButtonRefs.current.delete(task.id);
+            }
+          }}
+        />
       </div>
 
       {/* Segunda fila: Tags de estado, prioridad y compartido */}

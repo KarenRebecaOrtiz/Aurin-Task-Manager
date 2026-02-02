@@ -1,109 +1,112 @@
-@use '@/app/styles/variables' as *;
-@use '@/app/styles/mixins' as *;
-@use '@/app/styles/components' as *;
-
-
+// Table - Hardcoded values
 
 .tableContainer {
   width: 100%;
   display: block;
   border-radius: 25px;
   flex-direction: column;
-  gap: $spacing-lg;
+  gap: 16px;
+
+  @media (min-width: 1024px) {
+    overflow-x: auto;
+
+    .table {
+      min-width: 1100px;
+    }
+  }
 }
 
 /* ESTADOS VACÍOS */
 .emptyStateTitle {
-  font-family: $font-family-table;
-  font-size: $text-xl;
-  font-weight: $font-weight-semibold;
-  color: $color-text-primary;
+  font-size: 20px;
+  font-weight: 600;
+  color: #0f172a;
   text-align: center;
-  padding-top: $spacing-xl;
-  margin-bottom: $spacing-sm;
-  
+  padding-top: 24px;
+  margin-bottom: 8px;
+
   :global(body.dark) & {
-    color: rgba(255, 255, 255, 0.733);
+    color: rgba(255, 255, 255, 0.73);
   }
 }
 
 .emptyStateSubtitle {
-  font-family: $font-family-table;
-  font-size: $text-base;
-  font-weight: $font-weight-normal;
-  color: $color-text-secondary;
+  font-size: 16px;
+  font-weight: 400;
+  color: #64748b;
   text-align: center;
-  
+
   :global(body.dark) & {
-    color: rgba(255, 255, 255, 0.733);
+    color: rgba(255, 255, 255, 0.73);
   }
 }
 
 .emptyState {
-  @include flex-column-center;
-  padding: $spacing-4xl 0px;
-  gap: $spacing-2xl;
-  min-height: calc(56px + (60px * 10)); // Same height as table with 10 rows
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 0;
+  gap: 24px;
+  min-height: calc(56px + (60px * 10));
 }
 
 /* TABLA */
 .table {
-  background: $color-bg-light;
-  border-radius: $radius-2xl;
-  padding: $spacing-lg;
-  min-height: calc(56px + (60px * 10)); // Header (56px) + 10 rows (60px each)
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 16px;
+  min-height: calc(56px + (60px * 10));
   display: flex;
   flex-direction: column;
-  
-  :global(body.dark) & {
-    background: $color-bg-dark;
-    border: 1px solid #ffffff0d;
 
+  :global(body.dark) & {
+    background: #171717;
+    border: 1px solid rgba(255, 255, 255, 0.05);
   }
 
   @media (max-width: 768px) {
     :global(body.dark) & {
-      background: #100f0f5c;
-      border: 1px solid #ffffff0d;
+      background: rgba(16, 15, 15, 0.36);
+      border: 1px solid rgba(255, 255, 255, 0.05);
     }
   }
 }
 
 /* CABECERA */
 .header {
-  @include flex-center;
-  border-bottom: 1px solid $color-border-light;
-  
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid rgba(209, 217, 230, 0.3);
+
   :global(body.dark) & {
-    border-bottom: 1px solid $color-border-dark;
+    border-bottom: 1px solid #3f3f46;
   }
 }
 
 .headerCell {
-  padding: $spacing-md $spacing-2xl;
-  font-family: $font-family-table;
-  font-size: 11px;
-  font-weight: $font-weight-semibold;
-  color: $color-text-primary;
+  padding: 12px 20px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748b;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 10px;
+  gap: 8px;
   user-select: none;
-  line-height: $leading-normal;
-  max-width: 250px!important;
-  
+  line-height: 1.5;
+  max-width: 250px !important;
+
   &.sortable {
     cursor: pointer;
   }
-  
+
   :global(body.dark) & {
-    color: $color-text-dark-secondary;
+    color: #a1a1aa;
   }
-  
-  /* Quitar padding en mobile */
+
   @media (max-width: 768px) {
     padding: 0;
   }
@@ -111,76 +114,66 @@
 
 /* FILAS */
 .row {
-  @include flex-center;
+  display: flex;
   align-items: stretch;
   gap: 0;
-  border-radius: $radius-2xl;
+  border-radius: 16px;
   position: relative;
   z-index: 0;
   cursor: pointer;
-  margin: 10px 10px 0px 0px;
-  -webkit-backdrop-filter: blur(8px);
-  transition: $transition-base;
+  margin: 10px 10px 0 0;
+  transition: all 0.2s ease;
 
   &:hover {
     transform: translateY(-3px);
-    box-shadow: none;
   }
-  
-  /*  Modo oscuro */
+
   :global(body.dark) & {
-    background: rgb(18 17 17);
+    background: rgb(18, 17, 17);
     border: none;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-    box-shadow: none !important;
-    
+
     &:hover {
-      background: $zinc-800;
-      box-shadow: none !important;
+      background: #3f3f46;
       transform: translateY(-3px);
     }
   }
-  
+
   @media (max-width: 768px) {
-    padding: 8px 0; 
+    padding: 8px 0;
     background: #fffafa;
-    margin: 15px 10px 0px 0px;
+    margin: 15px 10px 0 0;
 
     :global(body.dark) & {
       background: #0e0e0f;
     }
   }
-  
+
   @media (max-width: 480px) {
-    padding: $spacing-xl 0; 
-    margin: 20px 10px 0px 0px; 
+    padding: 24px 0;
+    margin: 20px 10px 0 0;
   }
 }
 
-
-
 /* CELDAS */
 .cell {
-  padding: $spacing-md $spacing-2xl;
-  font-family: $font-family-table;
-  font-size: $text-sm;
-  font-weight: $font-weight-normal;
-  color: $color-text-primary;
-  line-height: $leading-normal;
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 400;
+  color: #0f172a;
+  line-height: 1.5;
   display: flex;
   align-items: center;
-  max-width: 250px!important;
+  max-width: 250px !important;
   justify-content: flex-start;
-  
+
   :global(body.dark) & {
-    color: $color-text-dark-primary;
-    
+    color: #d1d1d1;
+
     img[src*=".svg"] {
-      @include image-filter-dark;
+      filter: invert(1) grayscale(1) brightness(1.5);
     }
   }
-  
+
   @media (max-width: 768px) {
     padding: 0;
   }
@@ -193,63 +186,56 @@
 
 .actionButton {
   height: auto;
-  padding: $spacing-sm;
-  border-radius: $radius-sm;
+  padding: 8px;
+  border-radius: 4px;
   border: none;
   cursor: pointer;
-  @include flex-center;
-  gap: $spacing-xs;
-  transition: $transition-fast;
-  font-family: $font-family-table;
-  font-size: $text-sm;
-  font-weight: $font-weight-medium;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+  font-size: 14px;
+  font-weight: 500;
   background: none;
-  
+
   &:hover {
-    background-color: $zinc-100;
+    background-color: #f1f5f9;
   }
-  
+
   :global(body.dark) & {
     &:hover {
-      background-color: $zinc-800;
+      background-color: #3f3f46;
     }
-    
-    img {
-      @include image-filter-dark;
-    }
-  }
-}
 
-/* IMÁGENES */
-.TasksTable_clientImage__aZq2W {
-  border-radius: $radius-full;
-  box-shadow: $shadow-neomorphic-light;
-  
-  :global(body.dark) & {
-    box-shadow: none !important;
+    img {
+      filter: invert(1) grayscale(1) brightness(1.5);
+    }
   }
 }
 
 /* RESPONSIVE */
 .hideOnMobile {
-  @include hide-on-mobile;
+  @media (max-width: 768px) {
+    display: none !important;
+  }
 }
 
 @media (max-width: 768px) {
   .header {
     display: flex;
     width: 100%;
-    
+
     .headerCell {
-      padding: $spacing-sm $spacing-md;
+      padding: 8px 12px;
       font-size: 12px;
       flex-shrink: 0;
-      
+
       &:first-child {
         text-align: left;
         justify-content: flex-start;
       }
-      
+
       &:last-child {
         text-align: right;
         justify-content: flex-end;
@@ -257,29 +243,27 @@
       }
     }
   }
-  
+
   .row {
     display: flex;
     width: 100%;
-    
+
     .cell {
-      padding: $spacing-sm $spacing-md;
+      padding: 8px 12px;
       flex-shrink: 0;
-      
-      /* Ensure proper alignment for mobile */
+
       &:first-child {
         text-align: left;
         justify-content: flex-start;
       }
-      
+
       &:last-child {
         text-align: right;
         justify-content: flex-end;
         margin-left: auto;
       }
     }
-    
-    /* Action cell specific styling */
+
     .actionCell {
       display: flex;
       justify-content: flex-end;
@@ -291,122 +275,119 @@
 
 /* PAGINACIÓN */
 .pagination {
-  @include flex-center;
-  gap: $spacing-sm;
-  padding: $spacing-lg $spacing-sm;
+  display: flex;
+  align-items: center;
   justify-content: flex-end;
-  
+  gap: 8px;
+  padding: 16px 8px;
+
   @media (max-width: 768px) {
     justify-content: center;
-    gap: $spacing-xs;
+    gap: 4px;
   }
 }
 
 .paginationButton {
   width: 32px;
   height: 32px;
-  padding: $spacing-sm;
-  background: $color-bg-light;
-  border-radius: $radius-lg;
+  padding: 8px;
+  background: #ffffff;
+  border-radius: 8px;
   border: none;
-  @include flex-center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  transition: $transition-fast;
-  
+  transition: all 0.15s ease;
+
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
   }
-  
+
   &:not(:disabled):hover {
     background: #e6e8ea;
   }
-  
+
   :global(body.dark) & {
     background: #212125;
-   
+
     &:not(:disabled):hover {
-      background: $zinc-900;
+      background: #18181b;
     }
-    
+
     img {
-      @include image-filter-dark;
+      filter: invert(1) grayscale(1) brightness(1.5);
     }
   }
 }
 
 .pageInfo {
-  font-family: $font-family-table;
-  font-size: $text-sm;
-  font-weight: $font-weight-medium;
-  color: $color-text-primary;
-  margin: 0 $spacing-sm;
-  
+  font-size: 14px;
+  font-weight: 500;
+  color: #0f172a;
+  margin: 0 8px;
+
   :global(body.dark) & {
-    color: $color-text-dark-secondary;
+    color: #a1a1aa;
   }
 }
 
 /* ==============================================================
-   🔮 CLIENTS TABLE SPECIFIC STYLES - HEADER & CELL ALIGNMENT
+   CLIENTS TABLE SPECIFIC STYLES - HEADER & CELL ALIGNMENT
    ================================================================= */
 
-/* Ensure header and cells have same layout for ClientsTable */
 .clients-table {
   .header {
     .headerCell {
-      /* Same layout as cells */
       display: flex;
       align-items: center;
       justify-content: flex-start;
-      max-width: 250px!important;
-      line-height: $leading-normal;
-      
-      /* Specific column alignments */
-      &:nth-child(1) { // Foto
+      max-width: 250px !important;
+      line-height: 1.5;
+
+      &:nth-child(1) {
         justify-content: center;
         align-items: center;
       }
-      
-      &:nth-child(2) { // Cuentas
+
+      &:nth-child(2) {
         justify-content: flex-start;
       }
-      
-      &:nth-child(3) { // Proyectos Asignados
+
+      &:nth-child(3) {
         justify-content: flex-start;
       }
-      
-      &:nth-child(4) { // Acciones
+
+      &:nth-child(4) {
         justify-content: center;
         align-items: center;
       }
     }
   }
-  
+
   .row {
     .cell {
-      /* Same layout as header */
       display: flex;
       align-items: center;
       justify-content: flex-start;
-      max-width: 250px!important;
-      line-height: $leading-normal;
-      
-      /* Specific column alignments */
-      &:nth-child(1) { // Foto
+      max-width: 250px !important;
+      line-height: 1.5;
+
+      &:nth-child(1) {
         justify-content: center;
         align-items: center;
       }
-      
-      &:nth-child(2) { // Cuentas
+
+      &:nth-child(2) {
         justify-content: flex-start;
       }
-      
-      &:nth-child(3) { // Proyectos Asignados
+
+      &:nth-child(3) {
         justify-content: flex-start;
       }
-      
-      &:nth-child(4) { // Acciones
+
+      &:nth-child(4) {
         justify-content: center;
         align-items: center;
       }
