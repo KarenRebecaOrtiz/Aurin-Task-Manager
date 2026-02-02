@@ -64,6 +64,7 @@ export const useVirtuosoMessages = ({
   const unsubscribeRef = useRef<(() => void) | null>(null);
   const processedIdsRef = useRef<Set<string>>(new Set());
   const isLoadingRef = useRef(false);
+  const isFirstSnapshotRef = useRef(true); // Para ignorar el snapshot inicial del listener
 
   // ============================================================================
   // HELPERS
@@ -272,10 +273,37 @@ export const useVirtuosoMessages = ({
     const messagesRef = collection(db, path);
     const q = query(messagesRef, orderBy('timestamp', 'desc'));
 
+    // Resetear flag del primer snapshot cuando se establece nuevo listener
+    isFirstSnapshotRef.current = true;
+
     const unsubscribe = onSnapshot(
       q,
       async (snapshot) => {
         const changes = snapshot.docChanges();
+
+        // Ignorar el primer snapshot completo del listener
+        // porque initialLoad ya cargó los mensajes
+        if (isFirstSnapshotRef.current) {
+          isFirstSnapshotRef.current = false;
+          // Solo procesar si hay IDs que no conocemos (mensajes nuevos durante el gap)
+          const newMessages: Message[] = [];
+          for (const change of changes) {
+            if (change.type === 'added' && !processedIdsRef.current.has(change.doc.id)) {
+              const messageData = { id: change.doc.id, ...change.doc.data() };
+              const processedMessage = await processMessage(messageData);
+              newMessages.push(processedMessage);
+              processedIdsRef.current.add(change.doc.id);
+            }
+          }
+          if (newMessages.length > 0) {
+            // Agregar mensajes nuevos y reordenar
+            setMessages((prev) => sortMessagesAsc([...prev, ...newMessages]));
+            if (onNewMessage) {
+              onNewMessage();
+            }
+          }
+          return;
+        }
 
         for (const change of changes) {
           const messageData = { id: change.doc.id, ...change.doc.data() };
@@ -288,15 +316,14 @@ export const useVirtuosoMessages = ({
               continue;
             }
 
-            // Doble check: verificar si ya existe en el array
+            // Nuevo mensaje - agregar y reordenar para garantizar orden correcto
+            processedIdsRef.current.add(messageData.id);
             setMessages((prev) => {
               if (prev.some(msg => msg.id === messageData.id)) {
                 return prev;
               }
-
-              // Nuevo mensaje - agregar al final
-              processedIdsRef.current.add(messageData.id);
-              return [...prev, processedMessage];
+              // Agregar y reordenar para asegurar ASC
+              return sortMessagesAsc([...prev, processedMessage]);
             });
 
             if (onNewMessage) {
@@ -328,7 +355,7 @@ export const useVirtuosoMessages = ({
         unsubscribeRef.current();
       }
     };
-  }, [taskId, processMessage, onNewMessage, isInitialLoad, collectionType]);
+  }, [taskId, processMessage, onNewMessage, isInitialLoad, collectionType, sortMessagesAsc]);
 
   // ============================================================================
   // CLEANUP ON TASK CHANGE
@@ -342,6 +369,7 @@ export const useVirtuosoMessages = ({
       setHasMore(true);
       setLastDoc(null);
       processedIdsRef.current.clear();
+      isFirstSnapshotRef.current = true; // Reset flag del primer snapshot
     };
   }, [taskId]);
 

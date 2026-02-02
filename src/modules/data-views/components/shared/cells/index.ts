@@ -5,3 +5,4 @@ export { default as ClientCell } from './ClientCell';
 export { default as DateCell } from './DateCell';
 export { default as UserCell } from './UserCell';
 export { default as ActionCell } from './ActionCell';
+export { default as TimeCell } from './TimeCell';

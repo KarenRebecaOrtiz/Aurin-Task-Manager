@@ -2,6 +2,7 @@ import { useMemo, useCallback } from 'react';
 import { Task, Client, User } from '@/types';
 import { AvatarGroup } from '@/modules/shared/components/atoms/Avatar';
 import { ClientCell, StatusCell, PriorityCell } from '@/modules/shared/components/molecules/TableCell';
+import { TimeCell } from '@/modules/data-views/components/shared/cells';
 import ActionMenu from '@/modules/data-views/components/ui/ActionMenu';
 import { hasUnreadUpdates, getUnreadCount } from '@/lib/taskUtils';
 import styles from '../TasksTable.module.scss';
@@ -41,7 +42,7 @@ export const useTaskColumns = ({
       {
         key: 'clientId',
         label: 'Cuenta',
-        width: '20%',
+        width: '8%',
         mobileVisible: true,
         mobileWidth: '30%',
         sortable: true,
@@ -49,7 +50,7 @@ export const useTaskColumns = ({
       {
         key: 'name',
         label: 'Tarea',
-        width: '60%',
+        width: '30%',
         mobileVisible: true,
         mobileWidth: '40%',
         sortable: true,
@@ -57,14 +58,14 @@ export const useTaskColumns = ({
       {
         key: 'assignedTo',
         label: 'Asignados',
-        width: '20%',
+        width: '15%',
         mobileVisible: false,
         sortable: false,
       },
       {
         key: 'status',
         label: 'Estado',
-        width: '30%',
+        width: '15%',
         mobileVisible: false,
         sortable: true,
       },
@@ -72,6 +73,13 @@ export const useTaskColumns = ({
         key: 'priority',
         label: 'Prioridad',
         width: '10%',
+        mobileVisible: false,
+        sortable: true,
+      },
+      {
+        key: 'timeTracking',
+        label: 'Tiempo',
+        width: '12%',
         mobileVisible: false,
         sortable: true,
       },
@@ -147,6 +155,19 @@ export const useTaskColumns = ({
         return {
           ...col,
           render: (task: Task) => <PriorityCell priority={task.priority as 'Alta' | 'Media' | 'Baja'} />,
+        };
+      }
+
+      // Time tracking column
+      if (col.key === 'timeTracking') {
+        return {
+          ...col,
+          render: (task: Task) => (
+            <TimeCell
+              timeTracking={task.timeTracking}
+              totalHours={task.totalHours}
+            />
+          ),
         };
       }
 

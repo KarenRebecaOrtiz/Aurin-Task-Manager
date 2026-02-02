@@ -40,7 +40,7 @@
   transition: background-color 0.3s ease;
 
   &:first-child {
-    margin-top: 8px;
+    margin-top: 16px; // Más espacio para el primer mensaje
   }
 
   &.highlighted {
@@ -150,8 +150,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: 20px 20px 12px 20px;
   gap: 8px;
+  min-height: 24px; // Espacio mínimo cuando no hay loading
 }
 
 .spinner {

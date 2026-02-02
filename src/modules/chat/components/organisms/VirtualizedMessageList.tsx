@@ -165,13 +165,12 @@ export const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = ({
 
   /**
    * Header con loader (cuando se están cargando mensajes antiguos)
+   * Siempre renderiza un spacer para evitar que el primer mensaje quede recortado
    */
   const renderHeader = useCallback(() => {
-    if (!hasMore) return null;
-
     return (
       <div className={styles.loadingHeader}>
-        {isLoadingMore && (
+        {hasMore && isLoadingMore && (
           <>
             <Loader2 size={16} className={styles.spinner} />
             <span className={styles.loadingText}>Cargando mensajes antiguos...</span>

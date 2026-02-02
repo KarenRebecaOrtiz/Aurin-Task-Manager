@@ -28,7 +28,7 @@ import { useTasksTableActionsStore } from '@/modules/data-views/tasks/stores/tas
 import { usePinnedTasksStore } from '@/modules/data-views/tasks/stores/pinnedTasksStore';
 
 // Utils and components
-import { StatusCell, PriorityCell, UserCell, ClientCell } from '@/modules/data-views/components/shared/cells';
+import { StatusCell, PriorityCell, UserCell, ClientCell, TimeCell } from '@/modules/data-views/components/shared/cells';
 
 const cleanupTasksTableListeners = () => {
   // Placeholder for cleanup logic
@@ -226,6 +226,9 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
   ), [userId]);
   const renderStatusColumn = useCallback((task: Task) => <StatusCell status={task.status} />, []);
   const renderPriorityColumn = useCallback((task: Task) => <PriorityCell priority={task.priority} />, []);
+  const renderTimeColumn = useCallback((task: Task) => (
+    <TimeCell timeTracking={task.timeTracking} totalHours={task.totalHours} />
+  ), []);
 
   const renderClientColumn = useCallback((task: Task) => {
     const client = tableState.effectiveClients.find(c => c.id === task.clientId);
@@ -287,17 +290,18 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
     );
   }, [userId, handleEditTaskForActionMenu, handleDeleteTaskForActionMenu, handleArchiveTaskForActionMenu, animateClick, actionMenuRef, handleActionButtonRef]);
 
-  // Columnas ordenadas: Cuenta, Tarea, Asignados, Proyecto, Estado, Prioridad, Acciones
+  // Columnas ordenadas: Cuenta, Tarea, Asignados, Proyecto, Estado, Prioridad, Tiempo, Acciones
   // Mobile: solo Tarea, Proyecto y Acciones visibles
-  // Desktop: 60px + 28% + 15% + 20% + 13% + 12% + 8% (uses min-width for table)
+  // Desktop: 60px + 24% + 12% + 16% + 12% + 10% + 10% + 8% (uses min-width for table)
   // Mobile: 50% + 35% + 15% = 100%
   const baseColumns = [
     { key: 'client', label: 'Cuenta', width: '60px', mobileVisible: false, sortable: false },
-    { key: 'name', label: 'Tarea', width: '28%', mobileVisible: true, mobileWidth: '50%', sortable: true },
-    { key: 'assignedTo', label: 'Asignados', width: '15%', mobileVisible: false, sortable: true },
-    { key: 'project', label: 'Proyecto', width: '20%', mobileVisible: true, mobileWidth: '35%', sortable: true },
-    { key: 'status', label: 'Estado', width: '13%', mobileVisible: false, sortable: true },
-    { key: 'priority', label: 'Prioridad', width: '12%', mobileVisible: false, sortable: true },
+    { key: 'name', label: 'Tarea', width: '24%', mobileVisible: true, mobileWidth: '50%', sortable: true },
+    { key: 'assignedTo', label: 'Asignados', width: '12%', mobileVisible: false, sortable: true },
+    { key: 'project', label: 'Proyecto', width: '16%', mobileVisible: true, mobileWidth: '35%', sortable: true },
+    { key: 'status', label: 'Estado', width: '12%', mobileVisible: false, sortable: true },
+    { key: 'priority', label: 'Prioridad', width: '10%', mobileVisible: false, sortable: true },
+    { key: 'timeTracking', label: 'Tiempo', width: '10%', mobileVisible: false, sortable: true },
     { key: 'action', label: 'Acciones', width: '8%', mobileVisible: true, mobileWidth: '15%', sortable: false },
   ];
 
@@ -308,6 +312,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
     if (col.key === 'project') return { ...col, render: renderProjectColumn };
     if (col.key === 'status') return { ...col, render: renderStatusColumn };
     if (col.key === 'priority') return { ...col, render: renderPriorityColumn };
+    if (col.key === 'timeTracking') return { ...col, render: renderTimeColumn };
     if (col.key === 'action') return { ...col, render: renderActionColumn };
     return col;
   });
