@@ -74,12 +74,19 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   };
 
   // Obtener usuarios del equipo desde dataStore si no se pasaron como prop
+  // Incluye status y lastActive para los status dots
   const teamMembers = useMemo(() => {
     const memberIds = [
       ...(task.LeadedBy || []),
       ...(task.AssignedTo || []),
     ];
-    return effectiveUsers.filter(user => memberIds.includes(user.id));
+    return effectiveUsers
+      .filter(user => memberIds.includes(user.id))
+      .map(user => ({
+        ...user,
+        status: (user as any).status,
+        lastActive: (user as any).lastActive,
+      }));
   }, [task.LeadedBy, task.AssignedTo, effectiveUsers]);
 
   // Leer horas totales desde el nuevo campo timeTracking (con fallback a campo legacy)
@@ -248,6 +255,9 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
                           imageUrl={member.imageUrl}
                           userName={member.fullName}
                           size="xs"
+                          showStatus={true}
+                          availabilityStatus={(member as any).status}
+                          lastActive={(member as any).lastActive}
                           className={styles.miniAvatar}
                         />
                       </motion.div>

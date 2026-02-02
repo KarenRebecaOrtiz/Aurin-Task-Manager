@@ -219,13 +219,15 @@ export function useTimeEntry(
         }
 
         // 3. Create visual message in chat (solo para historial visual)
+        // Solo pasar el comentario del usuario, no la descripción de tiempo
+        // El badge del timelog ya muestra la duración, no necesitamos duplicarlo en el texto
         await firebaseService.sendTimeLogMessage(
           taskId,
           userId,
           userName,
           hours + minutes / 60, // Convertir a horas decimales para display
           displayDate,
-          fullDescription
+          data.comment?.trim() || undefined // Solo el comentario real del usuario
         );
 
         // Reset form with fresh default values

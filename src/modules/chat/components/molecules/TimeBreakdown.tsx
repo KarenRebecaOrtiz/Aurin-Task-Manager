@@ -67,6 +67,7 @@ export const TimeBreakdown: React.FC<TimeBreakdownProps> = ({
   }, []);
 
   // Build member time entries with user info - usa dataStore como fallback
+  // Incluye status y lastActive para los status dots
   const memberTimeEntries = useMemo(() => {
     return Object.entries(memberHours)
       .map(([userId, hours]) => {
@@ -76,6 +77,8 @@ export const TimeBreakdown: React.FC<TimeBreakdownProps> = ({
           hours,
           fullName: member?.fullName || "Usuario desconocido",
           imageUrl: member?.imageUrl || "/default-avatar.svg",
+          status: (member as any)?.status,
+          lastActive: (member as any)?.lastActive,
         };
       })
       .sort((a, b) => b.hours - a.hours); // Sort by most hours first
@@ -151,6 +154,9 @@ export const TimeBreakdown: React.FC<TimeBreakdownProps> = ({
                         imageUrl={entry.imageUrl}
                         userName={entry.fullName}
                         size="xs"
+                        showStatus={true}
+                        availabilityStatus={entry.status}
+                        lastActive={entry.lastActive}
                       />
                     ) : (
                       <div className={styles.defaultAvatar}>

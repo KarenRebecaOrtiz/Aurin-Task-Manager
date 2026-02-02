@@ -4,13 +4,23 @@ import * as React from 'react';
 import * as AvatarPrimitive from '@radix-ui/react-avatar';
 import { cn } from '@/lib/utils';
 
+export type AvailabilityStatus = 'Disponible' | 'Ocupado' | 'Por terminar' | 'Fuera';
+
+// Umbral de inactividad en milisegundos (5 minutos)
+const INACTIVITY_THRESHOLD_MS = 5 * 60 * 1000;
+
 interface UserAvatarProps {
   userId: string;
   imageUrl?: string;
   userName?: string;
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
   showStatus?: boolean;
+  /** @deprecated Use availabilityStatus instead */
   isOnline?: boolean;
+  /** El status de disponibilidad del usuario */
+  availabilityStatus?: AvailabilityStatus;
+  /** Timestamp ISO de última actividad para detección automática de inactividad */
+  lastActive?: string;
   className?: string;
 }
 
@@ -74,8 +84,14 @@ AvatarFallback.displayName = AvatarPrimitive.Fallback.displayName;
 /**
  * UserAvatar Component
  *
- * Displays user avatar with optional online status indicator
+ * Displays user avatar with optional availability status indicator
  * Supports multiple sizes and automatic fallback to initials
+ *
+ * Status colors:
+ * - Disponible: Green (#178d00)
+ * - Ocupado: Red (#d32f2f)
+ * - Por terminar: Orange (#f57c00)
+ * - Fuera/Inactivo: Gray (#616161)
  */
 export const UserAvatar: React.FC<UserAvatarProps> = ({
   userId,
@@ -84,6 +100,8 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
   size = 'md',
   showStatus = false,
   isOnline = false,
+  availabilityStatus,
+  lastActive,
   className = '',
 }) => {
   // Generate fallback initials from userName
@@ -94,6 +112,52 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
     }
     return name.slice(0, 2).toUpperCase();
   };
+
+  // Check if user is inactive based on lastActive timestamp
+  const isUserInactive = React.useMemo(() => {
+    if (!lastActive) return true;
+    const lastActiveTime = new Date(lastActive).getTime();
+    const now = Date.now();
+    return now - lastActiveTime > INACTIVITY_THRESHOLD_MS;
+  }, [lastActive]);
+
+  // Get status color based on availability status and activity
+  const getStatusColor = React.useCallback((): string => {
+    // Si está inactivo, mostrar gris
+    if (lastActive && isUserInactive) {
+      return '#616161';
+    }
+
+    // Si tiene availabilityStatus, usarlo
+    if (availabilityStatus) {
+      switch (availabilityStatus) {
+        case 'Disponible':
+          return '#178d00';
+        case 'Ocupado':
+          return '#d32f2f';
+        case 'Por terminar':
+          return '#f57c00';
+        case 'Fuera':
+          return '#616161';
+        default:
+          return '#616161';
+      }
+    }
+
+    // Fallback al comportamiento legacy con isOnline
+    return isOnline ? '#178d00' : '#616161';
+  }, [availabilityStatus, lastActive, isUserInactive, isOnline]);
+
+  // Get status label for aria-label
+  const getStatusLabel = React.useCallback((): string => {
+    if (lastActive && isUserInactive) {
+      return 'Inactivo';
+    }
+    if (availabilityStatus) {
+      return availabilityStatus;
+    }
+    return isOnline ? 'Online' : 'Offline';
+  }, [availabilityStatus, lastActive, isUserInactive, isOnline]);
 
   const fallback = getInitials(userName);
 
@@ -116,10 +180,11 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
         <span
           className={cn(
             'absolute bottom-0 right-0 rounded-full border-2 border-white',
-            statusSizeMap[size],
-            isOnline ? 'bg-green-500' : 'bg-gray-400'
+            statusSizeMap[size]
           )}
-          aria-label={isOnline ? 'Online' : 'Offline'}
+          style={{ backgroundColor: getStatusColor() }}
+          aria-label={getStatusLabel()}
+          title={getStatusLabel()}
         />
       )}
     </div>

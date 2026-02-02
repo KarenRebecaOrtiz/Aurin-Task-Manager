@@ -5,6 +5,7 @@ import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDataStore } from '@/stores/dataStore';
+import styles from './AvatarGroup.module.scss';
 
 // Lazy load the ProfileCard to avoid bundle size issues
 const ProfileCard = dynamic(
@@ -12,12 +13,23 @@ const ProfileCard = dynamic(
   { ssr: false }
 );
 
-export interface User {
+export type AvailabilityStatus = 'Disponible' | 'Ocupado' | 'Por terminar' | 'Fuera';
+
+// Umbral de inactividad en milisegundos (5 minutos)
+const INACTIVITY_THRESHOLD_MS = 5 * 60 * 1000;
+
+// Interface local para el componente
+export interface AvatarUser {
   id: string;
   imageUrl: string;
   fullName: string;
   role?: string;
+  status?: string;
+  lastActive?: string;
 }
+
+// Re-exportar para compatibilidad
+export type User = AvatarUser;
 
 export interface AvatarGroupProps {
   assignedUserIds: string[];
@@ -50,7 +62,7 @@ export const AvatarGroup: React.FC<AvatarGroupProps> = ({
   showTooltip = true,
 }) => {
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedUser, setSelectedUser] = useState<AvatarUser | null>(null);
   const [isProfileCardOpen, setIsProfileCardOpen] = useState(false);
 
   // ✅ Obtener users desde dataStore en lugar de prop
@@ -63,7 +75,7 @@ export const AvatarGroup: React.FC<AvatarGroupProps> = ({
     }
   }, []);
 
-  const handleAvatarClick = useCallback((user: User, e: React.MouseEvent) => {
+  const handleAvatarClick = useCallback((user: AvatarUser, e: React.MouseEvent) => {
     e.stopPropagation();
     setSelectedUser(user);
     setIsProfileCardOpen(true);
@@ -74,14 +86,62 @@ export const AvatarGroup: React.FC<AvatarGroupProps> = ({
     setSelectedUser(null);
   }, []);
 
-  const avatars = useMemo(() => {
+  /**
+   * Determina si un usuario está inactivo basándose en lastActive
+   * Si no hay lastActive o es muy antiguo, se considera inactivo
+   */
+  const isUserInactive = useCallback((lastActive?: string): boolean => {
+    if (!lastActive) return true; // Sin lastActive = inactivo
+
+    const lastActiveTime = new Date(lastActive).getTime();
+    const now = Date.now();
+    return now - lastActiveTime > INACTIVITY_THRESHOLD_MS;
+  }, []);
+
+  /**
+   * Get status color based on user availability status AND lastActive
+   * Si el usuario está inactivo (>5 min sin actividad), mostrar gris
+   * independientemente del status manual
+   */
+  const getStatusColor = useCallback((user: AvatarUser): string => {
+    // Si está inactivo, mostrar como "Fuera" (gris) sin importar el status manual
+    if (isUserInactive(user.lastActive)) {
+      return '#616161'; // Gray - inactivo
+    }
+
+    // Si está activo, usar el status manual
+    switch (user.status) {
+      case 'Disponible':
+        return '#178d00'; // Green
+      case 'Ocupado':
+        return '#d32f2f'; // Red
+      case 'Por terminar':
+        return '#f57c00'; // Orange
+      case 'Fuera':
+        return '#616161'; // Gray
+      default:
+        return '#616161'; // Default gray for unknown/undefined status
+    }
+  }, [isUserInactive]);
+
+  /**
+   * Get status label for tooltip
+   */
+  const getStatusLabel = useCallback((user: AvatarUser): string => {
+    if (isUserInactive(user.lastActive)) {
+      return 'Inactivo';
+    }
+    return user.status || 'Sin estado';
+  }, [isUserInactive]);
+
+  const avatars = useMemo((): AvatarUser[] => {
     if (!Array.isArray(users)) {
       return [];
     }
 
     const matchedUsers = users
       .filter((user) => assignedUserIds.includes(user.id) || leadedByUserIds.includes(user.id))
-      .slice(0, maxAvatars);
+      .slice(0, maxAvatars) as AvatarUser[];
 
     return matchedUsers.sort((a, b) => {
       if (a.id === currentUserId) return -1;
@@ -144,6 +204,12 @@ export const AvatarGroup: React.FC<AvatarGroupProps> = ({
                 onError={handleAvatarImageError}
                 priority={false}
                 loading="lazy"
+              />
+              {/* Status indicator dot */}
+              <div
+                className={`${styles.statusDot} ${size === 'small' ? styles.statusDotSmall : ''} ${size === 'large' ? styles.statusDotLarge : ''}`}
+                style={{ backgroundColor: getStatusColor(user) }}
+                title={getStatusLabel(user)}
               />
               <AnimatePresence>
                 {isHovered && showTooltip && (

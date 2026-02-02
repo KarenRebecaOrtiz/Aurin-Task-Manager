@@ -17,6 +17,7 @@ import { useUser } from '@clerk/nextjs';
 import { useState, useEffect, useCallback } from 'react';
 import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { useDataStore } from '@/stores/dataStore';
 import { useInactivityDetection } from './useInactivityDetection';
 import { useDayReset } from './useDayReset';
 
@@ -42,6 +43,9 @@ export const useAvailabilityStatus = () => {
 
   const [isLoading, setIsLoading] = useState(false);
 
+  // Obtener función para actualizar el dataStore (optimistic update)
+  const updateUserStatus = useDataStore((state) => state.updateUserStatus);
+
   /**
    * Actualiza el estado de disponibilidad en Firestore
    */
@@ -62,21 +66,28 @@ export const useAvailabilityStatus = () => {
 
   /**
    * Actualiza el estado usando writes optimizados
+   * Incluye optimistic update al dataStore para feedback instantáneo en toda la UI
    */
   const updateStatus = useCallback(async (newStatus: AvailabilityStatus) => {
     if (!user?.id || isLoading) return;
-    
+
     setIsLoading(true);
-    
+
     try {
-      await updateFirestoreStatus(newStatus);
+      // Optimistic update: actualizar dataStore inmediatamente
+      updateUserStatus(user.id, newStatus);
+
+      // Actualizar estado local
       setState(prev => ({ ...prev, currentStatus: newStatus }));
+
+      // Persistir en Firestore
+      await updateFirestoreStatus(newStatus);
     } catch {
-      // Silently handle error
+      // Si falla, el listener de Firestore revertirá al estado correcto
     } finally {
       setIsLoading(false);
     }
-  }, [user?.id, isLoading, updateFirestoreStatus]);
+  }, [user?.id, isLoading, updateFirestoreStatus, updateUserStatus]);
 
   // Función para volver a Disponible cuando hay actividad
   const handleActivity = useCallback(() => {

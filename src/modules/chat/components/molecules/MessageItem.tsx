@@ -91,17 +91,54 @@ export const MessageItem = memo(
       const showName = position === "single" || position === "first";
       const showTimestamp = position === "single" || position === "last";
 
-      // ✅ Buscar avatar optimizado con fallback a dataStore
-      const senderAvatar = React.useMemo(() => {
+      // ✅ Buscar datos del usuario con fallback a dataStore
+      const senderData = React.useMemo(() => {
+        let user: any = null;
+
         // Si hay usersMap (búsqueda O(1)), usarlo
         if (usersMap) {
-          const user = usersMap.get(message.senderId);
-          return user?.imageUrl || "/default-avatar.svg";
+          user = usersMap.get(message.senderId);
+        } else {
+          // Fallback: búsqueda O(n) en array efectivo (con dataStore como fallback)
+          user = effectiveUsers.find((u) => u.id === message.senderId);
         }
-        // Fallback: búsqueda O(n) en array efectivo (con dataStore como fallback)
-        const user = effectiveUsers.find((u) => u.id === message.senderId);
-        return user?.imageUrl || "/default-avatar.svg";
+
+        return {
+          imageUrl: user?.imageUrl || "/default-avatar.svg",
+          status: user?.status,
+          lastActive: user?.lastActive,
+        };
       }, [usersMap, effectiveUsers, message.senderId]);
+
+      const senderAvatar = senderData.imageUrl;
+
+      // Umbral de inactividad (5 minutos)
+      const INACTIVITY_THRESHOLD_MS = 5 * 60 * 1000;
+
+      // Calcular color del status dot
+      const getStatusColor = React.useCallback((): string => {
+        const { status, lastActive } = senderData;
+
+        // Si está inactivo, mostrar gris
+        if (lastActive) {
+          const lastActiveTime = new Date(lastActive).getTime();
+          const isInactive = Date.now() - lastActiveTime > INACTIVITY_THRESHOLD_MS;
+          if (isInactive) return '#616161';
+        }
+
+        // Usar status manual
+        switch (status) {
+          case 'Disponible':
+            return '#178d00';
+          case 'Ocupado':
+            return '#d32f2f';
+          case 'Por terminar':
+            return '#f57c00';
+          case 'Fuera':
+          default:
+            return '#616161';
+        }
+      }, [senderData]);
 
       const handleActionButtonClick = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
@@ -305,6 +342,11 @@ export const MessageItem = memo(
                     animated={false}
                   />
                 )}
+                {/* Status indicator dot */}
+                <span
+                  className={styles.statusDot}
+                  style={{ backgroundColor: getStatusColor() }}
+                />
               </div>
             ) : (
               <div className={styles.avatarPlaceholder} />

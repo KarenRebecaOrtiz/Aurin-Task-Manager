@@ -66,12 +66,32 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  overflow: hidden;
+  overflow: visible; // Cambiado para permitir el status dot
+  position: relative;
 
   img {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    border-radius: 50%;
+  }
+}
+
+// Status indicator dot for availability
+.statusDot {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+  z-index: 10;
+  transition: background-color 0.2s ease;
+
+  :global(.dark) & {
+    border-color: #171717;
   }
 }
 

@@ -20,6 +20,7 @@ import TasksPageModals from '@/modules/data-views/tasks/components/modals/TasksP
 import { useSharedTasksState } from '@/hooks/useSharedTasksState';
 import { useUserDataSubscription } from '@/hooks/useUserDataSubscription';
 import { usePinnedTasksSubscription } from '@/modules/data-views/tasks/hooks/usePinnedTasksSubscription';
+import { useVisibilityRefresh } from '@/hooks/useVisibilityRefresh';
 import tasksStyles from './tasks/styles/TasksPage.module.scss';
 import { ChatbotWidget } from '@/modules/n8n-chatbot';
 import { useAuth as useAuthContext } from '@/contexts/AuthContext';
@@ -41,6 +42,9 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
 
   // 🚀 LOAD DATA ONCE HERE - all pages use the global store
   useSharedTasksState(user?.id);
+
+  // 🔄 Refresh users when tab becomes visible (for status updates)
+  useVisibilityRefresh({ enabled: !!user?.id });
 
   // Get state from stores
   const isCreateTaskOpen = useTasksPageStore(useShallow(state => state.isCreateTaskOpen));

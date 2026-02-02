@@ -27,13 +27,16 @@ const AvailabilityToggle = () => {
   }, []);
 
   const handleToggle = async () => {
-    if (isLoading || hookLoading || !mounted || !isOnline) return; // Add !isOnline to prevent offline updates
+    if (isLoading || hookLoading || !mounted) return;
 
     setIsLoading(true);
     try {
+      // Si está "Fuera" o "Por terminar", volver a "Disponible"
+      // Si está "Disponible", cambiar a "Ocupado"
+      // Si está "Ocupado", cambiar a "Disponible"
       const newStatus = currentStatus === 'Disponible' ? 'Ocupado' : 'Disponible';
       await updateStatus(newStatus);
-      console.log('[AvailabilityToggle] Toggle called, newStatus:', newStatus); // Add log to confirm call
+      console.log('[AvailabilityToggle] Toggle called, newStatus:', newStatus);
     } catch (error) {
       console.error('[AvailabilityToggle] Error updating status:', error);
     } finally {
@@ -54,7 +57,8 @@ const AvailabilityToggle = () => {
   }
 
   const isAvailable = currentStatus === 'Disponible';
-  const isToggleDisabled = isLoading || hookLoading || !isOnline || currentStatus === 'Fuera';
+  // Permitir toggle incluso cuando está "Fuera" para que el usuario pueda recuperarse
+  const isToggleDisabled = isLoading || hookLoading;
 
   return (
     <div className={styles.container}>
@@ -65,7 +69,7 @@ const AvailabilityToggle = () => {
         checked={!isAvailable}
         onChange={handleToggle}
         disabled={isToggleDisabled}
-        title={isToggleDisabled ? 'No disponible cuando está fuera de línea o offline' : 'Cambiar entre Disponible y Ocupado'}
+        title="Cambiar entre Disponible y Ocupado"
       />
       <label htmlFor="availability-toggle" className={styles.switch}>
         <div className={styles.svgContainer}>

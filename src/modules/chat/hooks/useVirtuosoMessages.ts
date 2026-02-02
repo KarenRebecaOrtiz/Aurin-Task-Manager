@@ -94,19 +94,26 @@ export const useVirtuosoMessages = ({
 
   /**
    * Ordena mensajes ASC (antiguos → nuevos)
+   * IMPORTANTE: Mensajes sin timestamp (pendientes de Firestore) van al final
    */
   const sortMessagesAsc = useCallback((msgs: Message[]): Message[] => {
+    const now = Date.now();
     return [...msgs].sort((a, b) => {
+      // Si no hay timestamp, usar tiempo actual (mensaje nuevo pendiente va al final)
       const aTime = a.timestamp
         ? a.timestamp instanceof Date
           ? a.timestamp.getTime()
-          : a.timestamp.toDate().getTime()
-        : 0;
+          : typeof a.timestamp.toDate === 'function'
+            ? a.timestamp.toDate().getTime()
+            : now
+        : now;
       const bTime = b.timestamp
         ? b.timestamp instanceof Date
           ? b.timestamp.getTime()
-          : b.timestamp.toDate().getTime()
-        : 0;
+          : typeof b.timestamp.toDate === 'function'
+            ? b.timestamp.toDate().getTime()
+            : now
+        : now;
       return aTime - bTime; // ASC: antiguos primero
     });
   }, []);
@@ -127,11 +134,18 @@ export const useVirtuosoMessages = ({
 
     // Los mensajes YA vienen ordenados ASC
     msgs.forEach((message) => {
-      const messageDate = message.timestamp
-        ? message.timestamp instanceof Date
-          ? message.timestamp
-          : message.timestamp.toDate()
-        : new Date();
+      let messageDate: Date;
+      if (message.timestamp) {
+        if (message.timestamp instanceof Date) {
+          messageDate = message.timestamp;
+        } else if (typeof message.timestamp.toDate === 'function') {
+          messageDate = message.timestamp.toDate();
+        } else {
+          messageDate = new Date();
+        }
+      } else {
+        messageDate = new Date();
+      }
 
       const messageDateStr = messageDate.toDateString();
 
@@ -330,12 +344,13 @@ export const useVirtuosoMessages = ({
               onNewMessage();
             }
           } else if (change.type === 'modified') {
-            // Mensaje actualizado - mantener posición
-            setMessages((prev) =>
-              prev.map((msg) =>
+            // Mensaje actualizado - reemplazar y reordenar (timestamp puede haber cambiado)
+            setMessages((prev) => {
+              const updated = prev.map((msg) =>
                 msg.id === processedMessage.id ? processedMessage : msg
-              )
-            );
+              );
+              return sortMessagesAsc(updated);
+            });
           } else if (change.type === 'removed') {
             // Mensaje eliminado
             setMessages((prev) => prev.filter((msg) => msg.id !== messageData.id));

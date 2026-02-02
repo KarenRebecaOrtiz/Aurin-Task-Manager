@@ -17,6 +17,7 @@ import { toast } from '@/components/ui/use-toast'
 import styles from '@/modules/n8n-chatbot/styles/components/input-area.module.scss'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10 MB
+const DRAFT_STORAGE_KEY_PREFIX = 'chat_draft_'
 
 interface Message {
   id: string
@@ -107,8 +108,21 @@ export const InputChat: React.FC<InputChatProps> = ({
   disabled = false,
   showWebSearch = false,
 }) => {
+  // ========== STORAGE KEY ==========
+  const storageKey = useMemo(() => `${DRAFT_STORAGE_KEY_PREFIX}${taskId}`, [taskId])
+
   // ========== STATE ==========
-  const [value, setValue] = useState('')
+  const [value, setValue] = useState(() => {
+    // Inicializar con valor de sessionStorage si existe
+    if (typeof window !== 'undefined') {
+      try {
+        return sessionStorage.getItem(`${DRAFT_STORAGE_KEY_PREFIX}${taskId}`) || ''
+      } catch {
+        return ''
+      }
+    }
+    return ''
+  })
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [filePreview, setFilePreview] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
@@ -152,6 +166,19 @@ export const InputChat: React.FC<InputChatProps> = ({
     onTranscription: handleAudioTranscription,
     onError: handleAudioError,
   })
+
+  // ========== PERSIST DRAFT TO SESSION STORAGE ==========
+  useEffect(() => {
+    try {
+      if (value.trim()) {
+        sessionStorage.setItem(storageKey, value)
+      } else {
+        sessionStorage.removeItem(storageKey)
+      }
+    } catch {
+      // sessionStorage not available (SSR or private browsing)
+    }
+  }, [value, storageKey])
 
   // ========== AUTO-RESIZE TEXTAREA ==========
   useEffect(() => {
