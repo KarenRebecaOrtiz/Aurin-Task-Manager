@@ -15,9 +15,27 @@ import { useProfileForm } from '../../hooks';
 import { useConfigPageStore } from '../../stores';
 import { PhoneInput, SaveActions } from '../ui';
 import { UNIQUE_TECHNOLOGIES } from '../../constants';
-import { formatPhoneNumber } from '../../utils';
+import { formatPhoneNumber, parseDate } from '../../utils';
 import { SocialLinksManager } from '../social-links';
 import styles from './ProfileSection.module.scss';
+
+/**
+ * Convierte un string de fecha DD/MM/YYYY a objeto Date
+ * Retorna undefined si el string está vacío o es inválido
+ */
+function birthDateStringToDate(dateString: string | undefined): Date | undefined {
+  if (!dateString || dateString.trim() === '') return undefined;
+
+  // Si ya es un formato ISO o Date-compatible, intentar parsear directo
+  if (dateString.includes('-') || dateString.includes('T')) {
+    const date = new Date(dateString);
+    return isNaN(date.getTime()) ? undefined : date;
+  }
+
+  // Parsear formato DD/MM/YYYY
+  const parsed = parseDate(dateString);
+  return parsed || undefined;
+}
 
 interface ProfileSectionProps {
   userId: string;
@@ -85,7 +103,15 @@ export const ProfileSection: React.FC<ProfileSectionProps> = memo(({
   }, [handlePhoneChange]);
 
   const handleDateChange = React.useCallback((date: Date | undefined) => {
-    const event = { target: { name: 'birthDate', value: date } } as any;
+    // Convertir Date a string formato DD/MM/YYYY para almacenamiento
+    let dateString = '';
+    if (date) {
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      dateString = `${day}/${month}/${year}`;
+    }
+    const event = { target: { name: 'birthDate', value: dateString } } as any;
     handleInputChange(event);
   }, [handleInputChange]);
 
@@ -170,7 +196,7 @@ export const ProfileSection: React.FC<ProfileSectionProps> = memo(({
           <div className={styles.fieldGroupRow}>
             <CrystalCalendarDropdown
               label="Fecha de Nacimiento"
-              value={formData.birthDate}
+              value={birthDateStringToDate(formData.birthDate)}
               onChange={handleDateChange}
               placeholder="DD/MM/AAAA"
               disabled={!isOwnProfile}
