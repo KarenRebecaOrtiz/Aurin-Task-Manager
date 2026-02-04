@@ -127,31 +127,38 @@ export const useKanbanDragDrop = ({
         return;
       }
 
-      try {
-        const task = effectiveTasks.find((t) => t.id === taskId);
-        if (task && task.status !== newStatusName) {
+      const task = effectiveTasks.find((t) => t.id === taskId);
+      if (task && task.status !== newStatusName) {
+        const previousStatus = task.status;
+        const { updateTask } = useDataStore.getState();
+
+        // ✅ OPTIMISTIC UPDATE: Actualizar UI inmediatamente
+        updateTask(taskId, {
+          status: newStatusName,
+          lastActivity: new Date().toISOString(),
+        });
+
+        try {
           // Importar funciones de Firestore
           const { updateDoc, doc, serverTimestamp } = await import('firebase/firestore');
           const { updateTaskActivity } = await import('@/lib/taskUtils');
 
-          // Actualizar el estado en Firestore
+          // Persistir en Firestore (en background)
           await updateDoc(doc(db, 'tasks', taskId), {
             status: newStatusName,
             lastActivity: serverTimestamp(),
           });
 
-          // Fix 2: Actualización optimista en dataStore para UI inmediata
-          const { updateTask } = useDataStore.getState();
-          updateTask(taskId, {
-            status: newStatusName,
-            lastActivity: new Date().toISOString(),
-          });
-
           // Actualizar la actividad de la tarea
           await updateTaskActivity(taskId, 'status_change');
+        } catch (error) {
+          // ❌ ROLLBACK: Si falla, revertir al estado anterior
+          console.error('[useKanbanDragDrop] Error updating task status:', error);
+          updateTask(taskId, {
+            status: previousStatus,
+            lastActivity: new Date().toISOString(),
+          });
         }
-      } catch (error) {
-        console.error('[useKanbanDragDrop] Error updating task status:', error);
       }
     },
     [isAdmin, effectiveTasks, statusColumns, normalizeStatus]

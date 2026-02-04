@@ -69,30 +69,36 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
   const handleStatusChange = useCallback(async (newStatus: StatusValue) => {
     if (newStatus === currentStatus || isUpdating) return;
 
+    const previousStatus = currentStatus;
     setIsUpdating(true);
     setIsOpen(false);
 
+    // ✅ OPTIMISTIC UPDATE: Actualizar UI inmediatamente
+    const { updateTask } = useDataStore.getState();
+    updateTask(taskId, {
+      status: newStatus,
+      lastActivity: new Date().toISOString(),
+    });
+
+    // Callback inmediato para UI responsiva
+    onStatusChange?.(newStatus);
+
     try {
-      // Update in Firestore
+      // Persistir en Firestore (en background)
       await updateDoc(doc(db, "tasks", taskId), {
         status: newStatus,
         lastActivity: serverTimestamp(),
       });
 
-      // Optimistic update in dataStore
-      const { updateTask } = useDataStore.getState();
-      updateTask(taskId, {
-        status: newStatus,
-        lastActivity: new Date().toISOString(),
-      });
-
       // Update activity
       await updateTaskActivity(taskId, "status_change");
-
-      // Callback
-      onStatusChange?.(newStatus);
     } catch {
-      // Error updating status - handled silently
+      // ❌ ROLLBACK: Si falla, revertir al estado anterior
+      updateTask(taskId, {
+        status: previousStatus,
+        lastActivity: new Date().toISOString(),
+      });
+      onStatusChange?.(previousStatus);
     } finally {
       setIsUpdating(false);
     }
