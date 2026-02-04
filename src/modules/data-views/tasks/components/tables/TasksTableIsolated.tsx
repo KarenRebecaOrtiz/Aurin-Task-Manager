@@ -54,8 +54,10 @@ export default function TasksTableIsolated({ currentView, onViewChange }: TasksT
         // Handled locally in TasksTable/TasksKanban/ArchiveTable components
       },
       openDeleteTask: (taskId: string) => {
+        const { tasks: currentTasks } = useDataStore.getState();
+        const task = currentTasks.find((t) => t.id === taskId);
         const { openDeletePopup } = useTasksPageStore.getState();
-        openDeletePopup('task', taskId);
+        openDeletePopup('task', taskId, task?.name);
       },
       openArchiveTable: () => {
         const { openArchiveTable } = useTasksPageStore.getState();

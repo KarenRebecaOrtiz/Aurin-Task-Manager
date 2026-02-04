@@ -136,24 +136,39 @@ export const TasksHeader: React.FC<TasksHeaderProps> = ({
     setSelectedWorkspace(workspaceId || ALL_WORKSPACES_ID);
   }, [setSelectedWorkspace]);
 
-  // Handle task selection from CommandPalette
+  // Handle task selection from CommandPalette (Ver Tarea - abre el chat sidebar como al hacer clic en la tabla)
   const handleTaskSelect = useCallback((taskId: string) => {
-    // Abrir el sidebar de la tarea usando el store
-    const { openEditTask } = useTasksPageStore.getState();
-    openEditTask(taskId);
-  }, []);
+    // Buscar la tarea y el cliente
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task) return;
 
-  // Handle edit task from CommandPalette
+    const client = allClients.find((c) => c.id === task.clientId);
+    const clientName = client?.name || 'Sin cuenta';
+
+    // Abrir el chat sidebar (igual que al hacer clic en una fila de la tabla)
+    const { openChatSidebar } = useSidebarStateStore.getState();
+    openChatSidebar(task as any, clientName);
+  }, [tasks, allClients]);
+
+  // Handle edit task from CommandPalette (Editar Tarea - solo abrir sidebar)
   const handleEditTask = useCallback((taskId: string) => {
     const { openEditTask } = useTasksPageStore.getState();
     openEditTask(taskId);
   }, []);
 
+  // Handle edit client from CommandPalette (Editar Cuenta)
+  const handleEditClientFromPalette = useCallback((clientId: string) => {
+    setClientDialogMode('edit');
+    setEditingClientId(clientId);
+    setIsClientDialogOpen(true);
+  }, []);
+
   // Handle delete task from CommandPalette
   const handleDeleteTask = useCallback((taskId: string) => {
+    const task = tasks.find((t) => t.id === taskId);
     const { openDeletePopup } = useTasksPageStore.getState();
-    openDeletePopup('task', taskId);
-  }, []);
+    openDeletePopup('task', taskId, task?.name);
+  }, [tasks]);
 
   // Handle member selection from CommandPalette - Abre ProfileCard
   const handleMemberSelect = useCallback((memberId: string) => {
@@ -203,6 +218,7 @@ export const TasksHeader: React.FC<TasksHeaderProps> = ({
               onTaskSelect={handleTaskSelect}
               onEditTask={handleEditTask}
               onDeleteTask={handleDeleteTask}
+              onEditClient={isAdmin ? handleEditClientFromPalette : undefined}
               onTeamSelect={handleTeamSelect}
               placeholder="Buscar proyectos, tareas o miembros..."
             />

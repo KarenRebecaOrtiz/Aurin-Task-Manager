@@ -9,7 +9,7 @@
 
 'use client';
 
-import React, { useCallback, useRef, useEffect } from 'react';
+import React, { useCallback, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Command } from 'lucide-react';
 import { useCommandPalette, type UseCommandPaletteProps } from '../hooks/useCommandPalette';
@@ -19,6 +19,7 @@ import { CommandList } from './lists/CommandList';
 import { TaskActions } from './actions/TaskActions';
 import { KeyboardHints } from './footer/KeyboardHints';
 import { dropdownAnimations } from '@/modules/shared/components/molecules/Dropdown/animations';
+import { useDataStore } from '@/stores/dataStore';
 import { useMediaQuery } from '@/modules/dialogs/hooks/useMediaQuery';
 import {
   ResponsiveDialog,
@@ -76,7 +77,7 @@ export function CommandPalette({
     containerRef,
   } = useCommandPalette(hookProps);
 
-  const triggerRef = useRef<HTMLButtonElement>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const isMobile = useMediaQuery('(max-width: 767px)');
 
@@ -135,6 +136,16 @@ export function CommandPalette({
     }
   };
 
+  // Obtener tareas del store para encontrar el clientId
+  const tasks = useDataStore((state) => state.tasks);
+
+  // Obtener el clientId de la tarea actual (si estamos en nivel task)
+  const currentTaskClientId = useMemo(() => {
+    if (navigationState.level !== 'task' || !navigationState.taskId) return null;
+    const task = tasks.find((t) => t.id === navigationState.taskId);
+    return task?.clientId || null;
+  }, [navigationState.level, navigationState.taskId, tasks]);
+
   // Renderizar contenido del panel
   const renderContent = () => {
     // Si estamos en nivel tarea, mostrar acciones
@@ -149,9 +160,19 @@ export function CommandPalette({
             close();
           } : undefined}
           onAddManualTime={hookProps.onAddManualTime ? () => hookProps.onAddManualTime?.(navigationState.taskId!) : undefined}
-          onEdit={hookProps.onEditTask ? () => hookProps.onEditTask?.(navigationState.taskId!) : undefined}
-          onDelete={hookProps.onDeleteTask ? () => hookProps.onDeleteTask?.(navigationState.taskId!) : undefined}
+          onEdit={hookProps.onEditTask ? () => {
+            hookProps.onEditTask?.(navigationState.taskId!);
+            close();
+          } : undefined}
+          onDelete={hookProps.onDeleteTask ? () => {
+            hookProps.onDeleteTask?.(navigationState.taskId!);
+            close();
+          } : undefined}
           onShare={hookProps.onShareTask ? () => hookProps.onShareTask?.(navigationState.taskId!) : undefined}
+          onEditClient={hookProps.onEditClient && currentTaskClientId ? () => {
+            hookProps.onEditClient?.(currentTaskClientId);
+            close();
+          } : undefined}
           onActionClick={handleActionClick}
         />
       );
@@ -221,21 +242,45 @@ export function CommandPalette({
     );
   }
 
+  // Manejar cambio en el input del trigger
+  const handleTriggerInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+    if (!isOpen) {
+      open();
+    }
+  }, [isOpen, open, setSearchQuery]);
+
+  // Manejar focus en el input del trigger
+  const handleTriggerFocus = useCallback(() => {
+    if (!isOpen) {
+      open();
+    }
+  }, [isOpen, open]);
+
   // Desktop: dropdown expandido
   return (
     <div className={`${styles.container} ${className}`} ref={containerRef}>
-      {/* Trigger Button */}
-      <button
+      {/* Trigger Input - Funcional directamente */}
+      <div
         ref={triggerRef}
-        type="button"
         className={`${styles.trigger} ${isOpen ? styles.focused : ''}`}
-        onClick={toggle}
-        aria-expanded={isOpen}
-        aria-haspopup="listbox"
+        onClick={handleTriggerFocus}
       >
         <div className={styles.triggerContent}>
           <Search className={styles.triggerIcon} size={16} />
-          <span className={styles.triggerPlaceholder}>{placeholder}</span>
+          <input
+            type="text"
+            className={styles.triggerInput}
+            value={searchQuery}
+            onChange={handleTriggerInputChange}
+            onFocus={handleTriggerFocus}
+            placeholder={placeholder}
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
+          />
         </div>
         <div className={styles.triggerShortcut}>
           <span className={styles.shortcutKey}>
@@ -243,7 +288,7 @@ export function CommandPalette({
           </span>
           <span className={styles.shortcutKey}>K</span>
         </div>
-      </button>
+      </div>
 
       {/* Dropdown Panel */}
       <AnimatePresence>
@@ -254,23 +299,17 @@ export function CommandPalette({
             role="listbox"
             {...dropdownAnimations.menu}
           >
-            {/* Header: Search + Breadcrumb */}
-            <div className={styles.header}>
-              <SearchInput
-                value={searchQuery}
-                onChange={setSearchQuery}
-                placeholder={getDynamicPlaceholder()}
-                autoFocus
-              />
-              {canGoBack && (
+            {/* Header: Solo Breadcrumb (el input está en el trigger) */}
+            {canGoBack && (
+              <div className={styles.header}>
                 <Breadcrumb
                   stack={navigationStack}
                   onNavigateToIndex={navigateToStackIndex}
                   onBack={navigateBack}
                   canGoBack={canGoBack}
                 />
-              )}
-            </div>
+              </div>
+            )}
 
             {/* Content */}
             {renderContent()}

@@ -188,9 +188,10 @@ export default function DataViewsContainer() {
   }, []);
 
   const handleDeleteTask = useCallback((taskId: string) => {
+    const task = tasks.find((t) => t.id === taskId);
     const { openDeletePopup } = useTasksPageStore.getState();
-    openDeletePopup('task', taskId);
-  }, []);
+    openDeletePopup('task', taskId, task?.name);
+  }, [tasks]);
 
   const handleArchiveTableOpen = useCallback(() => {
     // Use window.history.pushState for instant navigation without remount

@@ -39,7 +39,7 @@ interface TasksPageState {
   
   // Data states
   editTaskId: string | null;
-  deleteTarget: { type: string; id: string } | null;
+  deleteTarget: { type: string; id: string; name?: string } | null;
   clientSidebarData: { client?: Client; isEdit?: boolean } | null;
   selectedProfileUser: User | null;
   
@@ -111,7 +111,7 @@ interface TasksPageState {
   closeCreateTask: () => void;
   openArchiveTable: () => void;
   closeArchiveTable: () => void;
-  openDeletePopup: (type: string, id: string) => void;
+  openDeletePopup: (type: string, id: string, name?: string) => void;
   closeDeletePopup: () => void;
   showSuccess: (message: string) => void;
   showFail: (message: string) => void;
@@ -217,9 +217,9 @@ export const useTasksPageStore = create<TasksPageState>((set) => ({
   openArchiveTable: () => set({ isArchiveTableOpen: true }),
   closeArchiveTable: () => set({ isArchiveTableOpen: false }),
   
-  openDeletePopup: (type, id) => set({ 
-    deleteTarget: { type, id }, 
-    isDeletePopupOpen: true 
+  openDeletePopup: (type, id, name) => set({
+    deleteTarget: { type, id, name },
+    isDeletePopupOpen: true
   }),
   
   closeDeletePopup: () => set({ 

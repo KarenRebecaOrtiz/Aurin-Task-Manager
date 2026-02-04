@@ -210,27 +210,27 @@ export function useCommandPaletteData({
   }, [navigationState.workspaceId, navigationState.projectName, allTasks, allUsers, searchQuery]);
 
   // ============================================================================
-  // TASKS (Nivel proyecto o miembro)
+  // TASKS (Disponibles en todos los niveles, filtradas por contexto)
   // ============================================================================
 
   const tasks = useMemo((): TaskCommandItem[] => {
     let filteredTasks = allTasks.filter((t) => !t.archived);
 
-    // Filtrar por workspace
+    // Filtrar por workspace si hay uno seleccionado en navegación
     if (navigationState.workspaceId) {
       filteredTasks = filteredTasks.filter(
         (t) => t.clientId === navigationState.workspaceId
       );
     }
 
-    // Filtrar por proyecto
+    // Filtrar por proyecto si estamos en ese nivel
     if (navigationState.projectName) {
       filteredTasks = filteredTasks.filter(
         (t) => t.project === navigationState.projectName
       );
     }
 
-    // Filtrar por miembro
+    // Filtrar por miembro si estamos en ese nivel
     if (navigationState.memberId) {
       filteredTasks = filteredTasks.filter((t) => {
         const isInvolved =
@@ -257,18 +257,42 @@ export function useCommandPaletteData({
       };
     });
 
-    // Filtrar por búsqueda
+    // Filtrar por búsqueda - priorizar coincidencia en nombre de tarea
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      return items.filter(
-        (item) =>
-          item.title.toLowerCase().includes(query) ||
-          item.subtitle?.toLowerCase().includes(query) ||
-          item.clientName.toLowerCase().includes(query)
-      );
+      return items
+        .filter(
+          (item) =>
+            item.title.toLowerCase().includes(query) ||
+            item.subtitle?.toLowerCase().includes(query) ||
+            item.clientName.toLowerCase().includes(query)
+        )
+        // Ordenar: primero las que coinciden en el nombre, luego las demás
+        .sort((a, b) => {
+          const aNameMatch = a.title.toLowerCase().includes(query);
+          const bNameMatch = b.title.toLowerCase().includes(query);
+          if (aNameMatch && !bNameMatch) return -1;
+          if (!aNameMatch && bNameMatch) return 1;
+          return 0;
+        });
     }
 
-    return items;
+    // Sin búsqueda: ordenar por fecha de creación (más recientes primero)
+    // y limitar a las primeras 10 para el dropdown inicial
+    return items
+      .sort((a, b) => {
+        // Ordenar por status: tareas en proceso primero
+        const statusOrder: Record<string, number> = {
+          'en-proceso': 0,
+          'por-iniciar': 1,
+          'por-finalizar': 2,
+          'finalizado': 3,
+        };
+        const aOrder = statusOrder[a.status] ?? 99;
+        const bOrder = statusOrder[b.status] ?? 99;
+        return aOrder - bOrder;
+      })
+      .slice(0, 15); // Limitar tareas mostradas inicialmente
   }, [
     navigationState.workspaceId,
     navigationState.projectName,

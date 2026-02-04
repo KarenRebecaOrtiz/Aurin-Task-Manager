@@ -115,6 +115,29 @@
   }
 }
 
+.triggerInput {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: none;
+  background: transparent;
+  outline: none;
+  @include typography(14px, $font-weight-normal, $color-text-primary);
+
+  &::placeholder {
+    color: $color-text-secondary;
+    font-weight: $font-weight-normal;
+  }
+
+  :global(body.dark) & {
+    color: rgba(255, 255, 255, 0.9);
+
+    &::placeholder {
+      color: rgba(255, 255, 255, 0.5);
+    }
+  }
+}
+
 .triggerShortcut {
   position: absolute;
   right: 12px;

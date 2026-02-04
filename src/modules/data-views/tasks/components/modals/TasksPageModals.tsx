@@ -128,9 +128,10 @@ export default function TasksPageModals() {
   // Handle delete popup with new dialog system
   useEffect(() => {
     if (isDeletePopupOpen && deleteTarget) {
+      const itemName = deleteTarget.name ? `"${deleteTarget.name}"` : (deleteTarget.type === 'task' ? 'esta tarea' : 'esta cuenta');
       openConfirm({
         title: `Eliminar ${deleteTarget.type === 'task' ? 'Tarea' : 'Cuenta'}`,
-        description: `¿Estás seguro de que quieres eliminar esta ${deleteTarget.type === 'task' ? 'tarea' : 'cuenta'}? Esta acción no se puede deshacer.`,
+        description: `¿Estás seguro de que quieres eliminar ${itemName}? Esta acción no se puede deshacer.`,
         variant: 'danger',
         confirmText: 'Eliminar',
         onConfirm: async () => {

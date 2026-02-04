@@ -21,6 +21,7 @@ import {
   Copy,
   Sparkles,
   Eye,
+  Building2,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserDataStore } from '@/stores/userDataStore';
@@ -41,6 +42,7 @@ export interface TaskActionsProps {
   onShare?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
+  onEditClient?: () => void;
   onOpenChat?: () => void;
   onAIQuestion?: (prompt: string) => void;
   onActionClick: (action: ActionCommandItem, index: number) => void;
@@ -56,6 +58,7 @@ export function TaskActions({
   onShare,
   onEdit,
   onDelete,
+  onEditClient,
   onOpenChat,
   onAIQuestion,
   onActionClick,
@@ -94,7 +97,7 @@ export function TaskActions({
         id: 'view',
         type: 'action',
         title: 'Ver Tarea',
-        subtitle: 'Abrir panel de detalles',
+        subtitle: 'Abrir y generar enlace compartible',
         icon: <Eye size={18} />,
         action: onView,
         shortcut: 'Enter',
@@ -175,6 +178,18 @@ export function TaskActions({
       });
     }
 
+    // Edit Client (solo admins)
+    if (isAdmin && onEditClient) {
+      items.push({
+        id: 'edit-client',
+        type: 'action',
+        title: 'Editar Cuenta',
+        subtitle: 'Modificar datos de la cuenta',
+        icon: <Building2 size={18} />,
+        action: onEditClient,
+      });
+    }
+
     // Delete (solo admins)
     if (isAdmin && onDelete) {
       items.push({
@@ -198,6 +213,7 @@ export function TaskActions({
     onOpenChat,
     onShare,
     onEdit,
+    onEditClient,
     onDelete,
     handleCopyLink,
   ]);

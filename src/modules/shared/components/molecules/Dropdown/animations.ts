@@ -16,9 +16,9 @@ export const dropdownAnimations = {
 
   // Animación de items individuales con stagger
   item: (index: number) => ({
-    initial: { opacity: 0, y: -8 },
+    initial: { opacity: 0, y: -4 },
     animate: { opacity: 1, y: 0 },
-    transition: { duration: 0.12, delay: index * 0.03 },
+    transition: { duration: 0.08, delay: Math.min(index * 0.015, 0.15) },
   }),
 
   // Animación del trigger (botón que abre el dropdown)

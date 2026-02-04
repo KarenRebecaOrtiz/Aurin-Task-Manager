@@ -27,5 +27,5 @@ export type TaskSortKey =
 /**
  * Default sort configuration
  */
-export const DEFAULT_SORT_KEY: TaskSortKey = 'createdAt';
+export const DEFAULT_SORT_KEY: TaskSortKey = 'lastActivity';
 export const DEFAULT_SORT_DIRECTION: SortDirection = 'desc';

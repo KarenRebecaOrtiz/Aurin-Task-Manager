@@ -83,7 +83,7 @@ export const tasksTableStore = create<TasksTableStore>()((set, get) => ({
     statusFilter: '',
     statusFilters: [], // Initialize empty array for multiple statuses
     clientFilter: '',
-    sortKey: 'createdAt',
+    sortKey: 'lastActivity',
     sortDirection: 'desc',
     isUserDropdownOpen: false,
     isPriorityDropdownOpen: false,

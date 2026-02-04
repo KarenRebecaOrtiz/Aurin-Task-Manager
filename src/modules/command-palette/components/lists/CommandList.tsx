@@ -11,7 +11,7 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, FolderKanban, Users, Building2, UsersRound } from 'lucide-react';
+import { Search, FolderKanban, Users, Building2, UsersRound, ClipboardCheck } from 'lucide-react';
 import { CommandItem } from '../items/CommandItem';
 import type {
   CommandItem as CommandItemType,
@@ -98,9 +98,10 @@ export function CommandList({
           <motion.div
             key={section.id}
             className={styles.section}
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.1 }}
           >
             {/* Section header */}
             <div className={styles.sectionHeader}>
@@ -154,6 +155,15 @@ function groupItemsBySection(
 
   // Crear secciones según el nivel
   if (level === 'root') {
+    // Mostrar tareas primero (son la funcionalidad principal)
+    if (tasks.length > 0) {
+      sections.push({
+        id: 'tasks',
+        title: 'Tareas',
+        icon: <ClipboardCheck size={12} style={{ marginRight: 4 }} />,
+        items: tasks,
+      });
+    }
     if (workspaces.length > 0) {
       sections.push({
         id: 'workspaces',
@@ -173,6 +183,15 @@ function groupItemsBySection(
   }
 
   if (level === 'workspace') {
+    // Mostrar tareas primero en nivel workspace también
+    if (tasks.length > 0) {
+      sections.push({
+        id: 'tasks',
+        title: 'Tareas',
+        icon: <ClipboardCheck size={12} style={{ marginRight: 4 }} />,
+        items: tasks,
+      });
+    }
     if (projects.length > 0) {
       sections.push({
         id: 'projects',
@@ -196,6 +215,7 @@ function groupItemsBySection(
       sections.push({
         id: 'tasks',
         title: 'Tareas',
+        icon: <ClipboardCheck size={12} style={{ marginRight: 4 }} />,
         items: tasks,
       });
     }

@@ -52,6 +52,8 @@ export interface UseCommandPaletteProps {
   onDeleteTask?: (taskId: string) => void;
   /** Callback para compartir una tarea */
   onShareTask?: (taskId: string) => void;
+  /** Callback para editar un cliente/cuenta */
+  onEditClient?: (clientId: string) => void;
 }
 
 // ============================================================================
@@ -115,15 +117,25 @@ export function useCommandPalette(props: UseCommandPaletteProps = {}) {
 
   const currentItems = useMemo((): CommandItem[] => {
     const level = navigationState.level;
+    const hasSearch = searchQuery.trim().length > 0;
 
     switch (level) {
       case 'root':
-        // En root mostramos workspaces y teams
-        return [...workspaces, ...teams];
+        // En root: si hay búsqueda, priorizar tareas; si no, mostrar todo
+        if (hasSearch) {
+          // Con búsqueda: tareas primero, luego workspaces y teams
+          return [...tasks, ...workspaces, ...teams];
+        }
+        // Sin búsqueda: workspaces, teams, y tareas recientes
+        return [...workspaces, ...teams, ...tasks];
 
       case 'workspace':
-        // En workspace mostramos proyectos y miembros
-        return [...projects, ...members];
+        // En workspace: si hay búsqueda, priorizar tareas
+        if (hasSearch) {
+          return [...tasks, ...projects, ...members];
+        }
+        // Sin búsqueda: proyectos, tareas recientes, miembros
+        return [...projects, ...tasks, ...members];
 
       case 'project':
         // En proyecto mostramos tareas y miembros del proyecto
@@ -144,7 +156,7 @@ export function useCommandPalette(props: UseCommandPaletteProps = {}) {
       default:
         return [];
     }
-  }, [navigationState.level, workspaces, projects, members, tasks, teams]);
+  }, [navigationState.level, workspaces, projects, members, tasks, teams, searchQuery]);
 
   // ============================================================================
   // ACTIONS: Open/Close
