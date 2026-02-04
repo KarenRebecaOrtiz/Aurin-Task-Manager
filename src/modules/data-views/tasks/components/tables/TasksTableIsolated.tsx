@@ -50,6 +50,9 @@ export default function TasksTableIsolated({ currentView, onViewChange }: TasksT
         const { openEditTask } = useTasksPageStore.getState();
         openEditTask(taskId);
       },
+      openEditClient: () => {
+        // Handled locally in TasksTable/TasksKanban/ArchiveTable components
+      },
       openDeleteTask: (taskId: string) => {
         const { openDeletePopup } = useTasksPageStore.getState();
         openDeletePopup('task', taskId);
