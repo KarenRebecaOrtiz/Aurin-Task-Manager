@@ -146,6 +146,22 @@ export function CommandPalette({
     return task?.clientId || null;
   }, [navigationState.level, navigationState.taskId, tasks]);
 
+  // Manejar cambio en el input del trigger (desktop only, pero debe estar antes del return condicional)
+  const handleTriggerInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+    if (!isOpen) {
+      open();
+    }
+  }, [isOpen, open, setSearchQuery]);
+
+  // Manejar focus en el input del trigger (desktop only, pero debe estar antes del return condicional)
+  const handleTriggerFocus = useCallback(() => {
+    if (!isOpen) {
+      open();
+    }
+  }, [isOpen, open]);
+
   // Renderizar contenido del panel
   const renderContent = () => {
     // Si estamos en nivel tarea, mostrar acciones
@@ -240,22 +256,6 @@ export function CommandPalette({
       </div>
     );
   }
-
-  // Manejar cambio en el input del trigger
-  const handleTriggerInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setSearchQuery(value);
-    if (!isOpen) {
-      open();
-    }
-  }, [isOpen, open, setSearchQuery]);
-
-  // Manejar focus en el input del trigger
-  const handleTriggerFocus = useCallback(() => {
-    if (!isOpen) {
-      open();
-    }
-  }, [isOpen, open]);
 
   // Desktop: dropdown expandido
   return (

@@ -53,6 +53,11 @@ interface UseProfileFormOptions {
  * Transforma datos de Config a ConfigForm
  */
 function transformConfigToFormData(data: Config, userId: string, currentUser: any): any {
+  console.log('[transformConfigToFormData] Input data:', {
+    profilePhoto: data.profilePhoto,
+    coverPhoto: data.coverPhoto,
+    clerkImageUrl: currentUser?.imageUrl,
+  });
   return {
     userId,
     notificationsEnabled: data.notificationsEnabled || false,
@@ -235,6 +240,10 @@ export const useProfileForm = ({ userId, onSuccess, onError }: UseProfileFormOpt
         const storeData = useUserDataStore.getState().userData;
         if (storeData && storeData.userId === userId) {
           // El store ya tiene los datos del usuario - usar como fuente principal
+          console.log('[useProfileForm] Loading from userDataStore:', {
+            profilePhoto: storeData.profilePhoto,
+            coverPhoto: storeData.coverPhoto,
+          });
           const formDataFromStore = transformConfigToFormData(storeData as unknown as Config, userId, currentUser);
           setFormData(formDataFromStore);
           setIsLoading(false);
@@ -258,6 +267,11 @@ export const useProfileForm = ({ userId, onSuccess, onError }: UseProfileFormOpt
 
         if (docSnap.exists()) {
           const data = docSnap.data() as Config & { id: string };
+          console.log('[useProfileForm] Loading from Firestore:', {
+            profilePhoto: data.profilePhoto,
+            coverPhoto: data.coverPhoto,
+            allFields: Object.keys(data),
+          });
 
           // Guardar en configCache para futuros usos del form
           configCache.set(userId, data as Config);

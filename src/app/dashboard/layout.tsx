@@ -152,7 +152,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
 // Soporta tanto chats de tareas ('chat') como de equipos ('team')
 const IndependentChatSidebarRenderer = () => {
   const { isOpen, sidebarType, chatSidebar, teamSidebar, closeChatSidebar, closeTeamSidebar } = useSidebarStateStore();
-  const users = useDataStore.getState().users;
+  const users = useDataStore(useShallow(state => state.users));
 
   // Determine if sidebar should be shown - soporta 'chat' y 'team'
   const isTaskChat = sidebarType === 'chat' && chatSidebar.task;

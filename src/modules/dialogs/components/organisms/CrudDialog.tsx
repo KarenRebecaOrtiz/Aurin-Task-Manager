@@ -49,6 +49,9 @@ export function CrudDialog({
   showCloseButton = true,
   className,
 }: CrudDialogProps) {
+  // IMPORTANTE: Todos los hooks deben estar ANTES de cualquier return condicional
+  const isMobile = useMediaQuery('(max-width: 767px)');
+
   // Determine default submit text based on mode
   const defaultSubmitText = mode === 'create' ? 'Crear' : mode === 'edit' ? 'Actualizar' : 'Guardar';
   const finalSubmitText = submitText || defaultSubmitText;
@@ -109,9 +112,6 @@ export function CrudDialog({
       </ResponsiveDialog>
     );
   }
-
-  // Check if mobile for conditional rendering
-  const isMobile = useMediaQuery('(max-width: 767px)');
 
   // Render main dialog
   return (
