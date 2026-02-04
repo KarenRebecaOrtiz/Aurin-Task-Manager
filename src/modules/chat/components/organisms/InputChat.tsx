@@ -310,6 +310,21 @@ export const InputChat: React.FC<InputChatProps> = ({
 
     if (!userId || (!hasText && !hasFile) || isSending || isTranscribing) return
 
+    // Capturar valores ANTES del cleanup optimista
+    const currentValue = value
+    const currentFile = selectedFile
+
+    // ✅ Cleanup optimista INMEDIATO
+    setValue('')
+    setSelectedFile(null)
+    setFilePreview(null)
+    // Limpiar draft de sessionStorage
+    try {
+      sessionStorage.removeItem(storageKey)
+    } catch {
+      // sessionStorage not available
+    }
+
     setIsSending(true)
     const clientId = crypto.randomUUID()
 
@@ -317,12 +332,12 @@ export const InputChat: React.FC<InputChatProps> = ({
       let finalMessageData: Partial<Message> = {
         senderId: userId,
         senderName: userFirstName || 'Usuario',
-        text: hasText ? value : null,
+        text: hasText ? currentValue : null,
         read: false,
         imageUrl: null,
         fileUrl: null,
-        fileName: selectedFile ? selectedFile.name : null,
-        fileType: selectedFile ? selectedFile.type : null,
+        fileName: currentFile ? currentFile.name : null,
+        fileType: currentFile ? currentFile.type : null,
         filePath: null,
         isPending: false,
         hasError: false,
@@ -330,9 +345,9 @@ export const InputChat: React.FC<InputChatProps> = ({
       }
 
       // Upload file if present
-      if (selectedFile) {
+      if (currentFile) {
         const formData = new FormData()
-        formData.append('file', selectedFile)
+        formData.append('file', currentFile)
         formData.append('userId', userId)
         formData.append('type', 'attachment')
         formData.append('conversationId', taskId)
@@ -352,8 +367,8 @@ export const InputChat: React.FC<InputChatProps> = ({
 
         finalMessageData = {
           ...finalMessageData,
-          imageUrl: selectedFile.type.startsWith('image/') ? url : null,
-          fileUrl: url && !selectedFile.type.startsWith('image/') ? url : null,
+          imageUrl: currentFile.type.startsWith('image/') ? url : null,
+          fileUrl: url && !currentFile.type.startsWith('image/') ? url : null,
           fileName,
           fileType,
           filePath: pathname, // Vercel Blob usa 'pathname' en lugar de 'filePath'
@@ -368,10 +383,7 @@ export const InputChat: React.FC<InputChatProps> = ({
       // Send message
       await onSendMessage(finalMessageData)
 
-      // Clear input on success
-      setValue('')
-      setSelectedFile(null)
-      setFilePreview(null)
+      // Reset web search toggle on success
       setWebSearchEnabled(false)
 
     } catch (error) {
@@ -383,7 +395,7 @@ export const InputChat: React.FC<InputChatProps> = ({
     } finally {
       setIsSending(false)
     }
-  }, [value, selectedFile, userId, userFirstName, taskId, isSending, isTranscribing, webSearchEnabled, onSendMessage, setIsSending])
+  }, [value, selectedFile, userId, userFirstName, taskId, isSending, isTranscribing, webSearchEnabled, onSendMessage, setIsSending, storageKey])
 
   const hasContent = value.trim() !== '' || selectedFile !== null
 
