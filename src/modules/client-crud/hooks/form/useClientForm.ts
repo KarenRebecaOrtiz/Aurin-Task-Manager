@@ -50,6 +50,9 @@ export function useClientForm({ initialData, onSubmit }: UseClientFormProps = {}
     isActive: true,
   });
 
+  // Check if initial data has a valid custom image
+  const initialHasValidImage = initialData?.imageUrl && !initialData.imageUrl.includes('empty-image');
+
   const [formData, setFormData] = useState<ClientFormData>({
     name: initialData?.name || '',
     email: initialData?.email || '',
@@ -61,8 +64,9 @@ export function useClientForm({ initialData, onSubmit }: UseClientFormProps = {}
     taxId: initialData?.taxId || '',
     notes: initialData?.notes || '',
     imageUrl: initialData?.imageUrl || undefined,
-    gradientId: initialData?.gradientId || 'default',
-    gradientColors: initialData?.gradientColors || undefined,
+    // If there's a valid image, set gradientId to 'custom-image' so the selector shows it as selected
+    gradientId: initialHasValidImage ? 'custom-image' : (initialData?.gradientId || 'default'),
+    gradientColors: initialHasValidImage ? undefined : (initialData?.gradientColors || undefined),
     projects: initialData?.projects || [],
     isActive: initialData?.isActive ?? true,
     createdAt: initialData?.createdAt,
@@ -150,6 +154,9 @@ export function useClientForm({ initialData, onSubmit }: UseClientFormProps = {}
 
   // Set initial data for editing (used for change tracking)
   const setInitialData = useCallback((data: Partial<ClientFormData>) => {
+    // Check if there's a valid custom image (not empty-image placeholder)
+    const hasValidImage = data.imageUrl && !data.imageUrl.includes('empty-image');
+
     const newData: ClientFormData = {
       name: data.name || '',
       email: data.email || '',
@@ -161,8 +168,9 @@ export function useClientForm({ initialData, onSubmit }: UseClientFormProps = {}
       taxId: data.taxId || '',
       notes: data.notes || '',
       imageUrl: data.imageUrl || undefined,
-      gradientId: data.gradientId || 'default',
-      gradientColors: data.gradientColors || undefined,
+      // If there's a valid image, set gradientId to 'custom-image' so the selector shows it as selected
+      gradientId: hasValidImage ? 'custom-image' : (data.gradientId || 'default'),
+      gradientColors: hasValidImage ? undefined : (data.gradientColors || undefined),
       projects: data.projects || [],
       isActive: data.isActive ?? true,
       createdAt: data.createdAt,

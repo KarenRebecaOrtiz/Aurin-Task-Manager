@@ -110,13 +110,17 @@ export function ClientDialog({
   }, [isOpen, resetForm]);
 
   // Handle gradient selection - clears imageUrl for mutual exclusivity
+  // Exception: 'custom-image' is used when uploading an image, so don't clear imageUrl in that case
   const handleGradientSelect = useCallback((gradientId: string, colors?: string[]) => {
     updateField('gradientId', gradientId);
     if (colors) {
       updateField('gradientColors', colors);
     }
     // Clear image when selecting gradient (mutual exclusivity)
-    updateField('imageUrl', '');
+    // But NOT when selecting 'custom-image' - that's used for uploaded images
+    if (gradientId !== 'custom-image') {
+      updateField('imageUrl', '');
+    }
   }, [updateField]);
 
   // Handle image upload - clears gradient for mutual exclusivity
