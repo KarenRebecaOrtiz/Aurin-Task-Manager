@@ -69,15 +69,17 @@ export function TaskActions({
   const { success: showSuccess } = useSonnerToast();
 
   // Verificar si el usuario está involucrado en la tarea
-  const isInvolved = useMemo(() => {
+  const { isInvolved, isCreator } = useMemo(() => {
     const task = tasks.find((t) => t.id === taskId);
-    if (!task) return false;
+    if (!task) return { isInvolved: false, isCreator: false };
 
-    return (
-      task.CreatedBy === currentUserId ||
+    const creator = task.CreatedBy === currentUserId;
+    const involved =
+      creator ||
       (task.AssignedTo || []).includes(currentUserId) ||
-      (task.LeadedBy || []).includes(currentUserId)
-    );
+      (task.LeadedBy || []).includes(currentUserId);
+
+    return { isInvolved: involved, isCreator: creator };
   }, [tasks, taskId, currentUserId]);
 
   // Copiar enlace de la tarea
@@ -165,8 +167,8 @@ export function TaskActions({
       });
     }
 
-    // Edit (involucrados y admins)
-    if ((isInvolved || isAdmin) && onEdit) {
+    // Edit (solo admins o creador de la tarea)
+    if ((isAdmin || isCreator) && onEdit) {
       items.push({
         id: 'edit',
         type: 'action',
@@ -207,6 +209,7 @@ export function TaskActions({
   }, [
     isAdmin,
     isInvolved,
+    isCreator,
     onView,
     onStartTimer,
     onAddManualTime,

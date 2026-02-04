@@ -68,13 +68,28 @@ export function useCommandPaletteData({
   );
 
   // ============================================================================
+  // FILTRO DE PERMISOS: Tareas que el usuario puede ver
+  // Solo admin o usuarios involucrados (CreatedBy, AssignedTo, LeadedBy)
+  // ============================================================================
+
+  const allowedTasks = useMemo(() => {
+    if (isAdmin) return allTasks;
+    return allTasks.filter((task) => {
+      const isCreator = task.CreatedBy === currentUserId;
+      const isAssigned = (task.AssignedTo || []).includes(currentUserId);
+      const isLeader = (task.LeadedBy || []).includes(currentUserId);
+      return isCreator || isAssigned || isLeader;
+    });
+  }, [allTasks, isAdmin, currentUserId]);
+
+  // ============================================================================
   // WORKSPACES (Nivel root)
   // ============================================================================
 
   const workspaces = useMemo((): WorkspaceCommandItem[] => {
     const items = storeWorkspaces.map((ws): WorkspaceCommandItem => {
-      // Contar tareas de este workspace
-      const taskCount = allTasks.filter((t) => t.clientId === ws.id).length;
+      // Contar tareas de este workspace (solo las que el usuario puede ver)
+      const taskCount = allowedTasks.filter((t) => t.clientId === ws.id && !t.archived).length;
 
       // Obtener proyectos únicos
       const client = clients.find((c) => c.id === ws.id);
@@ -92,18 +107,21 @@ export function useCommandPaletteData({
       };
     });
 
+    // Filtrar workspaces sin tareas visibles para el usuario
+    const visibleWorkspaces = items.filter((item) => item.taskCount > 0);
+
     // Filtrar por búsqueda
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      return items.filter(
+      return visibleWorkspaces.filter(
         (item) =>
           item.title.toLowerCase().includes(query) ||
           item.subtitle?.toLowerCase().includes(query)
       );
     }
 
-    return items;
-  }, [storeWorkspaces, allTasks, clients, searchQuery]);
+    return visibleWorkspaces;
+  }, [storeWorkspaces, allowedTasks, clients, searchQuery]);
 
   // ============================================================================
   // PROJECTS (Nivel workspace)
@@ -118,11 +136,12 @@ export function useCommandPaletteData({
     if (!client?.projects) return [];
 
     const items = client.projects.map((projectName): ProjectCommandItem => {
-      // Contar tareas de este proyecto
-      const taskCount = allTasks.filter(
+      // Contar tareas de este proyecto (solo las que el usuario puede ver)
+      const taskCount = allowedTasks.filter(
         (t) =>
           t.clientId === navigationState.workspaceId &&
-          t.project === projectName
+          t.project === projectName &&
+          !t.archived
       ).length;
 
       return {
@@ -136,22 +155,26 @@ export function useCommandPaletteData({
       };
     });
 
+    // Filtrar proyectos sin tareas visibles para el usuario
+    const visibleProjects = items.filter((item) => item.taskCount > 0);
+
     // Filtrar por búsqueda
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      return items.filter((item) => item.title.toLowerCase().includes(query));
+      return visibleProjects.filter((item) => item.title.toLowerCase().includes(query));
     }
 
     // Ordenar por cantidad de tareas (más tareas primero)
-    return items.sort((a, b) => b.taskCount - a.taskCount);
-  }, [navigationState.level, navigationState.workspaceId, clients, allTasks, searchQuery]);
+    return visibleProjects.sort((a, b) => b.taskCount - a.taskCount);
+  }, [navigationState.level, navigationState.workspaceId, clients, allowedTasks, searchQuery]);
 
   // ============================================================================
   // MEMBERS (Usuarios con tareas en el contexto actual)
   // ============================================================================
 
   const members = useMemo((): MemberCommandItem[] => {
-    let relevantTasks = allTasks;
+    // Usar solo tareas que el usuario puede ver (y no archivadas)
+    let relevantTasks = allowedTasks.filter((t) => !t.archived);
 
     // Filtrar tareas según el nivel de navegación
     if (navigationState.workspaceId) {
@@ -207,14 +230,15 @@ export function useCommandPaletteData({
 
     // Ordenar por cantidad de tareas
     return items.sort((a, b) => b.taskCount - a.taskCount);
-  }, [navigationState.workspaceId, navigationState.projectName, allTasks, allUsers, searchQuery]);
+  }, [navigationState.workspaceId, navigationState.projectName, allowedTasks, allUsers, searchQuery]);
 
   // ============================================================================
-  // TASKS (Disponibles en todos los niveles, filtradas por contexto)
+  // TASKS (Disponibles en todos los niveles, filtradas por contexto y permisos)
   // ============================================================================
 
   const tasks = useMemo((): TaskCommandItem[] => {
-    let filteredTasks = allTasks.filter((t) => !t.archived);
+    // Usar allowedTasks que ya tiene filtro de permisos
+    let filteredTasks = allowedTasks.filter((t) => !t.archived);
 
     // Filtrar por workspace si hay uno seleccionado en navegación
     if (navigationState.workspaceId) {
@@ -297,7 +321,7 @@ export function useCommandPaletteData({
     navigationState.workspaceId,
     navigationState.projectName,
     navigationState.memberId,
-    allTasks,
+    allowedTasks,
     clients,
     searchQuery,
   ]);
