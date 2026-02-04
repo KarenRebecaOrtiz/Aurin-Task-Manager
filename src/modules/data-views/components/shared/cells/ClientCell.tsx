@@ -12,6 +12,7 @@ import { createPortal } from 'react-dom';
 import { Client } from '@/types';
 import { ClientDialog } from '@/modules/client-crud';
 import { GradientAvatar } from '@/components/ui/gradient-avatar';
+import { useAuth } from '@/contexts/AuthContext';
 import styles from './ClientCell.module.scss';
 
 interface ClientCellProps {
@@ -27,24 +28,27 @@ interface ClientCellProps {
  */
 const ClientCell: React.FC<ClientCellProps> = ({ client, className, onClientUpdate }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const { isAdmin } = useAuth();
 
   const handleAvatarClick = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (client) {
+    // Solo administradores pueden abrir el diálogo de edición de cuenta
+    if (client && isAdmin) {
       setIsModalOpen(true);
     }
-  }, [client]);
+  }, [client, isAdmin]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       e.stopPropagation();
-      if (client) {
+      // Solo administradores pueden abrir el diálogo de edición de cuenta
+      if (client && isAdmin) {
         setIsModalOpen(true);
       }
     }
-  }, [client]);
+  }, [client, isAdmin]);
 
   const handleCloseModal = useCallback(() => {
     setIsModalOpen(false);
@@ -63,12 +67,12 @@ const ClientCell: React.FC<ClientCellProps> = ({ client, className, onClientUpda
   return (
     <>
       <div
-        className={`${styles.clientWrapper} ${className || ''}`}
+        className={`${styles.clientWrapper} ${className || ''} ${isAdmin ? styles.clickable : ''}`}
         onClick={handleAvatarClick}
-        role="button"
-        tabIndex={0}
-        onKeyDown={handleKeyDown}
-        title={`Ver detalles de ${client.name}`}
+        role={isAdmin ? "button" : undefined}
+        tabIndex={isAdmin ? 0 : undefined}
+        onKeyDown={isAdmin ? handleKeyDown : undefined}
+        title={isAdmin ? `Editar cuenta de ${client.name}` : client.name}
       >
         <GradientAvatar
           imageUrl={client.imageUrl}

@@ -4,36 +4,41 @@
 .clientWrapper {
   @include flex-center;
   justify-content: center;
-  cursor: pointer;
+  cursor: default;
   transition: transform 0.2s ease, opacity 0.2s ease;
   position: relative;
   width: 40px;
   height: 40px;
   flex-shrink: 0;
 
-  &:hover {
-    transform: scale(1.1);
-    opacity: 0.85;
+  // Solo admins pueden hacer clic - aplicar estilos interactivos
+  &.clickable {
+    cursor: pointer;
 
-    &::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      border-radius: 999px;
-      box-shadow: 0 0 0 2px var(--primary-color, #3b82f6);
-      pointer-events: none;
-      animation: pulse 1.5s infinite;
+    &:hover {
+      transform: scale(1.1);
+      opacity: 0.85;
+
+      &::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: 999px;
+        box-shadow: 0 0 0 2px var(--primary-color, #3b82f6);
+        pointer-events: none;
+        animation: pulse 1.5s infinite;
+      }
     }
-  }
 
-  &:active {
-    transform: scale(0.95);
-  }
+    &:active {
+      transform: scale(0.95);
+    }
 
-  &:focus-visible {
-    outline: 2px solid var(--primary-color, #3b82f6);
-    outline-offset: 2px;
-    border-radius: 999px;
+    &:focus-visible {
+      outline: 2px solid var(--primary-color, #3b82f6);
+      outline-offset: 2px;
+      border-radius: 999px;
+    }
   }
 }
 
