@@ -158,9 +158,22 @@ export function TaskDialog({
 
         // ✅ Agregar tarea al store con el ID real del servidor
         if (response.data) {
+          const taskData = response.data;
           useDataStore.getState().addTask({
-            ...response.data,
-            id: response.data.id,
+            id: taskData.id,
+            clientId: taskData.clientId,
+            project: taskData.project,
+            name: taskData.name,
+            description: taskData.description,
+            status: taskData.status,
+            priority: taskData.priority,
+            startDate: apiFormData.startDate,
+            endDate: apiFormData.endDate,
+            LeadedBy: taskData.LeadedBy || [],
+            AssignedTo: taskData.AssignedTo || [],
+            createdAt: new Date().toISOString(),
+            CreatedBy: userId,
+            lastActivity: new Date().toISOString(),
           })
         }
 
