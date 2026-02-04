@@ -8,7 +8,7 @@
 
 import { collection, getDocs, query, limit, orderBy, doc, updateDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { get, set } from 'idb-keyval';
+import { get, set, del } from 'idb-keyval';
 import { Task } from '@/types';
 import {
   globalRequestCache,
@@ -148,7 +148,7 @@ async function fetchTasksFromFirebase(requestStartTime?: number): Promise<Task[]
     const tasksQuery = query(
       collection(db, 'tasks'),
       limit(100),
-      orderBy('createdAt', 'desc')
+      orderBy('lastActivity', 'desc')
     );
 
     const snapshot = await getDocs(tasksQuery);
@@ -448,9 +448,11 @@ export async function unarchiveTask(taskId: string): Promise<void> {
 
 /**
  * Invalidate task cache manually (e.g., after creating/deleting a task).
+ * Clears both memory cache and IndexedDB cache.
  */
-export function invalidateTasksCache(): void {
+export async function invalidateTasksCache(): Promise<void> {
   globalRequestCache.invalidate(MEMORY_CACHE_KEY);
+  await del(IDB_CACHE_KEY);
 }
 
 /**

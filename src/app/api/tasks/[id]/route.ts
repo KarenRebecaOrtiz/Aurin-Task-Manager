@@ -151,6 +151,8 @@ export const PUT = withAuth(async (userId, request: NextRequest, context: { para
       CreatedBy: existingTask.CreatedBy, // Preserve creator
       createdAt: existingTask.createdAt, // Preserve creation date
       updatedAt: Timestamp.fromDate(new Date()),
+      lastActivity: Timestamp.fromDate(new Date()),
+      hasUnreadUpdates: true,
       // Convert dates to Firestore Timestamps
       startDate: updateData.startDate ? Timestamp.fromDate(updateData.startDate) : existingTask.startDate,
       endDate: updateData.endDate ? Timestamp.fromDate(updateData.endDate) : existingTask.endDate,
@@ -158,9 +160,6 @@ export const PUT = withAuth(async (userId, request: NextRequest, context: { para
 
     // Save updated task
     await adminDb.collection('tasks').doc(taskId).set(updatedTask);
-
-    // Update task activity - skipped (TODO: migrate to Admin SDK)
-    // await updateTaskActivity(taskId, 'edit');
 
     // Detect changes and send targeted notifications (using new mailer module)
     const recipients = [
@@ -366,6 +365,8 @@ export const PATCH = withAuth(async (userId, request: NextRequest, context: { pa
       ...existingTask,
       ...patchData,
       updatedAt: Timestamp.fromDate(new Date()),
+      lastActivity: Timestamp.fromDate(new Date()),
+      hasUnreadUpdates: true,
       // Convert dates to Timestamps if provided
       ...(patchData.startDate !== undefined && { startDate: patchData.startDate ? Timestamp.fromDate(patchData.startDate) : null }),
       ...(patchData.endDate !== undefined && { endDate: patchData.endDate ? Timestamp.fromDate(patchData.endDate) : null }),
@@ -373,9 +374,6 @@ export const PATCH = withAuth(async (userId, request: NextRequest, context: { pa
 
     // Save updated task
     await adminDb.collection('tasks').doc(taskId).set(updatedTask);
-
-    // Update task activity - skipped (TODO: migrate to Admin SDK)
-    // await updateTaskActivity(taskId, 'edit');
 
     // Send email notifications to assigned team members (using new mailer module)
     const recipients = [

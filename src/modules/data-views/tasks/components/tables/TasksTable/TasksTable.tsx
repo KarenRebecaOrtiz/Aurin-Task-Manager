@@ -172,17 +172,11 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
   const pinnedTaskIds = usePinnedTasksStore(state => state.pinnedTaskIds);
 
   const sortedTasks = useMemo(() => {
-    const sorted = [...tableState.filteredTasks];
-    if (!tableState.sortKey || tableState.sortKey === '') {
-      sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    }
-    // ... other sorting logic
-
-    // Pinned tasks go first, maintaining their pin order
+    // filteredTasks ya viene ordenado por lastActivity desde useTasksTableState
     const pinnedTasks: Task[] = [];
     const unpinnedTasks: Task[] = [];
 
-    sorted.forEach(task => {
+    tableState.filteredTasks.forEach(task => {
       if (pinnedTaskIds.includes(task.id)) {
         pinnedTasks.push(task);
       } else {
@@ -190,13 +184,13 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
       }
     });
 
-    // Sort pinned tasks by their position in pinnedTaskIds array
-    pinnedTasks.sort((a, b) => {
-      return pinnedTaskIds.indexOf(a.id) - pinnedTaskIds.indexOf(b.id);
-    });
+    // Pinned tasks mantienen su orden de pin
+    pinnedTasks.sort((a, b) =>
+      pinnedTaskIds.indexOf(a.id) - pinnedTaskIds.indexOf(b.id)
+    );
 
     return [...pinnedTasks, ...unpinnedTasks];
-  }, [tableState.filteredTasks, tableState.sortKey, pinnedTaskIds]);
+  }, [tableState.filteredTasks, pinnedTaskIds]);
 
   const getRowClassName = useCallback((task: Task) => {
     if (pinnedTaskIds.includes(task.id)) {

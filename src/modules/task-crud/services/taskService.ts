@@ -5,6 +5,7 @@
 
 import { FormValues } from '../types/form';
 import { Task } from '../types/domain';
+import { invalidateTasksCache } from '@/services/taskService';
 
 // API Response types
 interface ApiResponse<T = any> {
@@ -69,6 +70,9 @@ class TaskService {
         console.error('[TaskService] API returned error:', data);
         throw new Error(data.error || 'Error al crear la tarea');
       }
+
+      // Invalidate cache so fresh data is fetched on next load
+      await invalidateTasksCache();
 
       console.log('[TaskService] Task created successfully:', data);
       return data;
@@ -172,6 +176,9 @@ class TaskService {
         throw new Error(data.error || 'Error al actualizar la tarea');
       }
 
+      // Invalidate cache so fresh data is fetched on next load
+      await invalidateTasksCache();
+
       console.log('[TaskService] Task updated successfully:', data);
       return data;
     } catch (error) {
@@ -199,6 +206,9 @@ class TaskService {
         throw new Error(data.error || 'Error al actualizar la tarea');
       }
 
+      // Invalidate cache so fresh data is fetched on next load
+      await invalidateTasksCache();
+
       return data;
     } catch (error) {
       console.error('[TaskService] Error patching task:', error);
@@ -220,6 +230,7 @@ class TaskService {
 
       // 204 No Content won't have a body
       if (response.status === 204) {
+        await invalidateTasksCache();
         return { success: true };
       }
 
@@ -228,6 +239,9 @@ class TaskService {
       if (!response.ok) {
         throw new Error(data.error || 'Error al eliminar la tarea');
       }
+
+      // Invalidate cache so fresh data is fetched on next load
+      await invalidateTasksCache();
 
       return data;
     } catch (error) {

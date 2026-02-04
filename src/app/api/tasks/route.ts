@@ -69,6 +69,8 @@ export const POST = withAuth(async (userId, request: NextRequest) => {
       id: taskId,
       CreatedBy: userId,
       createdAt: FieldValue.serverTimestamp(),
+      lastActivity: FieldValue.serverTimestamp(),
+      hasUnreadUpdates: false,
       // Convert dates to Firestore Timestamps
       startDate: taskData.startDate ? Timestamp.fromDate(taskData.startDate) : null,
       endDate: taskData.endDate ? Timestamp.fromDate(taskData.endDate) : null,
