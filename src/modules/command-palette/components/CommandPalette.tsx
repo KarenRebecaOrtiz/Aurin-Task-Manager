@@ -197,7 +197,6 @@ export function CommandPalette({
       <div className={`${styles.container} ${className}`}>
         {/* Trigger */}
         <button
-          ref={triggerRef}
           type="button"
           className={`${styles.trigger} ${isOpen ? styles.focused : ''}`}
           onClick={toggle}
