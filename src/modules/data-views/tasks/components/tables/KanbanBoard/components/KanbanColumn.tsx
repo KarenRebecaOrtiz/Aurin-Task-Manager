@@ -49,6 +49,7 @@ interface KanbanColumnProps {
   onEditTaskOpen: (taskId: string) => void;
   onDeleteTaskOpen: (taskId: string) => void;
   onArchiveTask: (task: Task) => Promise<void>;
+  onEditClient?: (clientId: string) => void;
   onCardClick: (task: Task) => void;
   animateClick: (element: HTMLElement) => void;
   actionButtonRefs: React.MutableRefObject<Map<string, HTMLButtonElement>>;
@@ -66,6 +67,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
   onEditTaskOpen,
   onDeleteTaskOpen,
   onArchiveTask,
+  onEditClient,
   onCardClick,
   animateClick,
   actionButtonRefs,
@@ -111,6 +113,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
                   onEditTaskOpen={onEditTaskOpen}
                   onDeleteTaskOpen={onDeleteTaskOpen}
                   onArchiveTask={onArchiveTask}
+                  onEditClient={onEditClient}
                   onCardClick={onCardClick}
                   animateClick={animateClick}
                   actionButtonRefs={actionButtonRefs}

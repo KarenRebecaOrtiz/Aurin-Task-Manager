@@ -50,6 +50,7 @@ interface KanbanTaskCardProps {
   onEditTaskOpen: (taskId: string) => void;
   onDeleteTaskOpen: (taskId: string) => void;
   onArchiveTask: (task: Task) => Promise<void>;
+  onEditClient?: (clientId: string) => void;
   onCardClick: (task: Task) => void;
   animateClick: (element: HTMLElement) => void;
   actionButtonRefs: React.MutableRefObject<Map<string, HTMLButtonElement>>;
@@ -87,6 +88,7 @@ export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
   onEditTaskOpen,
   onDeleteTaskOpen,
   onArchiveTask,
+  onEditClient,
   onCardClick,
   animateClick,
   actionButtonRefs,
@@ -134,7 +136,8 @@ export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
         </div>
         {/* El ActionMenu maneja internamente los permisos:
             - Usuarios involucrados pueden ver el menú y fijar
-            - Solo Admin o Creator pueden editar/archivar/eliminar */}
+            - Solo Admin o Creator pueden editar/archivar/eliminar
+            - Solo Admin puede editar la cuenta del cliente */}
         <ActionMenu
           task={task}
           userId={userId}
@@ -147,6 +150,7 @@ export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
               console.error('[KanbanTaskCard] Error archiving task:', error);
             }
           }}
+          onEditClient={task.clientId && onEditClient ? () => onEditClient(task.clientId) : undefined}
           showPinOption={true}
           animateClick={animateClick}
           actionMenuRef={actionMenuRef}

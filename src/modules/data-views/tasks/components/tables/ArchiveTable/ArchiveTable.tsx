@@ -19,6 +19,7 @@ import { useTasksCommon } from '@/modules/data-views/tasks/hooks/useTasksCommon'
 import { useArchiveTableState } from './hooks/useArchiveTableState';
 import { useAdvancedSearch } from '@/modules/data-views/hooks/useAdvancedSearch';
 import { useWorkspacesStore, ALL_WORKSPACES_ID } from '@/stores/workspacesStore';
+import { ClientDialog } from '@/modules/client-crud/components/ClientDialog';
 
 interface Task {
   id: string;
@@ -122,14 +123,19 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
     // Hook para detectar el viewport
     const [isMobile, setIsMobile] = useState(false);
 
+    // Client edit dialog state (admin only)
+    const [editClientDialog, setEditClientDialog] = useState<{ isOpen: boolean; clientId?: string }>({
+      isOpen: false,
+    });
+
     useEffect(() => {
       const checkViewport = () => {
         setIsMobile(window.innerWidth < 768);
       };
-      
+
       checkViewport();
       window.addEventListener('resize', checkViewport);
-      
+
       return () => window.removeEventListener('resize', checkViewport);
     }, []);
     
@@ -328,6 +334,19 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
       }
     }, []);
 
+    // Handler for editing client (admin only)
+    const createEditClientHandler = useCallback((clientId: string) => () => {
+      if (isAdmin && clientId) {
+        setEditClientDialog({ isOpen: true, clientId });
+      }
+    }, [isAdmin]);
+
+    const handleClientDialogClose = useCallback((open: boolean) => {
+      if (!open) {
+        setEditClientDialog({ isOpen: false });
+      }
+    }, []);
+
     // Manejar clicks fuera del ActionMenu
     useEffect(() => {
       const handleClickOutside = (event: MouseEvent) => {
@@ -451,6 +470,7 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
             // El ActionMenu ahora maneja internamente los permisos:
             // - Usuarios involucrados pueden ver el menú y fijar
             // - Solo Admin o Creator pueden editar/desarchivar/eliminar
+            // - Solo Admin puede editar la cuenta del cliente
             return (
               <ActionMenu
                 task={task}
@@ -458,6 +478,7 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
                 onEdit={createEditHandler(task.id)}
                 onDelete={createDeleteHandler(task.id)}
                 onArchive={createArchiveHandler(task)}
+                onEditClient={task.clientId ? createEditClientHandler(task.clientId) : undefined}
                 showPinOption={false}
                 animateClick={animateClick}
                 actionMenuRef={actionMenuRef}
@@ -620,6 +641,14 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
             </button>
           </div>
         )}
+
+        {/* Client Edit Dialog (Admin only) */}
+        <ClientDialog
+          isOpen={editClientDialog.isOpen}
+          onOpenChange={handleClientDialogClose}
+          clientId={editClientDialog.clientId}
+          mode="edit"
+        />
       </div>
     );
   },

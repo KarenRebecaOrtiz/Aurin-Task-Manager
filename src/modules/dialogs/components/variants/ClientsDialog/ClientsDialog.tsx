@@ -151,7 +151,7 @@ export function ClientsDialog({ isOpen, onOpenChange }: ClientsDialogProps) {
                   className={clientStyles.createButtonDiscrete}
                   onClick={handleCreateClient}
                 >
-                  <Plus size={18} />
+                  <Plus size={18} strokeWidth={1.5} />
                   Crear nueva cuenta
                 </button>
               </ResponsiveDialogFooter>
@@ -195,7 +195,7 @@ export function ClientsDialog({ isOpen, onOpenChange }: ClientsDialogProps) {
                       className={clientStyles.createButtonDiscrete}
                       onClick={handleCreateClient}
                     >
-                      <Plus size={18} />
+                      <Plus size={18} strokeWidth={1.5} />
                       Crear nueva cuenta
                     </button>
                   </DialogFooter>

@@ -16,7 +16,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer';
-import { Pencil, Archive, Trash2, Pin, PinOff } from 'lucide-react';
+import { Pencil, Archive, Trash2, Pin, PinOff, Building2 } from 'lucide-react';
 import { usePinnedTasksStore, MAX_PINNED } from '@/modules/data-views/tasks/stores/pinnedTasksStore';
 import { useSonnerToast } from '@/modules/sonner';
 
@@ -60,6 +60,7 @@ interface ActionMenuProps {
   onDelete: () => void;
   onArchive?: () => void;
   onPin?: (taskId: string) => void;
+  onEditClient?: () => void;
   showPinOption?: boolean;
   animateClick: (element: HTMLElement) => void;
   actionMenuRef: React.RefObject<HTMLDivElement>;
@@ -73,6 +74,7 @@ const ActionMenu = memo<ActionMenuProps>(({
   onDelete,
   onArchive,
   onPin,
+  onEditClient,
   showPinOption = false,
   animateClick,
   actionMenuRef,
@@ -164,6 +166,13 @@ const ActionMenu = memo<ActionMenuProps>(({
     onDelete();
     setIsDrawerOpen(false);
   }, [onDelete]);
+
+  const handleDrawerEditClient = useCallback(() => {
+    if (onEditClient) {
+      onEditClient();
+      setIsDrawerOpen(false);
+    }
+  }, [onEditClient]);
 
   // Pin handler (async for Firestore sync)
   const handlePinToggle = useCallback(async () => {
@@ -299,6 +308,22 @@ const ActionMenu = memo<ActionMenuProps>(({
                   />
                   <span className={styles.tooltip}>Editar Tarea</span>
                 </div>
+                {/* EDIT CLIENT: Solo para Admins */}
+                {isAdmin && onEditClient && task.clientId && (
+                  <div
+                    className={styles.dropdownItem}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      animateClick(e.currentTarget);
+                      onEditClient();
+                      setOpenMenuId(null);
+                    }}
+                    title="Editar Cuenta"
+                  >
+                    <Building2 size={18} strokeWidth={1.5} />
+                    <span className={styles.tooltip}>Editar Cuenta</span>
+                  </div>
+                )}
                 {onArchive && (
                   <div
                     className={styles.dropdownItem}
@@ -398,6 +423,17 @@ const ActionMenu = memo<ActionMenuProps>(({
                   <span className={styles.drawerText}>Editar Tarea</span>
                 </button>
 
+                {/* EDIT CLIENT: Solo para Admins */}
+                {isAdmin && onEditClient && task.clientId && (
+                  <button
+                    className={styles.drawerItem}
+                    onClick={handleDrawerEditClient}
+                  >
+                    <Building2 size={20} strokeWidth={1.5} className={styles.drawerIcon} />
+                    <span className={styles.drawerText}>Editar Cuenta</span>
+                  </button>
+                )}
+
                 {onArchive && (
                   <button
                     className={styles.drawerItem}
@@ -440,11 +476,13 @@ const ActionMenu = memo<ActionMenuProps>(({
   return (
     prevProps.task.id === nextProps.task.id &&
     prevProps.task.archived === nextProps.task.archived &&
+    prevProps.task.clientId === nextProps.task.clientId &&
     prevProps.userId === nextProps.userId &&
     prevProps.onEdit === nextProps.onEdit &&
     prevProps.onDelete === nextProps.onDelete &&
     prevProps.onArchive === nextProps.onArchive &&
     prevProps.onPin === nextProps.onPin &&
+    prevProps.onEditClient === nextProps.onEditClient &&
     prevProps.showPinOption === nextProps.showPinOption
   );
 });

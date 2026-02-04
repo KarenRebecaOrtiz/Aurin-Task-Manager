@@ -7,7 +7,7 @@
 
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useDataStore, useClients, useClientsLoading } from '@/stores/dataStore';
 import { useClientsDataStore } from '@/stores/clientsDataStore';
@@ -38,8 +38,15 @@ export function useClientsDialog(isOpen: boolean): UseClientsDialogReturn {
   // ============================================================
 
   // useClients() already has useShallow optimization
-  const clients = useClients();
+  const clientsFromStore = useClients();
   const isLoading = useClientsLoading();
+
+  // Sort clients alphabetically by name (case-insensitive)
+  const clients = useMemo(() => {
+    return [...clientsFromStore].sort((a, b) =>
+      a.name.localeCompare(b.name, 'es', { sensitivity: 'base' })
+    );
+  }, [clientsFromStore]);
 
   // Store actions
   const deleteClientFromStore = useDataStore((state) => state.deleteClient);

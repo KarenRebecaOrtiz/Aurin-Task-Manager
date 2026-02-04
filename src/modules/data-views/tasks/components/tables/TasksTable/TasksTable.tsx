@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useMemo, useCallback, memo } from 'react';
+import { useEffect, useRef, useMemo, useCallback, memo, useState } from 'react';
 import { useStore } from 'zustand';
 import { Task, Client, User } from '@/types';
 import Table from '@/modules/data-views/components/shared/table/Table';
 import ActionMenu from '@/modules/data-views/components/ui/ActionMenu';
 import { SharedBadge } from '@/modules/shared/components/ui';
 import { useUserDataStore } from '@/stores/userDataStore';
+import { ClientDialog } from '@/modules/client-crud/components/ClientDialog';
 import styles from './TasksTable.module.scss';
 import { Folder } from 'lucide-react';
 
@@ -82,6 +83,11 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
   const clientDropdownRef = useRef<HTMLDivElement>(null);
   const actionButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const actionMenuRef = useRef<HTMLDivElement>(null);
+
+  // Client edit dialog state (admin only)
+  const [editClientDialog, setEditClientDialog] = useState<{ isOpen: boolean; clientId?: string }>({
+    isOpen: false,
+  });
 
   const effectiveTasksIds = useMemo(
     () => tableState.effectiveTasks.map(t => t.id).join(','),
@@ -262,6 +268,20 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
   const handleDeleteTaskForActionMenu = useCallback((taskId: string) => () => handleDeleteTask(taskId), [handleDeleteTask]);
   const handleArchiveTaskForActionMenu = useCallback((task: Task) => () => handleArchiveTask(task), [handleArchiveTask]);
 
+  // Handler for editing client (admin only)
+  const handleEditClientForActionMenu = useCallback((clientId: string) => () => {
+    if (isAdmin && clientId) {
+      setEditClientDialog({ isOpen: true, clientId });
+      tableState.setActionMenuOpenId(null);
+    }
+  }, [isAdmin, tableState.setActionMenuOpenId]);
+
+  const handleClientDialogClose = useCallback((open: boolean) => {
+    if (!open) {
+      setEditClientDialog({ isOpen: false });
+    }
+  }, []);
+
   const handleActionButtonRef = useCallback((taskId: string) => (el: HTMLButtonElement | null) => {
     if (el) {
       actionButtonRefs.current.set(taskId, el);
@@ -274,6 +294,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
     // El ActionMenu ahora maneja internamente los permisos:
     // - Usuarios involucrados (AssignedTo, LeadedBy, CreatedBy) pueden ver el menú y fijar
     // - Solo Admin o Creator pueden editar/archivar/eliminar
+    // - Solo Admin puede editar la cuenta del cliente
     // Pasamos el userId y dejamos que ActionMenu decida qué mostrar
     return (
       <ActionMenu
@@ -282,13 +303,14 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
         onEdit={handleEditTaskForActionMenu(task.id)}
         onDelete={handleDeleteTaskForActionMenu(task.id)}
         onArchive={handleArchiveTaskForActionMenu(task)}
+        onEditClient={task.clientId ? handleEditClientForActionMenu(task.clientId) : undefined}
         showPinOption={true}
         animateClick={animateClick}
         actionMenuRef={actionMenuRef}
         actionButtonRef={handleActionButtonRef(task.id)}
       />
     );
-  }, [userId, handleEditTaskForActionMenu, handleDeleteTaskForActionMenu, handleArchiveTaskForActionMenu, animateClick, actionMenuRef, handleActionButtonRef]);
+  }, [userId, handleEditTaskForActionMenu, handleDeleteTaskForActionMenu, handleArchiveTaskForActionMenu, handleEditClientForActionMenu, animateClick, actionMenuRef, handleActionButtonRef]);
 
   // Columnas ordenadas: Cuenta, Tarea, Asignados, Proyecto, Estado, Prioridad, Tiempo, Acciones
   // Mobile: solo Tarea, Proyecto y Acciones visibles
@@ -461,6 +483,14 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
           </button>
         </div>
       )}
+
+      {/* Client Edit Dialog (Admin only) */}
+      <ClientDialog
+        isOpen={editClientDialog.isOpen}
+        onOpenChange={handleClientDialogClose}
+        clientId={editClientDialog.clientId}
+        mode="edit"
+      />
     </div>
   );
 });

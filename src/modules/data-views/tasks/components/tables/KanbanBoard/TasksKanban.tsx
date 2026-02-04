@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   DndContext,
@@ -21,6 +21,7 @@ import { useTaskArchiving } from '@/modules/data-views/tasks/hooks/useTaskArchiv
 import { useTasksCommon } from '@/modules/data-views/tasks/hooks/useTasksCommon';
 import { KANBAN_COLUMNS } from '@/modules/data-views/constants';
 import { kanbanBoardVariants } from '@/modules/data-views/animations/entryAnimations';
+import { ClientDialog } from '@/modules/client-crud/components/ClientDialog';
 
 // ✅ Importar componentes modulares
 import { KanbanColumn, KanbanDragOverlay } from './components';
@@ -173,6 +174,24 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
   const actionButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const lastOverId = useRef<string | null>(null);
   const recentlyMovedToNewContainer = useRef(false);
+
+  // Client edit dialog state (admin only)
+  const [editClientDialog, setEditClientDialog] = useState<{ isOpen: boolean; clientId?: string }>({
+    isOpen: false,
+  });
+
+  // Handler for editing client (admin only)
+  const handleEditClient = useCallback((clientId: string) => {
+    if (isAdmin && clientId) {
+      setEditClientDialog({ isOpen: true, clientId });
+    }
+  }, [isAdmin]);
+
+  const handleClientDialogClose = useCallback((open: boolean) => {
+    if (!open) {
+      setEditClientDialog({ isOpen: false });
+    }
+  }, []);
 
   /**
    * Custom collision detection strategy optimized for:
@@ -389,6 +408,7 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
               onEditTaskOpen={onEditTaskOpen}
               onDeleteTaskOpen={onDeleteTaskOpen}
               onArchiveTask={handleArchiveTask}
+              onEditClient={handleEditClient}
               onCardClick={handleCardClick}
               animateClick={animateClick}
               actionButtonRefs={actionButtonRefs}
@@ -474,6 +494,14 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
           </button>
         </div>
       )}
+
+      {/* Client Edit Dialog (Admin only) */}
+      <ClientDialog
+        isOpen={editClientDialog.isOpen}
+        onOpenChange={handleClientDialogClose}
+        clientId={editClientDialog.clientId}
+        mode="edit"
+      />
     </div>
   );
 };
