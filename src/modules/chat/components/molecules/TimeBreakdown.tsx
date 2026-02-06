@@ -71,7 +71,8 @@ export const TimeBreakdown: React.FC<TimeBreakdownProps> = ({
   const memberTimeEntries = useMemo(() => {
     return Object.entries(memberHours)
       .map(([userId, hours]) => {
-        const member = effectiveMembers.find(m => m.id === userId);
+        const member = effectiveMembers.find(m => m.id === userId)
+          || storeUsers.find(m => m.id === userId);
         return {
           userId,
           hours,
@@ -82,7 +83,7 @@ export const TimeBreakdown: React.FC<TimeBreakdownProps> = ({
         };
       })
       .sort((a, b) => b.hours - a.hours); // Sort by most hours first
-  }, [memberHours, effectiveMembers]);
+  }, [memberHours, effectiveMembers, storeUsers]);
 
   const hasMemberData = memberTimeEntries.length > 0;
 
