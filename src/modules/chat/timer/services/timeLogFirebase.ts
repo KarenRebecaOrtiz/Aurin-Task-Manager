@@ -122,7 +122,7 @@ export async function createTimeLog(
     // Update member hours
     const currentMemberMinutes = hoursToMinutes(currentTimeTracking.memberHours?.[input.userId] || 0);
     const newMemberMinutes = currentMemberMinutes + input.durationMinutes;
-    const { hours: newMemberHours } = minutesToHoursAndMinutes(newMemberMinutes);
+    const newMemberHours = newMemberMinutes / 60;
 
     // Create the time log document
     const newLogRef = doc(timeLogsRef);
@@ -296,7 +296,7 @@ export async function updateTimeLog(
       // Update member hours
       const currentMemberMinutes = hoursToMinutes(currentTimeTracking.memberHours?.[logData.userId] || 0);
       const newMemberMinutes = Math.max(0, currentMemberMinutes + durationDiff);
-      const { hours: newMemberHours } = minutesToHoursAndMinutes(newMemberMinutes);
+      const newMemberHours = newMemberMinutes / 60;
 
       const updatedMemberHours = {
         ...currentTimeTracking.memberHours,
@@ -370,7 +370,7 @@ export async function deleteTimeLog(
     // Update member hours
     const currentMemberMinutes = hoursToMinutes(currentTimeTracking.memberHours?.[logData.userId] || 0);
     const newMemberMinutes = Math.max(0, currentMemberMinutes - logData.durationMinutes);
-    const { hours: newMemberHours } = minutesToHoursAndMinutes(newMemberMinutes);
+    const newMemberHours = newMemberMinutes / 60;
 
     const updatedMemberHours = {
       ...currentTimeTracking.memberHours,
@@ -546,11 +546,10 @@ export async function recalculateTimeTracking(taskId: string): Promise<void> {
 
   const { hours: totalHours, minutes: remainingMinutes } = minutesToHoursAndMinutes(totalMinutes);
   
-  // Convert member minutes to hours
+  // Convert member minutes to decimal hours
   const memberHours: Record<string, number> = {};
   for (const [userId, minutes] of Object.entries(memberMinutes)) {
-    const { hours } = minutesToHoursAndMinutes(minutes);
-    memberHours[userId] = hours;
+    memberHours[userId] = minutes / 60;
   }
 
   await updateDoc(taskRef, {
