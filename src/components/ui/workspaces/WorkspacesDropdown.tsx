@@ -57,6 +57,12 @@ export function WorkspacesDropdown({
   // Check if "View All" is selected
   const isViewAllSelected = selectedWorkspaceId === ALL_WORKSPACES_ID || !selectedWorkspaceId;
 
+  // Sort workspaces alphabetically by name
+  const sortedWorkspaces = React.useMemo(
+    () => [...workspaces].sort((a, b) => a.name.localeCompare(b.name)),
+    [workspaces]
+  );
+
   // Get selected workspace (or VIEW_ALL_OPTION)
   const selectedWorkspace = React.useMemo(() => {
     if (isViewAllSelected) return VIEW_ALL_OPTION;
@@ -209,15 +215,15 @@ export function WorkspacesDropdown({
                   </motion.button>
 
                   {/* Divider after "View All" */}
-                  {workspaces.length > 0 && <div className={styles.listDivider} />}
+                  {sortedWorkspaces.length > 0 && <div className={styles.listDivider} />}
 
                   {/* Client Workspaces List */}
-                  {workspaces.length === 0 ? (
+                  {sortedWorkspaces.length === 0 ? (
                     <div className={styles.emptyState}>
                       No hay cuentas disponibles
                     </div>
                   ) : (
-                    workspaces.map((workspace, index) => {
+                    sortedWorkspaces.map((workspace, index) => {
                       const isSelected = !isViewAllSelected && selectedWorkspace?.id === workspace.id;
                       return (
                         <motion.button
@@ -270,7 +276,7 @@ export function WorkspacesDropdown({
                       type="button"
                       onClick={handleCreateClick}
                       className={styles.createButton}
-                      {...dropdownAnimations.item(workspaces.length + 1)}
+                      {...dropdownAnimations.item(sortedWorkspaces.length + 1)}
                     >
                       <div className={styles.createIcon}>
                         <Plus size={16} />

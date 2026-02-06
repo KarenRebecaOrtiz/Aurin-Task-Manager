@@ -145,10 +145,10 @@ async function fetchTasksFromFirebase(requestStartTime?: number): Promise<Task[]
   try {
 
     // --- USER: CUSTOMIZE YOUR FIREBASE QUERY HERE ---
+    // Sin limit para traer TODAS las tareas del sistema
     const tasksQuery = query(
       collection(db, 'tasks'),
-      limit(100),
-      orderBy('lastActivity', 'desc')
+      orderBy('createdAt', 'desc')
     );
 
     const snapshot = await getDocs(tasksQuery);
@@ -195,6 +195,18 @@ async function fetchTasksFromFirebase(requestStartTime?: number): Promise<Task[]
         totalHours: data.totalHours || 0,
         memberHours: data.memberHours || {},
       };
+    });
+
+    // Ordenar client-side por lastActivity (las que no tienen van al final)
+    tasksData.sort((a, b) => {
+      const aHasActivity = a.lastActivity && a.lastActivity !== a.createdAt;
+      const bHasActivity = b.lastActivity && b.lastActivity !== b.createdAt;
+      if (aHasActivity && !bHasActivity) return -1;
+      if (!aHasActivity && bHasActivity) return 1;
+      if (aHasActivity && bHasActivity) {
+        return new Date(b.lastActivity!).getTime() - new Date(a.lastActivity!).getTime();
+      }
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
 
     // Create metrics
