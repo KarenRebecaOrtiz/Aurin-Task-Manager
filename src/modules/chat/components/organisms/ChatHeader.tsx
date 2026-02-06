@@ -95,10 +95,10 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
     // Prefer new timeTracking structure
     if (task.timeTracking) {
       const { totalHours: hours, totalMinutes: minutes } = task.timeTracking;
-      return Math.round(hours + (minutes || 0) / 60);
+      return hours + (minutes || 0) / 60;
     }
     // Fallback to legacy field
-    return Math.round(task.totalHours || 0);
+    return task.totalHours || 0;
   }, [task.timeTracking, task.totalHours]);
 
   // Get member hours with fallback
