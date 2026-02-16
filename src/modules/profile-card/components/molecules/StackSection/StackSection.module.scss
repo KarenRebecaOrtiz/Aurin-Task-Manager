@@ -36,18 +36,18 @@
   }
 
   :global(.dark) & {
-    background: #ffffff;
-    border: 1px solid #e5e7eb;
-    color: #000000;
+    background: $color-bg-dark-secondary;
+    border: 1px solid $color-border-dark;
+    color: $color-text-dark-primary;
 
     &:hover {
-      background: #f3f4f6;
-      border-color: #d1d5db;
+      background: $color-bg-dark-tertiary;
+      border-color: $color-border-dark-secondary;
     }
 
     &:active {
-      background: #e5e7eb;
-      border-color: #9ca3af;
+      background: $color-bg-dark;
+      border-color: $color-border-dark;
     }
   }
 }

@@ -1,11 +1,5 @@
 import type { Unsubscribe } from 'firebase/firestore';
 
-export interface SocialLink {
-  id: 'github' | 'linkedin' | 'twitter' | 'instagram' | 'dribbble';
-  url: string;
-  label: string;
-}
-
 export interface UserProfile {
   id: string;
   fullName?: string;
@@ -22,13 +16,7 @@ export interface UserProfile {
   profilePhoto?: string;
   coverPhoto?: string;
   status?: string;
-  socialLinks?: {
-    github?: string;
-    linkedin?: string;
-    twitter?: string;
-    instagram?: string;
-    dribbble?: string;
-  };
+  socialLinks?: Record<string, string>;
 }
 
 export interface ProfileCardProps {

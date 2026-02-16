@@ -72,6 +72,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
 
   // Get state and actions from the main tasks store using the vanilla API
   const archiveTask = useStore(tasksTableStore, state => state.archiveTask);
+  const undoLastArchive = useStore(tasksTableStore, state => state.undoLastArchive);
   const undoStack = useStore(tasksTableStore, state => state.undoStack);
   const showUndo = useStore(tasksTableStore, state => state.showUndo);
 
@@ -333,13 +334,9 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
     return col;
   });
 
-  const handleUndoClick = useCallback(() => {
-    const lastAction = undoStack[undoStack.length - 1];
-    if (lastAction) {
-      // TODO: Call the undo action from the store (which needs to be created)
-      // unarchiveTask(lastAction.task.id);
-    }
-  }, [undoStack]);
+  const handleUndoClick = useCallback(async () => {
+    await undoLastArchive();
+  }, [undoLastArchive]);
 
   const handleUndoMouseEnter = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
     e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';

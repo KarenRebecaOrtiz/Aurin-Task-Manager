@@ -4,19 +4,18 @@
 .contactInfo {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin: 16px 0;
-  padding: 16px 0px;
-  border-radius: 12px;
-  background: white;
+  gap: $spacing-sm;
+  margin: $spacing-lg 0;
+  padding: $spacing-lg 0;
+  border-radius: $radius-xl;
+  background: $white;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border: 1px solid $color-border-subtle;
+  border: 1px solid $color-border-light;
 
   :global(body.dark) & {
-    background: #171717;
-    border: none !important;
-
+    background: $color-bg-dark;
+    border-color: $color-border-dark;
   }
 }
 

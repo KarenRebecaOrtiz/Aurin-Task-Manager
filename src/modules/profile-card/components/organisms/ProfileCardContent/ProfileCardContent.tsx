@@ -1,10 +1,3 @@
-
-// TODO: Contenido completo del profile card
-// TODO: Props: profile, userId, currentUserId, onConfigClick, onMessageClick, socialLinks
-// TODO: Componer ProfileHeader, bio (Muted), ContactInfo, StackSection, divider, SocialLinks
-// TODO: Incluir animaciones con framer-motion variants (contentVariants, itemVariants)
-// TODO: Aplicar estilos desde ProfileCardContent.module.scss
-
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Muted } from '@/components/ui/Typography';
@@ -36,7 +29,6 @@ export const ProfileCardContent: React.FC<ProfileCardContentProps> = ({
 }) => {
   return (
     <div className={styles.profileCard}>
-      {/* TODO: ProfileHeader con cover photo, avatar, nombre, badge, botones */}
       <ProfileHeader
         profile={profile}
         userId={userId}
@@ -45,7 +37,6 @@ export const ProfileCardContent: React.FC<ProfileCardContentProps> = ({
         onMessageClick={onMessageClick}
       />
 
-      {/* TODO: Content section con bio, contacto, stack, social */}
       <motion.div
         className={styles.contentSection}
         variants={contentVariants}
@@ -53,14 +44,12 @@ export const ProfileCardContent: React.FC<ProfileCardContentProps> = ({
         animate="visible"
         exit="exit"
       >
-        {/* TODO: Bio section */}
         <motion.div variants={itemVariants}>
           <Muted className={styles.bio}>
             {profile.description || 'Sin descripción disponible'}
           </Muted>
         </motion.div>
 
-        {/* TODO: Contact Info */}
         <ContactInfo
           phone={profile.phone}
           city={profile.city}
@@ -68,14 +57,14 @@ export const ProfileCardContent: React.FC<ProfileCardContentProps> = ({
           gender={profile.gender}
         />
 
-        {/* TODO: Stack Section */}
         <StackSection stack={profile.stack || []} />
 
-        {/* TODO: Divider */}
-        <motion.div className={styles.divider} variants={itemVariants} />
-
-        {/* TODO: Social Links */}
-        <SocialLinks socialLinks={socialLinks} />
+        {socialLinks.length > 0 && (
+          <>
+            <motion.div className={styles.divider} variants={itemVariants} />
+            <SocialLinks socialLinks={socialLinks} />
+          </>
+        )}
       </motion.div>
     </div>
   );

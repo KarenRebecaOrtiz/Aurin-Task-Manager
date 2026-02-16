@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { motion } from 'framer-motion';
 import { ContactInfoItem } from './ContactInfoItem';
@@ -18,7 +17,6 @@ export const ContactInfo: React.FC<ContactInfoProps> = ({
   birthDate,
   gender,
 }) => {
-  // TODO: No renderizar si no hay información de contacto
   const hasContactInfo = phone || city || birthDate || gender;
 
   if (!hasContactInfo) {
@@ -27,7 +25,6 @@ export const ContactInfo: React.FC<ContactInfoProps> = ({
 
   return (
     <motion.div className={styles.contactInfo} variants={itemVariants}>
-      {/* TODO: Renderizar cada campo solo si existe */}
       {phone && <ContactInfoItem label="Teléfono:" value={phone} />}
       {city && <ContactInfoItem label="Ubicación:" value={city} />}
       {birthDate && <ContactInfoItem label="Fecha de Nacimiento:" value={birthDate} />}

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { taskService } from '../services/taskService';
+import { useDataStore } from '@/stores/dataStore';
 
 interface Task {
   id: string;
@@ -70,6 +71,7 @@ type TasksTableActions = {
   setShowUndo: (show: boolean) => void;
   setUserFilter: (filter: string) => void;
   archiveTask: (taskId: string, userId: string) => Promise<void>;
+  undoLastArchive: () => Promise<void>;
 };
 
 type TasksTableStore = TasksTableState & TasksTableActions;
@@ -118,8 +120,8 @@ export const tasksTableStore = create<TasksTableStore>()((set, get) => ({
     setShowUndo: (show) => set({ showUndo: show }),
     setUserFilter: (filter) => set({ userFilter: filter }),
     archiveTask: async (taskId: string, userId: string) => {
-      // Check if task is already archived
-      const taskToArchive = get().filteredTasks.find(t => t.id === taskId);
+      const { tasks, setTasks } = useDataStore.getState();
+      const taskToArchive = tasks.find(t => t.id === taskId);
 
       if (!taskToArchive) {
         console.error("[tasksTableStore] Task not found for archiving:", taskId);
@@ -131,38 +133,87 @@ export const tasksTableStore = create<TasksTableStore>()((set, get) => ({
         return;
       }
 
+      // 1. Optimistic update: mark as archived in dataStore immediately
+      const optimisticTasks = tasks.map(t =>
+        t.id === taskId
+          ? { ...t, archived: true, archivedAt: new Date().toISOString(), archivedBy: userId }
+          : t
+      );
+      setTasks(optimisticTasks);
+
+      // 2. Add to undo stack
+      set(state => ({
+        undoStack: [...state.undoStack, { task: taskToArchive as Task, action: 'archive', timestamp: Date.now() }],
+        showUndo: true,
+      }));
+
+      // 3. Auto-hide undo after 5 seconds
+      setTimeout(() => {
+        set(state => {
+          if (state.undoStack[state.undoStack.length - 1]?.task.id === taskId) {
+            return { showUndo: false };
+          }
+          return {};
+        });
+      }, 5000);
+
       try {
-        // Add to undo stack before archiving
-        set(state => ({
-          undoStack: [...state.undoStack, { task: taskToArchive, action: 'archive', timestamp: Date.now() }],
-          showUndo: true,
-        }));
-
-        // Hide the undo notification after 5 seconds
-        setTimeout(() => {
-          set(state => {
-            if (state.undoStack[state.undoStack.length - 1]?.task.id === taskId) {
-              return { showUndo: false };
-            }
-            return {};
-          });
-        }, 5000);
-
-        // Call the backend service
-        // The taskService handles optimistic updates to the dataStore
-        // The UI will update reactively when dataStore changes
+        // 4. Persist to server
         await taskService.archive(taskId, userId);
-
       } catch (error) {
-        console.error("[tasksTableStore] Failed to archive task:", error);
+        console.error("[tasksTableStore] Failed to archive task, rolling back:", error);
 
-        // Remove from undo stack on error
+        // Rollback: restore original task in dataStore
+        const { tasks: currentTasks, setTasks: setCurrentTasks } = useDataStore.getState();
+        const rolledBackTasks = currentTasks.map(t =>
+          t.id === taskId ? taskToArchive : t
+        );
+        setCurrentTasks(rolledBackTasks);
+
+        // Remove from undo stack
         set(state => ({
           undoStack: state.undoStack.filter(item => item.task.id !== taskId),
           showUndo: false,
         }));
 
         throw error;
+      }
+    },
+
+    undoLastArchive: async () => {
+      const lastAction = get().undoStack[get().undoStack.length - 1];
+      if (!lastAction) return;
+
+      const { tasks, setTasks } = useDataStore.getState();
+
+      // 1. Remove from undo stack and hide notification immediately
+      set(state => ({
+        undoStack: state.undoStack.filter(item => item.timestamp !== lastAction.timestamp),
+        showUndo: false,
+      }));
+
+      if (lastAction.action === 'archive') {
+        // Optimistic: restore task to non-archived in dataStore
+        const restoredTasks = tasks.map(t =>
+          t.id === lastAction.task.id
+            ? { ...t, archived: false, archivedAt: undefined, archivedBy: undefined }
+            : t
+        );
+        setTasks(restoredTasks);
+
+        try {
+          await taskService.unarchive(lastAction.task.id);
+        } catch (error) {
+          console.error("[tasksTableStore] Failed to undo archive, rolling back:", error);
+          // Rollback: re-archive in dataStore
+          const { tasks: currentTasks, setTasks: setCurrentTasks } = useDataStore.getState();
+          const rolledBack = currentTasks.map(t =>
+            t.id === lastAction.task.id
+              ? { ...t, archived: true, archivedAt: lastAction.task.archivedAt, archivedBy: lastAction.task.archivedBy }
+              : t
+          );
+          setCurrentTasks(rolledBack);
+        }
       }
     },
 }));

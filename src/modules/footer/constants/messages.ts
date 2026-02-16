@@ -5,5 +5,5 @@ export const FEEDBACK_MESSAGES = {
   NETWORK_ERROR: 'Ocurrió un error. Intenta nuevamente.',
 } as const;
 
-export const APP_VERSION = 'v1.1.0';
+export const APP_VERSION = 'v1.1.1';
 export const FOOTER_TEXT = 'Hecho con cariño para facilitarte el día';

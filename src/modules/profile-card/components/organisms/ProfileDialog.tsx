@@ -1,12 +1,3 @@
-/**
- * Profile Dialog Component
- * Unified dialog for displaying user profiles
- * Uses CrudDialog organism following atomic design
- *
- * IMPORTANT: Uses userDataStore for current user (Single Source of Truth)
- * and profileCardStore for other users
- */
-
 'use client';
 
 import { useCallback, useMemo } from 'react';
@@ -36,24 +27,19 @@ export function ProfileDialog({
 }: ProfileDialogProps) {
   const isOwnProfile = userId === currentUserId;
 
-  // For current user: use userDataStore (Single Source of Truth)
   const currentUserData = useUserData();
   const currentUserLoading = useUserDataLoading();
 
-  // For other users: always call useProfile hook (React rule: hooks must be called unconditionally)
-  // We'll just ignore the result if it's own profile
+  // Hooks must be called unconditionally — result ignored for own profile
   const { profile: otherUserProfile, isLoading: otherUserLoading, error: otherUserError } = useProfile(userId);
 
-  // Select the appropriate data source based on who we're viewing
   const profile = useMemo((): UserProfile | undefined => {
     if (isOwnProfile && currentUserData) {
-      // Transform UserData to UserProfile for current user
       return {
         id: currentUserData.userId,
         ...currentUserData,
       } as UserProfile;
     }
-    // For other users, use the profile from profileCardStore
     return otherUserProfile;
   }, [isOwnProfile, currentUserData, otherUserProfile]);
 
@@ -70,7 +56,6 @@ export function ProfileDialog({
     onClose();
   }, [onMessageClick, onClose]);
 
-  // Process social links using helper
   const socialLinks = getSocialLinks(profile);
 
   const title = isOwnProfile ? "Mi Perfil" : "Perfil Público";
@@ -91,7 +76,6 @@ export function ProfileDialog({
       size="lg"
       closeOnOverlayClick
       showCloseButton
-      // No actions for profile view - just a display dialog
     >
       {profile && (
         <ProfileCardContent

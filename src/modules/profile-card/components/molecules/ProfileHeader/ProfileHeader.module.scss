@@ -4,8 +4,16 @@
 .coverPhotoSection {
   position: relative;
   width: 100%;
-  height: 128px;
+  height: $profile-card-header-height;
   overflow: hidden;
+
+  @media (min-width: $breakpoint-sm) {
+    height: $profile-card-header-height-md;
+  }
+
+  @media (min-width: $breakpoint-lg) {
+    height: $profile-card-header-height-lg;
+  }
 }
 
 .coverPhoto {
