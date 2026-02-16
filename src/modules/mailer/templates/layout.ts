@@ -246,13 +246,7 @@ export const baseEmailLayout = (content: string, title: string): string => `
       ${content}
     </div>
     <div class="email-footer">
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto; width: 80px;">
-        <tr>
-          <td style="text-align: center;">
-            <img src="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/logoLight.svg" alt="Aurin" style="display: block; width: 100%; height: auto;" />
-          </td>
-        </tr>
-      </table>
+      <img src="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/logoLight.svg" alt="Aurin" width="80" height="28" style="height: 28px; width: auto; max-width: 80px;" />
       <p>
         Puedes gestionar las notificaciones de cada tarea o equipo
         desde el icono de campana en su chat.
