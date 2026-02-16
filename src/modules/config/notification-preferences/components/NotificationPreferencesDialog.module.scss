@@ -1,6 +1,6 @@
 /**
  * Estilos para NotificationPreferencesDialog
- * Diseño minimalista con lista plana y dividers sutiles
+ * Diseño con acordeones por categoría y toggles granulares
  */
 
 // Variables
@@ -145,7 +145,131 @@ $aurin-hover: #bccb00;
 }
 
 // ============================================================================
-// PREFERENCES LIST (Flat design)
+// CATEGORIES LIST
+// ============================================================================
+
+.categoriesList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding-top: 0.25rem;
+}
+
+// ============================================================================
+// CATEGORY ACCORDION
+// ============================================================================
+
+.categorySection {
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.categoryHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.75rem 0.5rem;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: 0.5rem;
+  transition: background-color 0.15s ease;
+  text-align: left;
+
+  &:hover {
+    background-color: #f4f4f5;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $aurin-color;
+    outline-offset: -2px;
+  }
+
+  :global(.dark) & {
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.04);
+    }
+  }
+}
+
+.categoryChevron {
+  flex-shrink: 0;
+  color: #a1a1aa;
+  transition: transform 0.2s ease;
+
+  :global(.dark) & {
+    color: #71717a;
+  }
+}
+
+.categoryChevronExpanded {
+  transform: rotate(90deg);
+}
+
+.categoryMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.categoryTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.categoryTitle {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #18181b;
+
+  :global(.dark) & {
+    color: #fafafa;
+  }
+}
+
+.categoryCount {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: #a1a1aa;
+  background-color: #f4f4f5;
+  padding: 0.0625rem 0.375rem;
+  border-radius: 9999px;
+  line-height: 1.4;
+
+  :global(.dark) & {
+    color: #71717a;
+    background-color: #27272a;
+  }
+}
+
+.categoryDescription {
+  font-size: 0.75rem;
+  color: #71717a;
+  line-height: 1.3;
+
+  :global(.dark) & {
+    color: #a1a1aa;
+  }
+}
+
+// ============================================================================
+// CATEGORY BODY (animated)
+// ============================================================================
+
+.categoryBodyWrapper {
+  overflow: hidden;
+}
+
+.categoryBody {
+  padding: 0.25rem 0 0.25rem 2rem;
+}
+
+// ============================================================================
+// PREFERENCES LIST (kept for backwards compat, now inside accordion)
 // ============================================================================
 
 .preferencesList {
@@ -158,9 +282,10 @@ $aurin-hover: #bccb00;
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.875rem 0;
+  padding: 0.625rem 0.5rem;
   border-bottom: 1px solid #f4f4f5;
   transition: background-color 0.15s ease;
+  border-radius: 0.375rem;
 
   &:hover {
     background-color: rgba(0, 0, 0, 0.01);
@@ -188,7 +313,7 @@ $aurin-hover: #bccb00;
 }
 
 .switchLabel {
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   color: #18181b;
 
@@ -198,7 +323,7 @@ $aurin-hover: #bccb00;
 }
 
 .switchDescription {
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   color: #71717a;
   line-height: 1.4;
 
@@ -262,8 +387,22 @@ $aurin-hover: #bccb00;
   }
 }
 
+.switchIndeterminate {
+  background-color: rgba($aurin-color, 0.45);
+
+  &:hover:not(:disabled) {
+    background-color: rgba($aurin-color, 0.55);
+  }
+
+  .switchThumb {
+    transform: translateX(0.7rem);
+  }
+}
+
 .switchThumb {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 1.125rem;
   height: 1.125rem;
   border-radius: 9999px;
@@ -275,6 +414,14 @@ $aurin-hover: #bccb00;
   .switchActive & {
     transform: translateX(1.375rem);
   }
+}
+
+.switchIndeterminateMark {
+  display: block;
+  width: 0.5rem;
+  height: 2px;
+  background-color: rgba(0, 0, 0, 0.35);
+  border-radius: 1px;
 }
 
 // ============================================================================
@@ -299,15 +446,23 @@ $aurin-hover: #bccb00;
     font-size: 0.875rem;
   }
 
+  .categoryHeader {
+    padding: 0.625rem 0.25rem;
+  }
+
+  .categoryBody {
+    padding-left: 1.5rem;
+  }
+
   .switchRow {
-    padding: 0.75rem 0;
+    padding: 0.5rem 0.25rem;
   }
 
   .switchLabel {
-    font-size: 0.8125rem;
+    font-size: 0.75rem;
   }
 
   .switchDescription {
-    font-size: 0.6875rem;
+    font-size: 0.625rem;
   }
 }
