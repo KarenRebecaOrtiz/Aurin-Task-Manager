@@ -3,26 +3,28 @@
  * Sin complicaciones, solo CSS que funcione
  */
 
+@use '@/app/styles/variables' as *;
+
 .todoDropdown {
   position: fixed;
   width: 320px;
   max-height: 500px;
-  border-radius: 12px;
-  background: rgba(241, 245, 249, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: $radius-xl;
+  background: rgba($slate-100, 0.95);
+  border: 1px solid rgba($white, 0.2);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   overflow: visible;
-  z-index: 1001;
+  z-index: $z-dropdown;
   display: flex;
   flex-direction: column;
-  box-shadow: 
-    -8px -8px 16px rgba(255, 255, 255, 0.8),
-    8px 8px 16px rgba(0, 0, 0, 0.05);
+  box-shadow:
+    -8px -8px 16px rgba($white, 0.8),
+    8px 8px 16px rgba($black, 0.05);
 
-  :global(.dark) & {
-    background: #171717;
-    border-color: 1px solid rgba(255, 255, 255, 0.0509803922);
+  :global(body.dark) & {
+    background: $zinc-900;
+    border-color: rgba($white, 0.05);
     box-shadow: none;
   }
 }
@@ -40,20 +42,20 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 20px;
+  padding: $spacing-lg $spacing-xl;
   background: transparent;
 }
 
 .title {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 16px;
-  font-weight: 600;
-  color: #0f172a;
+  gap: $spacing-sm;
+  font-size: $text-base;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
 
-  :global(.dark) & {
-    color: rgba(255, 255, 255, 0.7);
+  :global(body.dark) & {
+    color: rgba($white, 0.7);
   }
 }
 
@@ -61,24 +63,24 @@
   background: none;
   border: none;
   cursor: pointer;
-  padding: 4px;
-  border-radius: 50px;
-  color: #0f172a;
+  padding: $spacing-xs;
+  border-radius: $radius-full;
+  color: $color-text-primary;
 
-  :global(.dark) & {
-    color: #f8fafc;
+  :global(body.dark) & {
+    color: $slate-500;
   }
 }
 
 .inputSection {
-  padding: 16px 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  padding: $spacing-lg $spacing-xl;
+  border-bottom: 1px solid rgba($white, 0.2);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: $spacing-sm;
 
-  :global(.dark) & {
-    border-bottom-color: #3f3f46;
+  :global(body.dark) & {
+    border-bottom-color: $zinc-700;
   }
 }
 
@@ -88,90 +90,90 @@
   display: flex;
   flex-direction: row;
   align-items: flex-end;
-  gap: 8px;
+  gap: $spacing-sm;
 }
 
 .textarea {
   flex: 1;
-  padding: 10px 12px;
-  border-radius: 10px;
-  font-size: 14px;
-  line-height: 1.5;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  background: rgba(255, 255, 255, 0.8);
+  padding: $spacing-sm $spacing-md;
+  border-radius: $radius-lg;
+  font-size: $text-sm;
+  line-height: $leading-normal;
+  border: 1px solid rgba($white, 0.3);
+  background: rgba($white, 0.8);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
-  transition: border-color 0.2s ease, background 0.2s ease;
+  transition: $transition-fast;
   resize: none;
   overflow-y: auto;
   min-height: 40px;
   max-height: 120px;
   font-family: inherit;
 
-  :global(.dark) & {
-    background: #27272a;
-    border-color: #52525b;
-    color: rgba(255, 255, 255, 0.7);
+  :global(body.dark) & {
+    background: $zinc-800;
+    border-color: $zinc-600;
+    color: rgba($white, 0.7);
   }
 
   &::placeholder {
-    color: #94a3b8;
+    color: $color-text-muted;
 
-    :global(.dark) & {
-      color: #71717a;
+    :global(body.dark) & {
+      color: $zinc-500;
     }
   }
 }
 
 .textarea:focus {
   outline: none;
-  border-color: rgba(255, 255, 255, 0.5);
-  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba($white, 0.5);
+  background: rgba($white, 0.9);
 
-  :global(.dark) & {
-    background: #3f3f46;
-    border-color: #71717a;
+  :global(body.dark) & {
+    background: $zinc-700;
+    border-color: $zinc-500;
   }
 }
 
 .textarea.error {
-  border-color: #ef4444;
-  background: rgba(254, 242, 242, 0.9);
+  border-color: $color-error;
+  background: rgba($red-100, 0.9);
 }
 
 // Legacy input styles (keeping for backward compatibility)
 .input {
   flex: 1;
-  padding: 8px 12px;
-  border-radius: 10px;
-  font-size: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  background: rgba(255, 255, 255, 0.8);
+  padding: $spacing-sm $spacing-md;
+  border-radius: $radius-lg;
+  font-size: $text-sm;
+  border: 1px solid rgba($white, 0.3);
+  background: rgba($white, 0.8);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
-  transition: all 0.2s ease;
+  transition: $transition-fast;
 
-  :global(.dark) & {
-    background: #27272a;
-    border-color: #52525b;
-    color: rgba(255, 255, 255, 0.7);
+  :global(body.dark) & {
+    background: $zinc-800;
+    border-color: $zinc-600;
+    color: rgba($white, 0.7);
   }
 }
 
 .input:focus {
   outline: none;
-  border-color: rgba(255, 255, 255, 0.5);
-  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba($white, 0.5);
+  background: rgba($white, 0.9);
 
-  :global(.dark) & {
-    background: #3f3f46;
-    border-color: #71717a;
+  :global(body.dark) & {
+    background: $zinc-700;
+    border-color: $zinc-500;
   }
 }
 
 .input.error {
-  border-color: #ef4444;
-  background: rgba(254, 242, 242, 0.9);
+  border-color: $color-error;
+  background: rgba($red-100, 0.9);
 }
 
 .addButton {
@@ -180,43 +182,43 @@
   justify-content: center;
   width: 36px;
   height: 36px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.8);
-  color: #0f172a;
+  border: 1px solid rgba($white, 0.3);
+  border-radius: $radius-md;
+  background: rgba($white, 0.8);
+  color: $color-text-primary;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: $transition-fast;
   flex-shrink: 0;
 
-  :global(.dark) & {
-    background: #27272a;
-    border-color: #52525b;
-    color: rgba(255, 255, 255, 0.7);
+  :global(body.dark) & {
+    background: $zinc-800;
+    border-color: $zinc-600;
+    color: rgba($white, 0.7);
   }
 }
 
 .addButton:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.9);
-  border-color: rgba(255, 255, 255, 0.5);
-  color: #3b82f6;
+  background: rgba($white, 0.9);
+  border-color: rgba($white, 0.5);
+  color: $blue-500;
 
-  :global(.dark) & {
-    background: #3f3f46;
-    border-color: #71717a;
-    color: #3b82f6;
+  :global(body.dark) & {
+    background: $zinc-700;
+    border-color: $zinc-500;
+    color: $blue-500;
   }
 }
 
 .content {
   flex: 1;
   overflow-y: auto;
-  padding: 16px 20px;
+  padding: $spacing-lg $spacing-xl;
 }
 
 .todoList {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: $spacing-sm;
   max-height: 300px;
   overflow-y: auto;
 }
@@ -225,81 +227,81 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  transition: background-color 0.2s ease;
+  padding: $spacing-md $spacing-xl;
+  border-bottom: 1px solid rgba($white, 0.1);
+  transition: $transition-fast;
 
-  :global(.dark) & {
-    border-bottom-color: #3f3f46;
+  :global(body.dark) & {
+    border-bottom-color: $zinc-700;
   }
 }
 
 .todoItem:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba($white, 0.1);
 }
 
-:global(.dark) .todoItem:hover {
-  background: #3f3f46;
+:global(body.dark) .todoItem:hover {
+  background: $zinc-700;
 }
 
 .todoToggle {
   background: none;
   border: none;
   cursor: pointer;
-  padding: 4px;
-  margin-right: 12px;
-  border-radius: 4px;
+  padding: $spacing-xs;
+  margin-right: $spacing-md;
+  border-radius: $radius-xs;
 }
 
 .checkbox {
   width: 20px;
   height: 20px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 6px;
+  border: 2px solid rgba($white, 0.3);
+  border-radius: $radius-sm;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  transition: $transition-fast;
 
-  :global(.dark) & {
-    border-color: rgba(255, 255, 255, 0.2);
+  :global(body.dark) & {
+    border-color: rgba($white, 0.2);
   }
 }
 
 .checkbox.checked {
-  background: #3b82f6;
-  border-color: #3b82f6;
+  background: $blue-500;
+  border-color: $blue-500;
 
-  :global(.dark) & {
-    background: #3b82f6;
-    border-color: #3b82f6;
+  :global(body.dark) & {
+    background: $blue-500;
+    border-color: $blue-500;
   }
 }
 
 .checkmark {
-  color: white;
-  font-size: 10px;
-  font-weight: bold;
+  color: $white;
+  font-size: $text-xs;
+  font-weight: $font-weight-bold;
 }
 
 .todoText {
   flex: 1;
-  font-size: 14px;
-  line-height: 1.4;
-  color: #0f172a;
-  transition: all 0.2s ease;
+  font-size: $text-sm;
+  line-height: $leading-tight;
+  color: $color-text-primary;
+  transition: $transition-fast;
 
-  :global(.dark) & {
-    color: #d1d1d1;
+  :global(body.dark) & {
+    color: $color-text-dark-primary;
   }
 }
 
 .todoText.completed {
-  color: #64748b;
+  color: $color-text-secondary;
   text-decoration: line-through;
 
-  :global(.dark) & {
-    color: #64748b;
+  :global(body.dark) & {
+    color: $color-text-secondary;
   }
 }
 
@@ -307,14 +309,14 @@
   background: none;
   border: none;
   cursor: pointer;
-  padding: 4px 8px;
-  margin-left: 8px;
-  border-radius: 4px;
+  padding: $spacing-xs $spacing-sm;
+  margin-left: $spacing-sm;
+  border-radius: $radius-xs;
   opacity: 0.7;
 }
 
 .deleteButton:hover {
-  background: rgba(239, 68, 68, 0.1);
+  background: rgba($red-500, 0.1);
   opacity: 1;
 }
 
@@ -323,12 +325,12 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 40px 20px;
+  padding: $spacing-4xl $spacing-xl;
   text-align: center;
-  color: #0f172a;
+  color: $color-text-primary;
 
-  :global(.dark) & {
-    color: rgba(255, 255, 255, 0.7);
+  :global(body.dark) & {
+    color: rgba($white, 0.7);
   }
 }
 
@@ -337,12 +339,12 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 40px 20px;
-  gap: 12px;
-  color: #0f172a;
+  padding: $spacing-4xl $spacing-xl;
+  gap: $spacing-md;
+  color: $color-text-primary;
 
-  :global(.dark) & {
-    color: rgba(255, 255, 255, 0.7);
+  :global(body.dark) & {
+    color: rgba($white, 0.7);
   }
 }
 
@@ -351,55 +353,55 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 40px 20px;
-  gap: 12px;
-  color: #0f172a;
+  padding: $spacing-4xl $spacing-xl;
+  gap: $spacing-md;
+  color: $color-text-primary;
 
-  :global(.dark) & {
-    color: rgba(255, 255, 255, 0.7);
+  :global(body.dark) & {
+    color: rgba($white, 0.7);
   }
 }
 
 .footer {
-  padding: 12px 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  padding: $spacing-md $spacing-xl;
+  border-top: 1px solid rgba($white, 0.2);
   overflow: hidden;
   display: flex;
   justify-content: flex-end;
 
-  :global(.dark) & {
-    border-top-color: #3f3f46;
+  :global(body.dark) & {
+    border-top-color: $zinc-700;
   }
 }
 
 .undoButton {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  background: rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 6px;
-  padding: 6px 10px;
-  font-size: 12px;
+  gap: $spacing-sm;
+  background: rgba($white, 0.8);
+  border: 1px solid rgba($white, 0.3);
+  border-radius: $radius-sm;
+  padding: $spacing-sm $spacing-md;
+  font-size: $text-xs;
   cursor: pointer;
-  transition: all 0.2s ease;
-  color: #64748b;
+  transition: $transition-fast;
+  color: $color-text-secondary;
 
-  :global(.dark) & {
-    background: #27272a;
-    border-color: #52525b;
-    color: rgba(255, 255, 255, 0.7);
+  :global(body.dark) & {
+    background: $zinc-800;
+    border-color: $zinc-600;
+    color: rgba($white, 0.7);
   }
 }
 
 .undoButton:hover {
-  background: rgba(255, 255, 255, 0.9);
-  color: #3b82f6;
+  background: rgba($white, 0.9);
+  color: $blue-500;
 
-  :global(.dark) & {
-    background: #3f3f46;
-    border-color: #71717a;
-    color: #3b82f6;
+  :global(body.dark) & {
+    background: $zinc-700;
+    border-color: $zinc-500;
+    color: $blue-500;
   }
 }
 
@@ -409,16 +411,16 @@
   justify-content: center;
   min-width: 20px;
   height: 18px;
-  padding: 0 4px;
-  background: rgba(59, 130, 246, 0.15);
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 600;
-  color: #3b82f6;
+  padding: 0 $spacing-xs;
+  background: rgba($blue-500, 0.15);
+  border-radius: $radius-xs;
+  font-size: $text-xs;
+  font-weight: $font-weight-semibold;
+  color: $blue-500;
 
-  :global(.dark) & {
-    background: rgba(59, 130, 246, 0.2);
-    color: #60a5fa;
+  :global(body.dark) & {
+    background: rgba($blue-500, 0.2);
+    color: $blue-400;
   }
 }
 
@@ -427,63 +429,63 @@
   top: 100%;
   left: 0;
   right: 0;
-  margin-top: 4px;
-  padding: 6px 8px;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  border-radius: 4px;
-  color: #dc2626;
-  font-size: 12px;
+  margin-top: $spacing-xs;
+  padding: $spacing-sm $spacing-sm;
+  background: rgba($red-100, 0.9);
+  border: 1px solid rgba($red-400, 0.4);
+  border-radius: $radius-xs;
+  color: $red-600;
+  font-size: $text-xs;
   z-index: 10;
 
-  :global(.dark) & {
-    background: #7f1d1d;
-    border-color: #991b1b;
-    color: #fca5a5;
+  :global(body.dark) & {
+    background: rgba(127, 29, 29, 0.8);
+    border-color: rgba($red-400, 0.5);
+    color: $red-400;
   }
 }
 
 .stats {
   display: flex;
-  gap: 12px;
-  font-size: 12px;
+  gap: $spacing-md;
+  font-size: $text-xs;
 }
 
 .remaining {
-  color: #3b82f6;
-  font-weight: 500;
+  color: $blue-500;
+  font-weight: $font-weight-medium;
 }
 
 .completed {
-  color: #64748b;
+  color: $color-text-secondary;
 
-  :global(.dark) & {
-    color: #a1a1aa;
+  :global(body.dark) & {
+    color: $color-text-dark-secondary;
   }
 }
 
 .subtitle {
-  font-size: 14px;
-  color: #64748b;
-  margin-bottom: 8px;
+  font-size: $text-sm;
+  color: $color-text-secondary;
+  margin-bottom: $spacing-sm;
 
-  :global(.dark) & {
-    color: #a1a1aa;
+  :global(body.dark) & {
+    color: $color-text-dark-secondary;
   }
 }
 
 .description {
-  font-size: 13px;
-  color: #64748b;
-  margin-bottom: 16px;
+  font-size: $text-xs;
+  color: $color-text-secondary;
+  margin-bottom: $spacing-lg;
 
-  :global(.dark) & {
-    color: #a1a1aa;
+  :global(body.dark) & {
+    color: $color-text-dark-secondary;
   }
 }
 
 .headerContent {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: $spacing-xs;
 }

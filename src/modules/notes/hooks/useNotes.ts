@@ -13,7 +13,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useFirestoreUser } from '@/modules/header/hooks/useFirestoreUser';
-import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
+import { useToast } from '@/modules/toast';
 import type { Note, CreateNotePayload } from '../types';
 import {
   NOTE_MAX_LENGTH,
@@ -39,7 +39,7 @@ interface UseNotesReturn {
 export function useNotes(): UseNotesReturn {
   const { user } = useUser();
   const { firestoreUser } = useFirestoreUser();
-  const { success, error: showError } = useSonnerToast();
+  const { success, error: showError } = useToast();
 
   const [notes, setNotes] = useState<Note[]>([]);
   const [currentUserNote, setCurrentUserNote] = useState<Note | null>(null);
@@ -93,7 +93,7 @@ export function useNotes(): UseNotesReturn {
         console.error('Error fetching notes:', err);
         setError(VALIDATION_MESSAGES.ERROR_FETCHING);
         setIsLoading(false);
-        showError(VALIDATION_MESSAGES.ERROR_FETCHING);
+        showError(VALIDATION_MESSAGES.ERROR_FETCHING, 'Verifica tu conexión e intenta de nuevo.');
       }
     );
 
@@ -104,7 +104,7 @@ export function useNotes(): UseNotesReturn {
   const addNote = useCallback(
     async (payload: CreateNotePayload) => {
       if (!user?.id || !firestoreUser) {
-        showError('Usuario no autenticado');
+        showError('Usuario no autenticado', 'Inicia sesión para acceder a tus notas.');
         return;
       }
 
@@ -112,18 +112,18 @@ export function useNotes(): UseNotesReturn {
 
       // Validation
       if (!content || content.trim().length === 0) {
-        showError(VALIDATION_MESSAGES.EMPTY_NOTE);
+        showError(VALIDATION_MESSAGES.EMPTY_NOTE, 'Escribe algo antes de crear la nota.');
         return;
       }
 
       if (content.length > NOTE_MAX_LENGTH) {
-        showError(VALIDATION_MESSAGES.NOTE_TOO_LONG);
+        showError(VALIDATION_MESSAGES.NOTE_TOO_LONG, `Máximo ${NOTE_MAX_LENGTH} caracteres.`);
         return;
       }
 
       // Check if user already has an active note
       if (currentUserNote) {
-        showError(VALIDATION_MESSAGES.ALREADY_HAS_NOTE);
+        showError(VALIDATION_MESSAGES.ALREADY_HAS_NOTE, 'Solo puedes tener una nota a la vez.');
         return;
       }
 
@@ -154,13 +154,13 @@ export function useNotes(): UseNotesReturn {
 
         await setDoc(doc(db, NOTES_COLLECTION, noteId), newNote);
         setCurrentUserNote(newNote);
-        success(SUCCESS_MESSAGES.NOTE_CREATED);
+        success(SUCCESS_MESSAGES.NOTE_CREATED, 'Tu nota es visible para el equipo por 24 horas.');
       } catch (err) {
         // eslint-disable-next-line no-console
         console.error('Error creating note:', err);
         const errorMsg = err instanceof Error ? err.message : VALIDATION_MESSAGES.ERROR_CREATING;
         setError(errorMsg);
-        showError(errorMsg);
+        showError('No se pudo crear la nota', 'Revisa tu conexión e intenta de nuevo.');
       } finally {
         setIsCreating(false);
       }
@@ -171,7 +171,7 @@ export function useNotes(): UseNotesReturn {
   // Remove note
   const removeNote = useCallback(async () => {
     if (!currentUserNote) {
-      showError('No hay nota activa para eliminar');
+      showError('Sin nota activa', 'Selecciona una nota antes de eliminar.');
       return;
     }
 
@@ -181,13 +181,13 @@ export function useNotes(): UseNotesReturn {
     try {
       await deleteDoc(doc(db, NOTES_COLLECTION, currentUserNote.id));
       setCurrentUserNote(null);
-      success(SUCCESS_MESSAGES.NOTE_DELETED);
+      success(SUCCESS_MESSAGES.NOTE_DELETED, 'La nota ya no es visible para el equipo.');
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('Error deleting note:', err);
       const errorMsg = err instanceof Error ? err.message : VALIDATION_MESSAGES.ERROR_DELETING;
       setError(errorMsg);
-      showError(errorMsg);
+      showError('No se pudo eliminar la nota', 'Revisa tu conexión e intenta de nuevo.');
     } finally {
       setIsDeleting(false);
     }

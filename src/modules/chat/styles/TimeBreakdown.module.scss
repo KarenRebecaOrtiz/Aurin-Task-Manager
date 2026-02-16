@@ -1,6 +1,6 @@
 /**
  * TimeBreakdown Styles
- * 
+ *
  * Dropdown component showing time breakdown per team member
  */
 
@@ -15,30 +15,30 @@
 .trigger {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  border-radius: 8px;
+  gap: $spacing-xs;
+  padding: $spacing-xs $spacing-sm;
+  border-radius: $radius-md;
   border: none;
-  font-size: 14px;
-  font-weight: 500;
-  color: #3b82f6;
+  font-size: $text-sm;
+  font-weight: $font-weight-medium;
+  color: $blue-500;
   background: transparent;
   cursor: default;
-  transition: all 0.2s ease;
+  transition: $transition-fast;
 
   &.interactive {
     cursor: pointer;
 
     &:hover {
-      background: rgba(59, 130, 246, 0.1);
+      background: rgba($blue-500, 0.1);
     }
   }
 
-  :global(.dark) & {
-    color: #60a5fa;
+  :global(body.dark) & {
+    color: $sky-500;
 
     &.interactive:hover {
-      background: rgba(96, 165, 250, 0.15);
+      background: rgba($sky-500, 0.15);
     }
   }
 }
@@ -48,7 +48,7 @@
 }
 
 .totalTime {
-  font-weight: 600;
+  font-weight: $font-weight-semibold;
   white-space: nowrap;
 }
 
@@ -68,21 +68,21 @@
   right: 0;
   min-width: 260px;
   max-width: 320px;
-  border-radius: 14px;
-  background: white;
-  box-shadow: 
+  border-radius: $radius-xl;
+  background: $white;
+  box-shadow:
     0 10px 40px -10px rgba(0, 0, 0, 0.15),
     0 4px 6px -2px rgba(0, 0, 0, 0.05),
     0 0 0 1px rgba(0, 0, 0, 0.05);
   z-index: 50;
   overflow: hidden;
 
-  :global(.dark) & {
-    background: #1a1a1e;
-    box-shadow: 
+  :global(body.dark) & {
+    background: $zinc-900;
+    box-shadow:
       0 10px 40px -10px rgba(0, 0, 0, 0.4),
       0 4px 6px -2px rgba(0, 0, 0, 0.2),
-      0 0 0 1px rgba(255, 255, 255, 0.08);
+      0 0 0 1px rgba($white, 0.08);
   }
 }
 
@@ -90,43 +90,43 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 14px;
+  padding: $spacing-md;
 }
 
 .headerTitle {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: $text-xs;
+  font-weight: $font-weight-semibold;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: #6b7280;
+  color: $color-text-secondary;
 
-  :global(.dark) & {
-    color: #9ca3af;
+  :global(body.dark) & {
+    color: $color-text-dark-secondary;
   }
 }
 
 .headerTotal {
-  font-size: 13px;
-  font-weight: 600;
-  color: #3b82f6;
+  font-size: $text-xs;
+  font-weight: $font-weight-semibold;
+  color: $blue-500;
 
-  :global(.dark) & {
-    color: #60a5fa;
+  :global(body.dark) & {
+    color: $sky-500;
   }
 }
 
 .divider {
   height: 1px;
   background: rgba(0, 0, 0, 0.06);
-  margin: 0 14px;
+  margin: 0 $spacing-md;
 
-  :global(.dark) & {
-    background: rgba(255, 255, 255, 0.08);
+  :global(body.dark) & {
+    background: rgba($white, 0.08);
   }
 }
 
 .memberList {
-  padding: 8px 6px;
+  padding: $spacing-sm $spacing-xs;
   max-height: 280px;
   overflow-y: auto;
 }
@@ -135,23 +135,23 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px;
-  border-radius: 8px;
-  transition: background 0.15s ease;
+  padding: $spacing-sm;
+  border-radius: $radius-md;
+  transition: $transition-fast;
 
   &:hover {
     background: rgba(0, 0, 0, 0.03);
   }
 
-  :global(.dark) &:hover {
-    background: rgba(255, 255, 255, 0.05);
+  :global(body.dark) &:hover {
+    background: rgba($white, 0.05);
   }
 }
 
 .memberInfo {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: $spacing-sm;
   flex: 1;
   min-width: 0;
 }
@@ -160,48 +160,48 @@
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: #e5e7eb;
+  background: $zinc-200;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #6b7280;
+  color: $color-text-secondary;
   flex-shrink: 0;
 
-  :global(.dark) & {
-    background: #3f3f46;
-    color: #a1a1aa;
+  :global(body.dark) & {
+    background: $zinc-700;
+    color: $zinc-400;
   }
 }
 
 .memberName {
-  font-size: 13px;
-  font-weight: 500;
-  color: #374151;
+  font-size: $text-xs;
+  font-weight: $font-weight-medium;
+  color: $zinc-700;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 
-  :global(.dark) & {
-    color: #e5e7eb;
+  :global(body.dark) & {
+    color: $zinc-200;
   }
 }
 
 .memberHours {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: $spacing-sm;
   flex-shrink: 0;
 }
 
 .hoursValue {
-  font-size: 13px;
-  font-weight: 600;
-  color: #3b82f6;
+  font-size: $text-xs;
+  font-weight: $font-weight-semibold;
+  color: $blue-500;
   min-width: 45px;
   text-align: right;
 
-  :global(.dark) & {
-    color: #60a5fa;
+  :global(body.dark) & {
+    color: $sky-500;
   }
 }
 
@@ -209,32 +209,32 @@
   height: 4px;
   min-width: 4px;
   max-width: 60px;
-  background: linear-gradient(90deg, #3b82f6, #60a5fa);
+  background: linear-gradient(90deg, $blue-500, $sky-500);
   border-radius: 2px;
   opacity: 0.6;
 
-  :global(.dark) & {
+  :global(body.dark) & {
     opacity: 0.8;
   }
 }
 
 .dropdownFooter {
-  padding: 10px 14px;
+  padding: $spacing-sm $spacing-md;
   border-top: 1px solid rgba(0, 0, 0, 0.06);
   background: rgba(0, 0, 0, 0.02);
 
-  :global(.dark) & {
-    border-top-color: rgba(255, 255, 255, 0.06);
-    background: rgba(255, 255, 255, 0.02);
+  :global(body.dark) & {
+    border-top-color: rgba($white, 0.06);
+    background: rgba($white, 0.02);
   }
 }
 
 .footerNote {
   font-size: 11px;
-  color: #9ca3af;
+  color: $zinc-400;
   font-style: italic;
 
-  :global(.dark) & {
-    color: #6b7280;
+  :global(body.dark) & {
+    color: $zinc-500;
   }
 }

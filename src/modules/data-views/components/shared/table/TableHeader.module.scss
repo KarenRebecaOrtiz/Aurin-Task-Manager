@@ -1,4 +1,4 @@
-// TableHeader - Hardcoded values
+@use '@/app/styles/variables' as *;
 
 /* CABECERA DE TABLA */
 .header {
@@ -7,7 +7,7 @@
   border-bottom: 1px solid rgba(209, 217, 230, 0.3);
 
   :global(body.dark) & {
-    border-bottom: 1px solid #3f3f46;
+    border-bottom: 1px solid $zinc-700;
   }
 
   @media (max-width: 768px) {
@@ -17,21 +17,21 @@
 
 /* CELDA DE CABECERA */
 .headerCell {
-  padding: 12px 20px;
-  font-size: 12px;
-  font-weight: 500;
-  color: #64748b;
+  padding: $spacing-md 20px;
+  font-size: $text-xs;
+  font-weight: $font-weight-medium;
+  color: $color-text-secondary;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 8px;
+  gap: $spacing-sm;
   user-select: none;
-  line-height: 1.5;
+  line-height: $leading-normal;
   max-width: 250px !important;
   position: relative;
-  transition: all 0.15s ease;
+  transition: $transition-fast;
 
   /* Estados de visibilidad */
   &.hidden {
@@ -44,13 +44,13 @@
 
   /* Estado ordenado */
   &.sorted {
-    background: rgba(59, 130, 246, 0.05);
+    background: rgba($blue-500, 0.05);
     color: #2563eb;
-    border-radius: 8px;
+    border-radius: $radius-md;
 
     :global(body.dark) & {
-      background: rgba(59, 130, 246, 0.1);
-      color: #60a5fa;
+      background: rgba($blue-500, 0.1);
+      color: $blue-400;
     }
   }
 
@@ -59,24 +59,24 @@
     cursor: pointer;
 
     &:hover {
-      background: rgba(59, 130, 246, 0.04);
+      background: rgba($blue-500, 0.04);
 
       :global(body.dark) & {
-        background: rgba(59, 130, 246, 0.08);
+        background: rgba($blue-500, 0.08);
       }
     }
 
     &:active {
-      background: rgba(59, 130, 246, 0.12);
+      background: rgba($blue-500, 0.12);
 
       :global(body.dark) & {
-        background: rgba(59, 130, 246, 0.18);
+        background: rgba($blue-500, 0.18);
       }
     }
   }
 
   :global(body.dark) & {
-    color: #a1a1aa;
+    color: $color-text-dark-secondary;
   }
 
   /* Quitar padding en mobile */
@@ -89,14 +89,14 @@
 .sortContainer {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: $spacing-xs;
   flex: 1;
   outline: none;
-  border-radius: 4px;
+  border-radius: $radius-xs;
 
   /* Focus state para accesibilidad */
   &:focus-visible {
-    outline: 2px solid #3b82f6;
+    outline: 2px solid $blue-500;
     outline-offset: 2px;
   }
 }
@@ -115,21 +115,21 @@
   align-items: center;
   justify-content: center;
   opacity: 0.6;
-  transition: all 0.15s ease;
-  width: 16px;
-  height: 16px;
+  transition: $transition-fast;
+  width: $spacing-lg;
+  height: $spacing-lg;
 }
 
 .sortArrow {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 12px;
-  height: 12px;
+  width: $spacing-md;
+  height: $spacing-md;
 }
 
 .arrowIcon {
-  transition: all 0.15s ease;
+  transition: $transition-fast;
 
   :global(body.dark) & {
     filter: invert(1) brightness(0.8);
@@ -140,21 +140,21 @@
 .visibilityContainer {
   display: flex;
   align-items: center;
-  margin-left: 4px;
+  margin-left: $spacing-xs;
 }
 
-/* BOTÓN DE VISIBILIDAD */
+/* BOTON DE VISIBILIDAD */
 .visibilityButton {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 16px;
-  height: 16px;
+  width: $spacing-lg;
+  height: $spacing-lg;
   border: none;
   background: transparent;
-  border-radius: 4px;
+  border-radius: $radius-xs;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: $transition-fast;
   opacity: 0.4;
   position: absolute;
   top: 2px;
@@ -162,32 +162,32 @@
   z-index: 10;
 
   &:hover {
-    background: rgba(0, 0, 0, 0.05);
+    background: rgba($black, 0.05);
     opacity: 0.8;
     transform: scale(1.05);
 
     :global(body.dark) & {
-      background: rgba(255, 255, 255, 0.05);
+      background: rgba($white, 0.05);
     }
   }
 
   &:active {
     transform: scale(0.95);
-    background: rgba(0, 0, 0, 0.1);
+    background: rgba($black, 0.1);
 
     :global(body.dark) & {
-      background: rgba(255, 255, 255, 0.1);
+      background: rgba($white, 0.1);
     }
   }
 
   &:focus-visible {
-    outline: 2px solid #3b82f6;
+    outline: 2px solid $blue-500;
     outline-offset: 2px;
   }
 }
 
 .eyeIcon {
-  transition: all 0.15s ease;
+  transition: $transition-fast;
   width: 5px;
   height: 5px;
   display: flex;
@@ -203,22 +203,22 @@
 .tooltip {
   position: fixed;
   z-index: 9999;
-  background: rgba(0, 0, 0, 0.9);
-  color: white;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 500;
+  background: rgba($black, 0.9);
+  color: $white;
+  padding: $spacing-xs $spacing-sm;
+  border-radius: $radius-xs;
+  font-size: $text-xs;
+  font-weight: $font-weight-medium;
   white-space: nowrap;
   pointer-events: none;
   backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba($white, 0.1);
+  box-shadow: 0 8px 32px rgba($black, 0.3);
 
   :global(body.dark) & {
-    background: rgba(255, 255, 255, 0.9);
-    color: rgba(0, 0, 0, 0.9);
-    border: 1px solid rgba(0, 0, 0, 0.1);
+    background: rgba($white, 0.9);
+    color: rgba($black, 0.9);
+    border: 1px solid rgba($black, 0.1);
   }
 }
 
@@ -231,10 +231,10 @@
   height: 0;
   border-left: 6px solid transparent;
   border-right: 6px solid transparent;
-  border-top: 6px solid rgba(0, 0, 0, 0.9);
+  border-top: 6px solid rgba($black, 0.9);
 
   :global(body.dark) & {
-    border-top-color: rgba(255, 255, 255, 0.9);
+    border-top-color: rgba($white, 0.9);
   }
 }
 
@@ -267,7 +267,7 @@
   /* Columna de estado */
   &[data-column="status"] {
     .columnLabel {
-      color: #6366f1;
+      color: $indigo-500;
 
       :global(body.dark) & {
         color: #818cf8;
@@ -278,10 +278,10 @@
   /* Columna de prioridad */
   &[data-column="priority"] {
     .columnLabel {
-      color: #ef4444;
+      color: $red-500;
 
       :global(body.dark) & {
-        color: #f87171;
+        color: $red-400;
       }
     }
   }
@@ -316,12 +316,12 @@
   }
 }
 
-/* Focus trap para navegación por teclado */
+/* Focus trap para navegacion por teclado */
 .headerCell:focus-within {
   z-index: 1;
 }
 
-/* Estados para debugging (opcional - remover en producción) */
+/* Estados para debugging (opcional - remover en produccion) */
 .debug {
   .headerCell {
     border: 1px dashed rgba(255, 0, 0, 0.3);

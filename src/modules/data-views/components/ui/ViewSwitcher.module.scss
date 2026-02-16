@@ -1,4 +1,4 @@
-@import 'src/app/styles/variables.scss';
+@use '@/app/styles/variables' as *;
 
 .viewSwitcher {
   display: flex;
@@ -14,8 +14,8 @@
 .switchContainer {
   display: flex;
   gap: 0;
-  border-radius: 12px;
-  background-color: #f3f4f6;
+  border-radius: $radius-xl;
+  background-color: $zinc-100;
   border: 1px solid rgba(255, 255, 255, 0.05);
   padding: 5px;
   position: relative;
@@ -33,8 +33,8 @@
     left: var(--indicator-x, 5px);
     width: var(--indicator-width, 47px);
     height: var(--indicator-height, 32px);
-    background-color: #ffffff;
-    border-radius: 12px;
+    background-color: $white;
+    border-radius: $radius-xl;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     transition: all 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
     z-index: 0;
@@ -46,13 +46,13 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 6px 8px;
+    padding: $spacing-sm $spacing-sm;
     cursor: pointer;
     border: none;
-    border-radius: 8px;
-    transition: all 0.25s ease;
-    color: #6b7280;
-    fill: #6b7280;
+    border-radius: $radius-md;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    color: $zinc-500;
+    fill: $zinc-500;
     background-color: transparent;
     position: relative;
     z-index: 1;
@@ -62,28 +62,37 @@
     svg {
       width: 18px;
       height: 18px;
+      transition: transform 0.2s ease;
     }
 
     &:hover {
-      color: #1f2937;
-      fill: #1f2937;
+      color: $zinc-800;
+      fill: $zinc-800;
+
+      svg {
+        transform: scale(1.15);
+      }
+    }
+
+    &:active {
+      transform: scale(0.95);
     }
 
     /* Active state - clearly visible indicator */
     &[data-active='true'] {
-      color: #09090b;
-      fill: #09090b;
-      font-weight: 600;
+      color: $zinc-950;
+      fill: $zinc-950;
+      font-weight: $font-weight-semibold;
     }
   }
 
   /* Dark mode support */
   :global(body.dark) & {
     background-color: $color-bg-dark;
-    border-color: 1px solid rgba(255, 255, 255, 0.0509803922);
+    border: 1px solid rgba(255, 255, 255, 0.05);
 
     &::before {
-      background-color: #3f3f46;
+      background-color: $zinc-700;
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
     }
 

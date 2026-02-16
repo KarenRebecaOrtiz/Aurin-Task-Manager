@@ -25,7 +25,7 @@ import { DialogFooter } from '../../molecules';
 import { DestructiveConfirmDialog } from '../DestructiveConfirmDialog';
 import { panelVariants } from '../../../config/animations';
 import { useMediaQuery } from '../../../hooks/useMediaQuery';
-import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
+import { useToast } from '@/modules/toast';
 import { clientService } from '@/modules/client-crud/services/clientService';
 import { useDataStore } from '@/stores/dataStore';
 import { useClientsDataStore } from '@/stores/clientsDataStore';
@@ -94,7 +94,7 @@ export function ManageProjectsDialog({
   client,
   onProjectsUpdated,
 }: ManageProjectsDialogProps) {
-  const { success: showSuccess, error: showError } = useSonnerToast();
+  const { success: showSuccess, error: showError } = useToast();
   const isMobile = useMediaQuery('(max-width: 767px)');
 
   // Get clients from store for updates
@@ -207,7 +207,7 @@ export function ManageProjectsDialog({
     } catch (error) {
       console.error('Error saving projects:', error);
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-      showError(`Error al guardar proyectos: ${errorMessage}`);
+      showError('No se pudieron guardar los proyectos', errorMessage);
       return false;
     } finally {
       setIsSubmitting(false);
@@ -228,13 +228,13 @@ export function ManageProjectsDialog({
   const handleCreateProject = useCallback(async () => {
     const trimmedName = newProjectName.trim();
     if (!trimmedName) {
-      showError('El nombre del proyecto no puede estar vacío');
+      showError('Nombre requerido', 'Ingresa un nombre para el proyecto.');
       return;
     }
 
     // Check for duplicates
     if (projects.some(p => p.toLowerCase() === trimmedName.toLowerCase())) {
-      showError('Ya existe un proyecto con ese nombre');
+      showError('Nombre duplicado', 'Ya existe un proyecto con ese nombre.');
       return;
     }
 
@@ -242,7 +242,7 @@ export function ManageProjectsDialog({
     const success = await saveProjects(updatedProjects);
 
     if (success) {
-      showSuccess(`Proyecto "${trimmedName}" creado exitosamente`);
+      showSuccess('Proyecto creado', `"${trimmedName}" ya está disponible para asignar tareas.`);
       setMode('view');
       setNewProjectName('');
     }
@@ -283,13 +283,13 @@ export function ManageProjectsDialog({
 
     const trimmedName = editingName.trim();
     if (!trimmedName) {
-      showError('El nombre del proyecto no puede estar vacío');
+      showError('Nombre requerido', 'Ingresa un nombre para el proyecto.');
       return;
     }
 
     // Check for duplicates (excluding current project)
     if (projects.some((p, i) => i !== editingIndex && p.toLowerCase() === trimmedName.toLowerCase())) {
-      showError('Ya existe un proyecto con ese nombre');
+      showError('Nombre duplicado', 'Ya existe un proyecto con ese nombre.');
       return;
     }
 
@@ -297,7 +297,7 @@ export function ManageProjectsDialog({
     const success = await saveProjects(updatedProjects);
 
     if (success) {
-      showSuccess(`Proyecto renombrado a "${trimmedName}"`);
+      showSuccess('Proyecto renombrado', `Ahora se llama "${trimmedName}".`);
       setEditingIndex(null);
       setEditingName('');
     }
@@ -321,7 +321,7 @@ export function ManageProjectsDialog({
       const success = await saveProjects(updatedProjects);
 
       if (success) {
-        showSuccess(`Proyecto "${projectToDelete.name}" eliminado`);
+        showSuccess('Proyecto eliminado', `"${projectToDelete.name}" se eliminó de la cuenta.`);
         setShowDeleteConfirm(false);
         setProjectToDelete(null);
       }

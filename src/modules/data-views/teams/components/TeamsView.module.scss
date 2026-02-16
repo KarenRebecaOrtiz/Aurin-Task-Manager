@@ -12,7 +12,7 @@
   border-radius: 50px;
   background: transparent;
 
-  :global(.dark) & {
+  :global(body.dark) & {
     background: transparent;
   }
 
@@ -47,54 +47,54 @@
   width: 120px;
   height: 120px;
   border-radius: 50%;
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
-  color: #3b82f6;
+  background: linear-gradient(135deg, rgba($blue-500, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+  color: $blue-500;
   margin-bottom: $spacing-md;
 
-  :global(.dark) & {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(139, 92, 246, 0.2) 100%);
-    color: #60a5fa;
+  :global(body.dark) & {
+    background: linear-gradient(135deg, rgba($blue-500, 0.2) 0%, rgba(139, 92, 246, 0.2) 100%);
+    color: $blue-400;
   }
 }
 
 .emptyTitle {
-  font-size: 20px;
-  font-weight: 600;
-  color: #0f172a;
+  font-size: $text-xl;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
   margin: 0;
 
-  :global(.dark) & {
-    color: #f1f5f9;
+  :global(body.dark) & {
+    color: $slate-100;
   }
 }
 
 .emptyDescription {
-  font-size: 14px;
-  color: #64748b;
+  font-size: $text-sm;
+  color: $color-text-secondary;
   margin: 0;
   max-width: 400px;
-  line-height: 1.5;
+  line-height: $leading-normal;
 
-  :global(.dark) & {
-    color: #94a3b8;
+  :global(body.dark) & {
+    color: $slate-500;
   }
 }
 
 // Workspace content area
 .workspaceContent {
   flex: 1;
-  border-radius: 16px;
-  padding: 16px;
+  border-radius: $radius-2xl;
+  padding: $spacing-lg;
   min-height: 656px;
   display: flex;
   flex-direction: column;
   gap: $spacing-lg;
-  background: #ffffff;
+  background: $white;
   border: 1px solid rgba(0, 0, 0, 0.08);
 
-  :global(.dark) & {
+  :global(body.dark) & {
     background: rgb(15, 15, 15);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba($white, 0.05);
   }
 }
 
@@ -109,12 +109,12 @@
   text-align: center;
   min-height: 400px;
   background: rgba(241, 245, 249, 0.5);
-  border-radius: 16px;
-  border: 2px dashed rgba(59, 130, 246, 0.3);
+  border-radius: $radius-2xl;
+  border: 2px dashed rgba($blue-500, 0.3);
 
-  :global(.dark) & {
+  :global(body.dark) & {
     background: rgba(30, 41, 59, 0.5);
-    border-color: rgba(59, 130, 246, 0.3);
+    border-color: rgba($blue-500, 0.3);
   }
 }
 
@@ -124,34 +124,34 @@
   justify-content: center;
   width: 80px;
   height: 80px;
-  border-radius: 16px;
-  background: rgba(59, 130, 246, 0.1);
-  color: #3b82f6;
+  border-radius: $radius-2xl;
+  background: rgba($blue-500, 0.1);
+  color: $blue-500;
 
-  :global(.dark) & {
-    background: rgba(59, 130, 246, 0.2);
-    color: #60a5fa;
+  :global(body.dark) & {
+    background: rgba($blue-500, 0.2);
+    color: $blue-400;
   }
 }
 
 .placeholderTitle {
-  font-size: 18px;
-  font-weight: 600;
-  color: #0f172a;
+  font-size: $text-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
   margin: 0;
 
-  :global(.dark) & {
-    color: #f1f5f9;
+  :global(body.dark) & {
+    color: $slate-100;
   }
 }
 
 .placeholderDescription {
-  font-size: 14px;
-  color: #64748b;
+  font-size: $text-sm;
+  color: $color-text-secondary;
   margin: 0;
 
-  :global(.dark) & {
-    color: #94a3b8;
+  :global(body.dark) & {
+    color: $slate-500;
   }
 }
 
@@ -165,7 +165,7 @@
   border-bottom: 1px solid $color-border-subtle;
   margin-bottom: $spacing-lg;
 
-  :global(.dark) & {
+  :global(body.dark) & {
     border-bottom-color: #2a2a2a;
   }
 }
@@ -173,27 +173,27 @@
 .workspaceInfo {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: $spacing-xs;
 }
 
 .workspaceTitle {
-  font-size: 24px;
-  font-weight: 700;
-  color: #0f172a;
+  font-size: $text-2xl;
+  font-weight: $font-weight-bold;
+  color: $color-text-primary;
   margin: 0;
 
-  :global(.dark) & {
-    color: #f1f5f9;
+  :global(body.dark) & {
+    color: $slate-100;
   }
 }
 
 .workspaceSubtitle {
-  font-size: 14px;
-  color: #64748b;
+  font-size: $text-sm;
+  color: $color-text-secondary;
   margin: 0;
 
-  :global(.dark) & {
-    color: #94a3b8;
+  :global(body.dark) & {
+    color: $slate-500;
   }
 }
 
@@ -216,7 +216,6 @@
   padding: $spacing-2xl;
   text-align: center;
   min-height: 300px;
-
 }
 
 .noTeamsIcon {
@@ -226,34 +225,34 @@
   width: 80px;
   height: 80px;
   border-radius: 50%;
-  background: rgba(59, 130, 246, 0.1);
-  color: #3b82f6;
+  background: rgba($blue-500, 0.1);
+  color: $blue-500;
 
-  :global(.dark) & {
+  :global(body.dark) & {
     background: rgba(40, 39, 39, 0.2);
-    color: #ffffff;
+    color: $white;
   }
 }
 
 .noTeamsTitle {
-  font-size: 18px;
-  font-weight: 600;
-  color: #0f172a;
+  font-size: $text-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
   margin: 0;
 
-  :global(.dark) & {
-    color: #f1f5f9;
+  :global(body.dark) & {
+    color: $slate-100;
   }
 }
 
 .noTeamsDescription {
-  font-size: 14px;
-  color: #64748b;
+  font-size: $text-sm;
+  color: $color-text-secondary;
   margin: 0;
   max-width: 360px;
-  line-height: 1.5;
+  line-height: $leading-normal;
 
-  :global(.dark) & {
-    color: #94a3b8;
+  :global(body.dark) & {
+    color: $slate-500;
   }
 }

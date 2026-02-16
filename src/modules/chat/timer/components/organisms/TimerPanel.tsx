@@ -24,7 +24,7 @@ import { TimeEntryForm } from '../molecules/TimeEntryForm';
 import { ConfirmTimerSwitch } from './ConfirmTimerSwitch';
 import { Send } from '@/components/animate-ui/icons/send';
 import { Timer } from '@/components/animate-ui/icons/timer';
-import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
+import { useToast } from '@/modules/toast';
 import { firebaseService } from '../../../services/firebaseService';
 import { createTimeLog } from '../../services/timeLogFirebase';
 import { useDataStore } from '@/stores/dataStore';
@@ -66,7 +66,7 @@ export function TimerPanel({
   const [isSendingLog, setIsSendingLog] = useState(false);
 
   // Toast notifications
-  const { success: showSuccess, error: showError, info: showInfo } = useSonnerToast();
+  const { success: showSuccess, error: showError, info: showInfo } = useToast();
 
   // Get tasks from store to display task names
   const tasks = useDataStore(useShallow((state) => state.tasks));
@@ -109,12 +109,12 @@ export function TimerPanel({
   // Handlers
   const handleSendTimelog = async () => {
     if (timerSeconds === 0) {
-      showInfo('No hay tiempo para enviar');
+      showInfo('No hay tiempo para enviar', 'El timer está en cero.');
       return;
     }
 
     if (isRunning) {
-      showInfo('Debes pausar o detener el timer antes de enviar el timelog');
+      showInfo('Debes pausar o detener el timer antes de enviar el timelog', 'Pausa el timer primero.');
       return;
     }
 
@@ -192,12 +192,12 @@ export function TimerPanel({
       // Reset timer after sending
       await resetTimer();
 
-      showSuccess('Timelog enviado correctamente');
+      showSuccess('Timelog enviado', 'El tiempo se registró correctamente.');
       if (onSuccess) onSuccess();
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('[TimerPanel] Error sending timelog:', error);
-      showError('Error al enviar el timelog');
+      showError('No se pudo enviar el timelog', 'Intenta de nuevo.');
     } finally {
       setIsSendingLog(false);
     }
@@ -205,7 +205,7 @@ export function TimerPanel({
 
   const handleStop = async () => {
     if (timerSeconds === 0) {
-      showInfo('No hay tiempo para guardar');
+      showInfo('No hay tiempo para guardar', 'El timer está en cero.');
       return;
     }
 
@@ -236,7 +236,7 @@ export function TimerPanel({
       if (onSuccess) onSuccess();
     } catch (error) {
       console.error('[TimerPanel] Error stopping timer:', error);
-      showError('Error al detener el timer');
+      showError('No se pudo detener el timer', 'Intenta de nuevo.');
     }
   };
 
@@ -254,9 +254,9 @@ export function TimerPanel({
 
     try {
       if (action === 'send') {
-        showInfo('Guardando timer...');
+        showInfo('Guardando timer...', 'El timer actual se guardará.');
       } else {
-        showInfo('Descartando timer...');
+        showInfo('Descartando timer...', 'El timer actual se descartará.');
       }
 
       // Resolve the promise to allow the new timer to start
@@ -264,7 +264,7 @@ export function TimerPanel({
       pendingTimerSwitch.resolve({ confirmed: true, action });
     } catch (error) {
       console.error('[TimerPanel] Error handling timer switch:', error);
-      showError('Error al cambiar el timer');
+      showError('No se pudo cambiar el timer', 'Intenta de nuevo más tarde.');
       // Still resolve to confirmed to allow the switch with send action
       pendingTimerSwitch.resolve({ confirmed: true, action: 'send' });
     } finally {

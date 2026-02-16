@@ -8,7 +8,7 @@
 // Contenedor principal
 .container {
   grid-column: span 2;
-  
+
   @media (max-width: 768px) {
     grid-column: span 1;
   }
@@ -26,8 +26,8 @@
   font-size: $text-sm;
   font-weight: $font-weight-semibold;
   color: $color-text-secondary;
-  
-  :global(.dark) & {
+
+  :global(body.dark) & {
     color: $color-text-dark-secondary;
   }
 }
@@ -38,8 +38,8 @@
   background: $zinc-100;
   padding: $spacing-xs $spacing-sm;
   border-radius: $radius-full;
-  
-  :global(.dark) & {
+
+  :global(body.dark) & {
     background: $zinc-800;
     color: $zinc-400;
   }
@@ -60,8 +60,8 @@
   border: 2px solid transparent;
   border-bottom-color: $blue-500;
   animation: spin 1s linear infinite;
-  
-  :global(.dark) & {
+
+  :global(body.dark) & {
     border-bottom-color: $sky-500;
   }
 }
@@ -76,30 +76,30 @@
   margin-left: $spacing-md;
   font-size: $text-sm;
   color: $zinc-500;
-  
-  :global(.dark) & {
+
+  :global(body.dark) & {
     color: $zinc-400;
   }
 }
 
 .errorState {
   padding: $spacing-lg;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.2);
+  background: rgba($red-500, 0.1);
+  border: 1px solid rgba($red-500, 0.2);
   border-radius: $radius-lg;
-  
-  :global(.dark) & {
-    background: rgba(239, 68, 68, 0.15);
-    border-color: rgba(239, 68, 68, 0.3);
+
+  :global(body.dark) & {
+    background: rgba($red-500, 0.15);
+    border-color: rgba($red-500, 0.3);
   }
 }
 
 .errorText {
   font-size: $text-sm;
   color: $red-500;
-  
-  :global(.dark) & {
-    color: $rose-500;
+
+  :global(body.dark) & {
+    color: $red-400;
   }
 }
 
@@ -110,8 +110,8 @@
   border: 1px solid $color-border-light;
   border-radius: $radius-lg;
   text-align: center;
-  
-  :global(.dark) & {
+
+  :global(body.dark) & {
     background: $zinc-900;
     border-color: $color-border-dark;
   }
@@ -122,8 +122,8 @@
   width: 3rem;
   height: 3rem;
   color: $zinc-400;
-  
-  :global(.dark) & {
+
+  :global(body.dark) & {
     color: $zinc-500;
   }
 }
@@ -132,8 +132,8 @@
   font-size: $text-sm;
   font-weight: $font-weight-medium;
   color: $color-text-secondary;
-  
-  :global(.dark) & {
+
+  :global(body.dark) & {
     color: $color-text-dark-secondary;
   }
 }
@@ -142,8 +142,8 @@
   font-size: $text-xs;
   color: $zinc-500;
   margin-top: $spacing-xs;
-  
-  :global(.dark) & {
+
+  :global(body.dark) & {
     color: $zinc-400;
   }
 }
@@ -153,8 +153,8 @@
   border: 1px solid $color-border-light;
   border-radius: $radius-lg;
   overflow: hidden;
-  
-  :global(.dark) & {
+
+  :global(body.dark) & {
     border-color: $color-border-dark;
     background-color: $color-bg-dark;
   }
@@ -179,8 +179,8 @@
   position: sticky;
   top: 0;
   z-index: 10;
-  
-  :global(.dark) & {
+
+  :global(body.dark) & {
     background: $zinc-800;
   }
 }
@@ -195,11 +195,12 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   border-bottom: 1px solid $color-border-light;
-  
-  :global(.dark) & {
-    color: $color-bg-dark
+
+  :global(body.dark) & {
+    color: $color-text-dark-secondary;
+    border-bottom-color: $color-border-dark;
   }
-  
+
   // Ocultar columnas de Estado (3) y Prioridad (4) en viewports menores a 569px
   @media (max-width: 568px) {
     &:nth-child(3),
@@ -212,29 +213,29 @@
 // Tbody
 .tbody {
   background: $white;
-  
-  :global(.dark) & {
+
+  :global(body.dark) & {
     background: $zinc-900;
   }
 }
 
 // Rows
 .row {
-  transition: background-color 0.15s ease;
-  
+  transition: $transition-fast;
+
   &:hover {
     background: $zinc-50;
   }
-  
+
   &:not(:last-child) {
     border-bottom: 1px solid $color-border-light;
   }
-  
-  :global(.dark) & {
+
+  :global(body.dark) & {
     &:hover {
       background: $zinc-800;
     }
-    
+
     &:not(:last-child) {
       border-bottom-color: $color-border-dark;
     }
@@ -245,7 +246,7 @@
 .td {
   padding: $spacing-md $spacing-lg;
   vertical-align: middle;
-  
+
   // Ocultar columnas de Estado (3) y Prioridad (4) en viewports menores a 569px
   @media (max-width: 568px) {
     &:nth-child(3),
@@ -266,8 +267,8 @@
   font-size: $text-sm;
   font-weight: $font-weight-medium;
   color: $color-text-primary;
-  
-  :global(.dark) & {
+
+  :global(body.dark) & {
     color: $color-text-dark-primary;
   }
 }
@@ -279,8 +280,8 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 250px;
-  
-  :global(.dark) & {
+
+  :global(body.dark) & {
     color: $zinc-400;
   }
 }
@@ -289,8 +290,8 @@
 .projectName {
   font-size: $text-sm;
   color: $color-text-secondary;
-  
-  :global(.dark) & {
+
+  :global(body.dark) & {
     color: $color-text-dark-secondary;
   }
 }

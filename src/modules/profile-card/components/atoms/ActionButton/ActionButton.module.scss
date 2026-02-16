@@ -1,23 +1,20 @@
 @use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
 
 .actionButton {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
+  @include flex-center;
+  gap: $spacing-sm;
   width: auto;
   height: auto;
-  padding: 12px;
-  border-radius: 12px;
-  font-family: "Urbanist", sans-serif;
-  font-size: 14px;
-  font-weight: 500;
+  padding: $spacing-md;
+  border-radius: $radius-xl;
+  font-family: $font-family-primary;
+  font-size: $text-sm;
+  font-weight: $font-weight-medium;
   cursor: pointer;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   border: 1px solid $color-border-light;
   background: transparent;
-  transition: background 0.2s ease, border-color 0.2s ease;
+  transition: background $transition-fast, border-color $transition-fast;
 
   &:hover {
     background: rgba(0, 0, 0, 0.05);

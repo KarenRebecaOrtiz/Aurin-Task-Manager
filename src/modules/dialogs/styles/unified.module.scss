@@ -1,41 +1,39 @@
 /**
  * Unified Dialog Styles
- * 
+ *
  * Sistema centralizado de estilos para todos los dialogs
  * CSS Modules compatible - usando variables CSS locales
- * 
+ *
  * IMPORTANTE: El centrado se maneja en Dialog.module.scss
  * Estos estilos son complementarios para variantes específicas
  */
 
+@use '@/app/styles/variables' as *;
+
 /* ===== MAIN CONTAINER ===== */
 .dialogContent {
-  // NO usar position fixed aquí - el centrado viene del padre (dialogRoot)
-  // Solo estilos de apariencia
-  
   /* Layout */
   display: flex;
   flex-direction: column;
   width: 100%;
   max-height: calc(100vh - 2rem);
-  
+
   /* Visual */
-  background: white;
-  border-radius: 12px;
-  box-shadow: 
+  background: $white;
+  border-radius: $radius-xl;
+  box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.05),
     0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  // overflow: hidden - el contenido interno (.dialogBody) maneja el scroll
   overflow: hidden;
-  
+
   /* Focus */
   outline: none;
-  
+
   /* Dark mode */
   :global(.dark) & {
-    background: #18181b;
-    color: #fafafa;
-    box-shadow: 
+    background: $zinc-900;
+    color: $zinc-50;
+    box-shadow:
       0 0 0 1px rgba(255, 255, 255, 0.1),
       0 25px 50px -12px rgba(0, 0, 0, 0.5);
   }
@@ -43,7 +41,6 @@
 
 /* ===== SCROLLABLE VARIANT ===== */
 .dialogContent.scrollable {
-  /* Para dialogs con mucho contenido */
   max-height: 90vh;
   overflow: hidden;
 }
@@ -53,26 +50,24 @@
   display: flex;
   flex-direction: column;
   flex: 1;
-  min-height: 0; /* Importante para que flex + overflow funcione */
-  
-  /* Todo el contenido scrolleable */
+  min-height: 0;
+
   overflow-y: auto;
   overflow-x: hidden;
-  
-  /* Custom scrollbar */
+
   &::-webkit-scrollbar {
     width: 6px;
   }
-  
+
   &::-webkit-scrollbar-track {
     background: transparent;
   }
-  
+
   &::-webkit-scrollbar-thumb {
     background: rgba(0, 0, 0, 0.2);
     border-radius: 3px;
   }
-  
+
   &::-webkit-scrollbar-thumb:hover {
     background: rgba(0, 0, 0, 0.3);
   }
@@ -82,7 +77,7 @@
   &::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.2);
   }
-  
+
   &::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.3);
   }
@@ -122,36 +117,33 @@
 
 /* ===== DARK MODE ===== */
 :global(.dark) .dialogContent {
-  background: #1a1a1a;
-  color: #e5e5e5;
+  background: $color-bg-dark;
+  color: $zinc-200;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
 }
 
-/* ===== CLOSE BUTTON (SI SE NECESITA) ===== */
+/* ===== CLOSE BUTTON ===== */
 .dialogClose {
   position: absolute;
   top: 1rem;
   right: 1rem;
   z-index: 10;
-  
-  /* Reset button styles */
+
   border: none;
   background: transparent;
   cursor: pointer;
-  
-  /* Visual */
-  border-radius: 6px;
+
+  border-radius: $radius-sm;
   padding: 0.5rem;
   opacity: 0.7;
-  transition: opacity 0.2s ease;
-  
-  /* Focus/Hover */
+  transition: opacity $transition-fast;
+
   &:hover {
     opacity: 1;
   }
-  
+
   &:focus {
-    outline: 2px solid #3b82f6;
+    outline: 2px solid $color-border-focus;
     outline-offset: 2px;
   }
 }

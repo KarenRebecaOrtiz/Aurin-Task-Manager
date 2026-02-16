@@ -1,6 +1,6 @@
 /**
  * Chat Module - SCSS Mixins
- * 
+ *
  * Mixins reutilizables para el módulo de chat.
  */
 
@@ -24,14 +24,12 @@
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
 
-  /* Sombras neumorfistas */
   box-shadow:
     -2px -2px 4px rgba(255, 255, 255, 0.8),
     2px 2px 4px rgba(0, 0, 0, 0.05),
     inset -1px -1px 2px rgba(255, 255, 255, 0.4),
     inset 1px 1px 2px rgba(209, 217, 230, 0.2);
 
-  /* Transiciones */
   transition:
     transform $transition-speed $transition-easing,
     box-shadow $transition-speed $transition-easing,
@@ -39,11 +37,10 @@
     border-color $transition-speed $transition-easing;
   will-change: transform, box-shadow, background, border-color;
 
-  /* Hover: Levitar */
   &:hover {
     transform: translateY(-1px) scale(1.05);
-    background: rgba(241, 245, 249, 0.85);
-    border-color: rgba(255, 255, 255, 0.4);
+    background: rgba($slate-100, 0.85);
+    border-color: rgba($white, 0.4);
     box-shadow:
       -4px -4px 8px rgba(255, 255, 255, 0.9),
       4px 4px 8px rgba(0, 0, 0, 0.08),
@@ -51,11 +48,10 @@
       inset 2px 2px 4px rgba(209, 217, 230, 0.3);
   }
 
-  /* Active: Presionado */
   &:active {
     transform: scale(0.95);
-    background: rgba(241, 245, 249, 0.6);
-    border-color: rgba(255, 255, 255, 0.15);
+    background: rgba($slate-100, 0.6);
+    border-color: rgba($white, 0.15);
     box-shadow:
       inset -1px -1px 3px rgba(255, 255, 255, 0.4),
       inset 1px 1px 3px rgba(209, 217, 230, 0.2),
@@ -63,8 +59,7 @@
       1px 1px 3px rgba(0, 0, 0, 0.04);
   }
 
-  /* Modo oscuro */
-  :global(.dark) & {
+  :global(body.dark) & {
     background: $chat-header-bg-dark;
     border-color: $chat-border-dark;
     box-shadow:
@@ -78,8 +73,8 @@
     }
 
     &:hover {
-      background: rgba(39, 39, 42, 0.85);
-      border-color: rgba(255, 255, 255, 0.2);
+      background: rgba($zinc-800, 0.85);
+      border-color: rgba($white, 0.2);
       box-shadow:
         -4px -4px 8px rgba(255, 255, 255, 0.04),
         4px 4px 8px rgba(0, 0, 0, 0.5),
@@ -88,8 +83,8 @@
     }
 
     &:active {
-      background: rgba(39, 39, 42, 0.6);
-      border-color: rgba(255, 255, 255, 0.05);
+      background: rgba($zinc-800, 0.6);
+      border-color: rgba($white, 0.05);
       box-shadow:
         inset -1px -1px 3px rgba(0, 0, 0, 0.35),
         inset 1px 1px 3px rgba(255, 255, 255, 0.02),
@@ -116,7 +111,7 @@
       inset 1px 1px 2px rgba(209, 217, 230, 0.2);
   }
 
-  :global(.dark) & {
+  :global(body.dark) & {
     &:hover {
       box-shadow:
         -2px -2px 4px rgba(255, 255, 255, 0.03),
@@ -145,7 +140,7 @@
     pointer-events: none;
   }
 
-  :global(.dark) &::before {
+  :global(body.dark) &::before {
     opacity: $noise-opacity-dark;
   }
 }
@@ -158,7 +153,7 @@
   background: $bg-color;
   backdrop-filter: blur($blur);
   -webkit-backdrop-filter: blur($blur);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba($white, 0.2);
 }
 
 // ============================================================================
@@ -183,7 +178,7 @@
     }
   }
 
-  :global(.dark) & {
+  :global(body.dark) & {
     &::-webkit-scrollbar-thumb {
       background: rgba(255, 255, 255, 0.2);
 

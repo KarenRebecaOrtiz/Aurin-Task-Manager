@@ -42,9 +42,9 @@
   flex-direction: column;
   max-height: calc(100vh - 2rem);
   overflow: hidden;
-  background: white;
-  color: #18181b;
-  border-radius: 16px;
+  background: $white;
+  color: $zinc-900;
+  border-radius: $radius-2xl;
   box-shadow: 
     0 0 0 1px rgba(0, 0, 0, 0.05),
     0 25px 50px -12px rgba(0, 0, 0, 0.25);
@@ -109,18 +109,19 @@
 }
 
 .title {
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: #18181b;
+  font-size: $text-2xl;
+  font-weight: $font-weight-semibold;
+  color: $zinc-900;
   margin: 0 0 0.5rem 0;
   padding-right: 2rem;
   letter-spacing: -0.025em;
+  line-height: $leading-tight;
 }
 
 .description {
-  font-size: 0.9375rem;
-  color: #52525b;
-  line-height: 1.6;
+  font-size: $text-sm;
+  color: $color-text-secondary;
+  line-height: $leading-relaxed;
   margin: 0;
 }
 
@@ -163,9 +164,9 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 0.75rem;
-  padding-top: 1.25rem;
-  background: white;
+  gap: $spacing-md;
+  padding-top: $spacing-xl;
+  background: $white;
 
   &.sticky {
     position: sticky;
@@ -187,19 +188,19 @@
   right: 1rem;
   background: transparent;
   border: none;
-  color: #71717a;
+  color: $zinc-500;
   cursor: pointer;
   padding: 0.5rem;
-  border-radius: 8px;
+  border-radius: $radius-md;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.15s ease;
+  transition: all $transition-fast;
   z-index: 10;
 
   &:hover {
-    background: #f4f4f5;
-    color: #18181b;
+    background: $zinc-100;
+    color: $zinc-900;
   }
 }
 
@@ -209,19 +210,19 @@
 
 .cancelButton {
   padding: 0.625rem 1rem;
-  border-radius: 8px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  border: 1px solid #e4e4e7;
+  border-radius: $radius-md;
+  font-size: $text-sm;
+  font-weight: $font-weight-medium;
+  border: 1px solid $zinc-200;
   cursor: pointer;
-  transition: all 0.15s ease;
-  background: white;
-  color: #3f3f46;
+  transition: all $transition-fast;
+  background: $white;
+  color: $zinc-700;
   font-family: inherit;
 
   &:hover:not(:disabled) {
-    background: #f4f4f5;
-    border-color: #d4d4d8;
+    background: $zinc-100;
+    border-color: $zinc-300;
   }
 
   &:active:not(:disabled) {
@@ -236,18 +237,18 @@
 
 .confirmButton {
   padding: 0.625rem 1rem;
-  border-radius: 8px;
-  font-size: 0.875rem;
-  font-weight: 500;
+  border-radius: $radius-md;
+  font-size: $text-sm;
+  font-weight: $font-weight-medium;
   border: none;
   cursor: pointer;
-  transition: all 0.15s ease;
-  background: #18181b;
-  color: white;
+  transition: all $transition-fast;
+  background: $zinc-900;
+  color: $white;
   font-family: inherit;
 
   &:hover:not(:disabled) {
-    background: #27272a;
+    background: $zinc-800;
   }
 
   &:active:not(:disabled) {
@@ -288,10 +289,10 @@
   background: inherit;
 }
 
-.panel.variantDanger .title { color: #dc2626; }
-.panel.variantWarning .title { color: #d97706; }
-.panel.variantSuccess .title { color: #16a34a; }
-.panel.variantInfo .title { color: #d0df00; }
+.panel.variantDanger .title { color: $red-500; }
+.panel.variantWarning .title { color: $orange-500; }
+.panel.variantSuccess .title { color: $green-500; }
+.panel.variantInfo .title { color: $brand-primary; }
 
 // ============================================================================
 // CONTENT VARIANTS
@@ -410,81 +411,81 @@
 @mixin darkModeStyles {
   .panel,
   .dialogContent {
-    background: #0c0c0c;
-    color: #fafafa;
-    box-shadow: 
+    background: $color-bg-dark;
+    color: $zinc-50;
+    box-shadow:
       0 0 0 1px rgba(255, 255, 255, 0.1),
       0 25px 50px -12px rgba(0, 0, 0, 0.5);
   }
-  
+
   .title {
-    color: #fafafa;
+    color: $zinc-50;
   }
-  
+
   .description {
-    color: #a1a1aa;
+    color: $color-text-dark-secondary;
   }
-  
+
   .content,
   .dialogBody,
   .scrollableContent {
     &::-webkit-scrollbar-thumb {
       background: rgba(255, 255, 255, 0.15);
     }
-    
+
     &::-webkit-scrollbar-thumb:hover {
       background: rgba(255, 255, 255, 0.25);
     }
   }
-  
+
   .dialogFooter {
-    background: #0c0c0c;
+    background: $color-bg-dark;
 
     &.sticky {
       box-shadow: 0 -2px 8px -2px rgba(0, 0, 0, 0.3);
     }
   }
-  
+
   .closeButton,
   .dialogClose {
-    color: #a1a1aa;
-    
+    color: $zinc-400;
+
     &:hover {
-      background: #27272a;
-      color: #fafafa;
+      background: $zinc-800;
+      color: $zinc-50;
     }
   }
-  
+
   .cancelButton {
-    background: #27272a;
-    border-color: #3f3f46;
-    color: #e4e4e7;
+    background: $zinc-800;
+    border-color: $zinc-700;
+    color: $zinc-200;
 
     &:hover:not(:disabled) {
-      background: #3f3f46;
-      border-color: #52525b;
-      color: #fafafa;
+      background: $zinc-700;
+      border-color: $zinc-600;
+      color: $zinc-50;
     }
 
     &:active:not(:disabled) {
-      background: #52525b;
+      background: $zinc-600;
     }
   }
-  
+
   .confirmButton {
-    background: #fafafa;
-    color: #18181b;
+    background: $zinc-50;
+    color: $zinc-900;
 
     &:hover:not(:disabled) {
-      background: #e4e4e7;
+      background: $zinc-200;
     }
   }
-  
+
   .variantDanger,
   .variantWarning,
   .variantSuccess,
   .variantInfo {
-    color: white;
+    color: $white;
   }
 }
 

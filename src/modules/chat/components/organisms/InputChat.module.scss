@@ -5,24 +5,24 @@
  */
 
 @use '@/app/styles/variables' as *;
-@use 'sass:color';
-@use '@/app/styles/utils' as *;
+@use '@/app/styles/utils' as utils;
+@use '../../styles/mixins' as *;
 
 // ============================================================================
 // EDIT CONTAINER (Message Editing)
 // ============================================================================
 .editContainer {
-  background: #fef3c7;
-  border-left: 4px solid #f59e0b;
-  border-radius: 8px;
-  margin-bottom: 12px;
-  padding: 12px;
+  background: $amber-100;
+  border-left: 4px solid $amber-500;
+  border-radius: $radius-md;
+  margin-bottom: $spacing-md;
+  padding: $spacing-md;
   animation: slideInEdit 0.3s ease-out;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 
   :global(body.dark) & {
-    background: #3f3f46;
-    border-left-color: #f59e0b;
+    background: $zinc-700;
+    border-left-color: $amber-500;
     box-shadow: none;
   }
 
@@ -31,12 +31,12 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 8px;
+      margin-bottom: $spacing-sm;
 
       .editLabel {
-        font-size: 12px;
-        font-weight: 600;
-        color: #d97706;
+        font-size: $text-xs;
+        font-weight: $font-weight-semibold;
+        color: $amber-600;
         text-transform: uppercase;
         letter-spacing: 0.5px;
       }
@@ -45,9 +45,9 @@
         background: none;
         border: none;
         cursor: pointer;
-        padding: 4px;
-        border-radius: 4px;
-        transition: background-color 0.2s ease;
+        padding: $spacing-xs;
+        border-radius: $radius-xs;
+        transition: $transition-fast;
 
         &:hover {
           background-color: rgba(0, 0, 0, 0.1);
@@ -58,9 +58,9 @@
     .editPreview {
       display: flex;
       align-items: center;
-      gap: 8px;
-      font-size: 14px;
-      color: #92400e;
+      gap: $spacing-sm;
+      font-size: $text-sm;
+      color: $amber-800;
 
       .editText {
         flex: 1;
@@ -71,25 +71,25 @@
     .editInputContainer {
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: $spacing-md;
 
       .editInput {
         width: 100%;
         min-height: 80px;
-        padding: 12px;
-        background: white;
-        border: 1px solid #e5e7eb;
-        border-radius: 8px;
+        padding: $spacing-md;
+        background: $white;
+        border: 1px solid $zinc-200;
+        border-radius: $radius-md;
         font-family: $font-family-primary;
-        font-size: 14px;
-        line-height: 1.5;
+        font-size: $text-sm;
+        line-height: $leading-normal;
         resize: vertical;
-        transition: border-color 0.2s ease;
+        transition: $transition-fast;
 
         &:focus {
           outline: none;
-          border-color: #3b82f6;
-          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+          border-color: $blue-500;
+          box-shadow: 0 0 0 3px rgba($blue-500, 0.1);
         }
 
         .ProseMirror {
@@ -97,7 +97,7 @@
           min-height: 60px;
 
           p {
-            margin: 0 0 8px 0;
+            margin: 0 0 $spacing-sm 0;
 
             &:last-child {
               margin-bottom: 0;
@@ -108,40 +108,40 @@
 
       .editActions {
         display: flex;
-        gap: 8px;
+        gap: $spacing-sm;
         justify-content: flex-end;
 
         .editSaveButton,
         .editCancelButton {
-          padding: 8px 16px;
-          border-radius: 6px;
-          font-size: 14px;
-          font-weight: 500;
+          padding: $spacing-sm $spacing-lg;
+          border-radius: $radius-sm;
+          font-size: $text-sm;
+          font-weight: $font-weight-medium;
           cursor: pointer;
-          transition: all 0.2s ease;
+          transition: $transition-fast;
           border: none;
         }
 
         .editSaveButton {
-          background: #3b82f6;
-          color: white;
+          background: $blue-500;
+          color: $white;
 
           &:hover:not(:disabled) {
-            background: #2563eb;
+            background: $blue-500;
           }
 
           &:disabled {
-            background: #9ca3af;
+            background: $zinc-400;
             cursor: not-allowed;
           }
         }
 
         .editCancelButton {
-          background: #f3f4f6;
-          color: #374151;
+          background: $zinc-100;
+          color: $zinc-700;
 
           &:hover {
-            background: #e5e7eb;
+            background: $zinc-200;
           }
         }
       }
@@ -171,21 +171,21 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
-  background: rgba(59, 130, 246, 0.1);
-  border: 1px solid rgba(59, 130, 246, 0.2);
-  border-radius: 12px;
-  margin-bottom: 12px;
-  font-size: 14px;
-  color: #1e40af;
+  padding: $spacing-md $spacing-lg;
+  background: rgba($blue-500, 0.1);
+  border: 1px solid rgba($blue-500, 0.2);
+  border-radius: $radius-lg;
+  margin-bottom: $spacing-md;
+  font-size: $text-sm;
+  color: $blue-500;
   font-family: $font-family-primary;
-  font-weight: 500;
+  font-weight: $font-weight-medium;
 
   > div {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: $spacing-md;
     width: 100%;
 
     span {
@@ -193,20 +193,20 @@
     }
 
     button {
-      background: rgba(59, 130, 246, 0.1);
-      border: 1px solid rgba(59, 130, 246, 0.3);
-      border-radius: 8px;
-      padding: 6px 12px;
-      color: #1e40af;
-      font-size: 12px;
-      font-weight: 600;
+      background: rgba($blue-500, 0.1);
+      border: 1px solid rgba($blue-500, 0.3);
+      border-radius: $radius-md;
+      padding: $spacing-xs $spacing-md;
+      color: $blue-500;
+      font-size: $text-xs;
+      font-weight: $font-weight-semibold;
       cursor: pointer;
-      transition: all 0.2s ease-in-out;
+      transition: $transition-fast;
       white-space: nowrap;
 
       &:hover {
-        background: rgba(59, 130, 246, 0.2);
-        border-color: rgba(59, 130, 246, 0.4);
+        background: rgba($blue-500, 0.2);
+        border-color: rgba($blue-500, 0.4);
       }
     }
   }
@@ -216,21 +216,21 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
-  background: rgba(245, 158, 11, 0.1);
-  border: 1px solid rgba(245, 158, 11, 0.3);
-  border-radius: 12px;
-  margin-bottom: 12px;
-  font-size: 14px;
-  color: #b45309;
+  padding: $spacing-md $spacing-lg;
+  background: rgba($amber-500, 0.1);
+  border: 1px solid rgba($amber-500, 0.3);
+  border-radius: $radius-lg;
+  margin-bottom: $spacing-md;
+  font-size: $text-sm;
+  color: $amber-700;
   font-family: $font-family-primary;
-  font-weight: 500;
+  font-weight: $font-weight-medium;
 
   > div {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: $spacing-md;
     width: 100%;
 
     span {
@@ -238,58 +238,58 @@
     }
 
     button {
-      background: rgba(245, 158, 11, 0.1);
-      border: 1px solid rgba(245, 158, 11, 0.3);
-      border-radius: 8px;
-      padding: 6px 12px;
-      color: #b45309;
-      font-size: 12px;
-      font-weight: 600;
+      background: rgba($amber-500, 0.1);
+      border: 1px solid rgba($amber-500, 0.3);
+      border-radius: $radius-md;
+      padding: $spacing-xs $spacing-md;
+      color: $amber-700;
+      font-size: $text-xs;
+      font-weight: $font-weight-semibold;
       cursor: pointer;
-      transition: all 0.2s ease-in-out;
+      transition: $transition-fast;
       white-space: nowrap;
 
       &:hover {
-        background: rgba(245, 158, 11, 0.2);
-        border-color: rgba(245, 158, 11, 0.4);
+        background: rgba($amber-500, 0.2);
+        border-color: rgba($amber-500, 0.4);
       }
     }
   }
 }
 
 :global(body.dark) .persistedData {
-  background: rgba(59, 130, 246, 0.15);
-  border-color: rgba(59, 130, 246, 0.3);
-  color: #93c5fd;
+  background: rgba($blue-500, 0.15);
+  border-color: rgba($blue-500, 0.3);
+  color: $blue-300;
 
   > div {
     button {
-      background: rgba(59, 130, 246, 0.2);
-      border-color: rgba(59, 130, 246, 0.4);
-      color: #93c5fd;
+      background: rgba($blue-500, 0.2);
+      border-color: rgba($blue-500, 0.4);
+      color: $blue-300;
 
       &:hover {
-        background: rgba(59, 130, 246, 0.3);
-        border-color: rgba(59, 130, 246, 0.5);
+        background: rgba($blue-500, 0.3);
+        border-color: rgba($blue-500, 0.5);
       }
     }
   }
 }
 
 :global(body.dark) .timerWarning {
-  background: rgba(245, 158, 11, 0.15);
-  border-color: rgba(245, 158, 11, 0.3);
-  color: #fcd34d;
+  background: rgba($amber-500, 0.15);
+  border-color: rgba($amber-500, 0.3);
+  color: $amber-300;
 
   > div {
     button {
-      background: rgba(245, 158, 11, 0.2);
-      border-color: rgba(245, 158, 11, 0.4);
-      color: #fcd34d;
+      background: rgba($amber-500, 0.2);
+      border-color: rgba($amber-500, 0.4);
+      color: $amber-300;
 
       &:hover {
-        background: rgba(245, 158, 11, 0.3);
-        border-color: rgba(245, 158, 11, 0.5);
+        background: rgba($amber-500, 0.3);
+        border-color: rgba($amber-500, 0.5);
       }
     }
   }
@@ -301,63 +301,63 @@
 .inputContainer {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  background: #f5f5f5;
-  padding: 20px;
+  gap: $spacing-sm;
+  background: $zinc-100;
+  padding: $spacing-lg;
   position: relative;
   box-shadow:
     -6px -6px 12px rgba(255, 255, 255, 0.004),
     6px 6px 12px rgba(0, 0, 0, 0.10);
-  transition: all 0.3s ease-in-out;
+  transition: $transition-fast;
 }
 
 .inputContainer:has(.mentionAutocomplete) {
-  margin-bottom: 12px;
+  margin-bottom: $spacing-md;
 }
 
 :global(body.dark) .inputContainer {
-  background: #151515a9;
-  border: 1px solid rgba(255, 255, 255, 0.0509803922);
+  background: rgba(21, 21, 21, 0.66);
+  border: 1px solid rgba($white, 0.05);
   box-shadow: none;
 }
 
 .input {
   width: 100%;
   height: 36px;
-  padding: 8px 12px;
-  background: #f3f3f3;
+  padding: $spacing-sm $spacing-md;
+  background: $zinc-100;
   border: none;
-  border-radius: 10px;
-  color: #1b2734d9;
-  font-size: 15px;
+  border-radius: $radius-md;
+  color: rgba($zinc-900, 0.85);
+  font-size: $text-sm;
   font-family: $font-family-primary;
-  font-weight: 400;
+  font-weight: $font-weight-normal;
   opacity: 0.85;
   box-shadow:
     inset -2px -2px 4px rgba(255, 255, 255, 0.03),
     inset 2px 2px 6px rgba(0, 0, 0, 0.15);
-  transition: all 0.2s ease-in-out;
+  transition: $transition-fast;
 }
 
 .input:focus {
   outline: none;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba($white, 0.03);
   box-shadow:
     inset -1px -1px 3px rgba(255, 255, 255, 0.1),
     inset 2px 2px 4px rgba(0, 0, 0, 0.2),
-    0 0 0 1px #e4e4e4;
+    0 0 0 1px $zinc-200;
 }
 
 :global(body.dark) .input {
-  background-color: #1c1c1c !important;
-  border: 1px solid rgba(255, 255, 255, 0.0509803922)!important;
-  color: rgba(255, 255, 255, 0.9) !important;
+  background-color: $zinc-900 !important;
+  border: 1px solid rgba($white, 0.05) !important;
+  color: rgba($white, 0.9) !important;
   box-shadow: none !important;
 
   &:focus {
-    background-color: #3f3f46 !important;
-    border-color: #60a5fa !important;
-    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.3) !important;
+    background-color: $zinc-700 !important;
+    border-color: $sky-400 !important;
+    box-shadow: 0 0 0 3px rgba($sky-400, 0.3) !important;
   }
 }
 
@@ -365,31 +365,30 @@
 // TOOLBAR & FORMAT BUTTONS
 // ============================================================================
 .toolbar {
-  @include neomorphic-container;
-  padding: 8px;
+  @include utils.neomorphic-container;
+  padding: $spacing-sm;
   display: flex;
   align-items: center;
-  gap: 4px;
-  margin-bottom: 8px;
+  gap: $spacing-xs;
+  margin-bottom: $spacing-sm;
   justify-content: space-around;
-  border-bottom: 1px solid $border-color;
+  border-bottom: 1px solid $zinc-200;
 
   &.dark {
-    border-bottom-color: color.adjust($border-color, $lightness: -50%);
+    border-bottom-color: $zinc-700;
   }
 }
 
 :global(body.dark) .toolbar {
-  background-color: #27272a;
-  border-bottom-color: #3f3f46;
+  background-color: $zinc-800;
+  border-bottom-color: $zinc-700;
   box-shadow: none;
 }
 
-
 .format-button {
-  background: #f1f5f9;
+  background: $slate-100;
   border: none;
-  border-radius: 100px;
+  border-radius: $radius-full;
   height: 28px;
   width: 28px;
   padding: 0;
@@ -398,15 +397,12 @@
   justify-content: center;
   cursor: pointer;
   box-shadow:
-    -3px -3px 6px #ffffff,
+    -3px -3px 6px $white,
     3px 3px 8px rgba(209, 217, 230, 0.8);
-  transition:
-    background-color 0.3s ease,
-    box-shadow 0.3s ease,
-    transform 0.2s ease;
+  transition: $transition-fast;
 
   &:hover {
-    background: #e2e8f0;
+    background: $slate-200;
     box-shadow:
       inset -2px -2px 4px rgba(255, 255, 255, 0.5),
       inset 2px 2px 6px rgba(0, 0, 0, 0.1);
@@ -414,14 +410,14 @@
   }
 
   &[data-active="true"] {
-    background: #e6ec94;
+    background: $brand-primary;
     transform: scale(0.98);
     box-shadow:
       inset -2px -2px 4px rgba(255, 255, 255, 0.3),
       inset 2px 2px 6px rgba(0, 0, 0, 0.15);
 
     &:hover {
-      background: #dfe087;
+      background: darken(#e6ec94, 3%);
       box-shadow:
         inset -2px -2px 4px rgba(255, 255, 255, 0.5),
         inset 2px 2px 6px rgba(0, 0, 0, 0.1);
@@ -432,12 +428,12 @@
   &:disabled {
     opacity: 0.4;
     cursor: not-allowed;
-    background: #f8f9fa;
+    background: $zinc-50;
     box-shadow: none;
     transform: none;
 
     &:hover {
-      background: #f8f9fa;
+      background: $zinc-50;
       box-shadow: none;
       transform: none;
     }
@@ -449,24 +445,24 @@
 }
 
 :global(body.dark) .format-button {
-  background: #3f3f46;
-  border: 1px solid #52525b;
+  background: $zinc-700;
+  border: 1px solid $zinc-600;
   box-shadow: none;
 
   &:hover {
-    background: #3f3f46;
-    border-color: #52525b;
+    background: $zinc-700;
+    border-color: $zinc-600;
     box-shadow: none;
     transform: translateY(-1px);
   }
 
   &[data-active="true"] {
-    background: #e6ec94;
+    background: $brand-primary;
     transform: scale(0.98);
     box-shadow: none;
 
     &:hover {
-      background: #dfe087;
+      background: darken(#e6ec94, 3%);
       box-shadow: none;
       transform: translateY(-1px) scale(0.98);
     }
@@ -475,13 +471,13 @@
   &:disabled {
     opacity: 0.4;
     cursor: not-allowed;
-    background: #3f3f46;
-    border-color: #52525b;
+    background: $zinc-700;
+    border-color: $zinc-600;
     box-shadow: none;
     transform: none;
 
     &:hover {
-      background: #3f3f46;
+      background: $zinc-700;
       box-shadow: none;
       transform: none;
     }
@@ -507,16 +503,13 @@
   text-align: center;
   height: 32px;
   width: 32px;
-  border-radius: 100px;
+  border-radius: $radius-full;
   border: none;
-  background: #f1f5f9;
+  background: $slate-100;
   box-shadow:
-    -3px -3px 6px #ffffff,
+    -3px -3px 6px $white,
     3px 3px 8px rgba(209, 217, 230, 0.8);
-  transition:
-    transform 0.2s ease-in-out,
-    box-shadow 0.3s ease,
-    background-color 0.3s ease-in-out;
+  transition: $transition-fast;
   cursor: pointer;
   padding: 0;
 }
@@ -526,21 +519,21 @@
   box-shadow:
     inset -2px -2px 3px rgba(255, 255, 255, 0.5),
     inset 2px 2px 4px rgba(0, 0, 0, 0.1);
-  background: #e4e8ee;
+  background: $zinc-200;
   transform: translateY(-1px);
 }
 
 :global(body.dark) .playStopButton,
 :global(body.dark) .sendButton {
-  background: #3f3f46;
-  border-color: #52525b;
+  background: $zinc-700;
+  border-color: $zinc-600;
   box-shadow: none;
 }
 
 :global(body.dark) .playStopButton:hover,
 :global(body.dark) .sendButton:hover {
-  background: #3f3f46;
-  border-color: #52525b;
+  background: $zinc-700;
+  border-color: $zinc-600;
   box-shadow: none;
 }
 
@@ -559,54 +552,51 @@
 }
 
 .playStopButton {
-  background: linear-gradient(135deg, #e6f3ff, #dbeafe) !important;
+  background: linear-gradient(135deg, $blue-50, $blue-100) !important;
   box-shadow:
-    -4px -4px 8px #ffffff,
-    4px 4px 8px rgba(59, 130, 246, 0.2) !important;
-  border: 1px solid rgba(59, 130, 246, 0.2);
+    -4px -4px 8px $white,
+    4px 4px 8px rgba($blue-500, 0.2) !important;
+  border: 1px solid rgba($blue-500, 0.2);
   border-radius: 50%;
   height: 32px;
   width: 32px;
-  padding: 4px;
+  padding: $spacing-xs;
   cursor: pointer;
-  transition:
-    background-color 0.3s ease-in-out,
-    box-shadow 0.3s ease,
-    transform 0.2s ease;
+  transition: $transition-fast;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-right: 8px;
+  margin-right: $spacing-sm;
 
   &:hover:not(:disabled) {
     box-shadow:
-      -5px -5px 10px #ffffff,
-      5px 5px 10px rgba(59, 130, 246, 0.3) !important;
+      -5px -5px 10px $white,
+      5px 5px 10px rgba($blue-500, 0.3) !important;
     transform: translateY(-2px);
   }
 
   &:active:not(:disabled) {
     box-shadow:
       inset -2px -2px 4px rgba(255, 255, 255, 0.8),
-      inset 2px 2px 4px rgba(59, 130, 246, 0.2) !important;
+      inset 2px 2px 4px rgba($blue-500, 0.2) !important;
     transform: translateY(0);
   }
 }
 
 :global(body.dark) .playStopButton {
-  background: #3b82f6 !important;
-  border-color: #60a5fa !important;
+  background: $blue-500 !important;
+  border-color: $sky-400 !important;
   box-shadow: none !important;
 
   &:hover:not(:disabled) {
-    background: #3b82f6 !important;
-    border-color: #60a5fa !important;
+    background: $blue-500 !important;
+    border-color: $sky-400 !important;
     box-shadow: none !important;
   }
 
   &:active:not(:disabled) {
-    background: #3b82f6 !important;
-    border-color: #60a5fa !important;
+    background: $blue-500 !important;
+    border-color: $sky-400 !important;
     box-shadow: none !important;
   }
 
@@ -616,27 +606,24 @@
 }
 
 .imageButton2 {
-  background: #f1f5f9;
+  background: $slate-100;
   border: none;
-  border-radius: 16px;
+  border-radius: $radius-xl;
   height: 32px;
   width: 32px;
   font-family: $font-family-primary;
-  padding: 4px;
+  padding: $spacing-xs;
   cursor: pointer;
-  transition:
-    background-color 0.3s ease-in-out,
-    box-shadow 0.3s ease,
-    transform 0.2s ease;
+  transition: $transition-fast;
   box-shadow:
-    -3px -3px 6px #ffffff,
+    -3px -3px 6px $white,
     3px 3px 8px rgba(0, 0, 0, 0.050);
   display: flex;
   align-items: center;
   justify-content: center;
 
   &:hover {
-    background-color: #e2e8f0;
+    background-color: $slate-200;
     box-shadow:
       inset -2px -2px 3px rgba(255, 255, 255, 0.5),
       inset 2px 2px 4px rgba(0, 0, 0, 0.1);
@@ -645,13 +632,13 @@
 }
 
 :global(body.dark) .imageButton2 {
-  background: #3f3f46;
-  border: 1px solid #52525b;
+  background: $zinc-700;
+  border: 1px solid $zinc-600;
   box-shadow: none;
 
   &:hover {
-    background-color: #3f3f46;
-    border-color: #52525b;
+    background-color: $zinc-700;
+    border-color: $zinc-600;
     box-shadow: none;
   }
 }
@@ -664,11 +651,11 @@
 // REPLY CONTAINER
 // ============================================================================
 .replyContainer {
-  background: #f8f9fa;
-  border-left: 4px solid #3b82f6;
-  border-radius: 8px;
-  margin-bottom: 12px;
-  padding: 12px;
+  background: $zinc-50;
+  border-left: 4px solid $blue-500;
+  border-radius: $radius-md;
+  margin-bottom: $spacing-md;
+  padding: $spacing-md;
   animation: slideInReply 0.3s ease-out;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 
@@ -677,12 +664,12 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 8px;
+      margin-bottom: $spacing-sm;
 
       .replyLabel {
-        font-size: 12px;
-        font-weight: 600;
-        color: #3b82f6;
+        font-size: $text-xs;
+        font-weight: $font-weight-semibold;
+        color: $blue-500;
         text-transform: uppercase;
         letter-spacing: 0.5px;
       }
@@ -691,9 +678,9 @@
         background: none;
         border: none;
         cursor: pointer;
-        padding: 4px;
-        border-radius: 4px;
-        transition: background-color 0.2s ease;
+        padding: $spacing-xs;
+        border-radius: $radius-xs;
+        transition: $transition-fast;
 
         &:hover {
           background-color: rgba(0, 0, 0, 0.1);
@@ -704,12 +691,12 @@
     .replyPreview {
       display: flex;
       align-items: center;
-      gap: 8px;
-      font-size: 14px;
-      color: #6b7280;
+      gap: $spacing-sm;
+      font-size: $text-sm;
+      color: $zinc-500;
 
       .replyImage {
-        border-radius: 4px;
+        border-radius: $radius-xs;
         object-fit: cover;
       }
 
@@ -724,25 +711,25 @@
 }
 
 :global(body.dark) .replyContainer {
-  background: #3f3f46;
-  border-left-color: #3b82f6;
+  background: $zinc-700;
+  border-left-color: $blue-500;
   box-shadow: none;
 
   .replyContent {
     .replyHeader {
       .replyLabel {
-        color: #60a5fa;
+        color: $sky-500;
       }
 
       .replyCancelButton {
         &:hover {
-          background-color: rgba(255, 255, 255, 0.1);
+          background-color: rgba($white, 0.1);
         }
       }
     }
 
     .replyPreview {
-      color: #d1d5db;
+      color: $zinc-300;
     }
   }
 }
@@ -763,23 +750,23 @@
 // ============================================================================
 .imagePreview {
   position: relative;
-  margin-bottom: 8px;
+  margin-bottom: $spacing-sm;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px;
-  border: 1px solid #eee;
-  border-radius: 6px;
-  background: #fafafa;
+  gap: $spacing-sm;
+  padding: $spacing-sm;
+  border: 1px solid $zinc-200;
+  border-radius: $radius-sm;
+  background: $zinc-50;
 
   :global(body.dark) & {
-    background: #3f3f46;
-    border-color: #52525b;
+    background: $zinc-700;
+    border-color: $zinc-600;
   }
 }
 
 .previewImage {
-  border-radius: 4px;
+  border-radius: $radius-xs;
   width: auto;
   height: auto;
   max-width: 100px;
@@ -791,7 +778,7 @@
   position: absolute;
   top: -8px;
   right: -8px;
-  background: #ef4444;
+  background: $red-500;
   border: none;
   border-radius: 50%;
   width: 24px;
@@ -805,18 +792,18 @@
 .filePreview {
   display: flex;
   align-items: center;
-  gap: 6px;
-  color: white;
-  padding: 5px;
-  background: #f5f5f5;
-  border-radius: 4px;
-  margin-bottom: 5px;
+  gap: $spacing-xs;
+  color: $white;
+  padding: $spacing-xs;
+  background: $zinc-100;
+  border-radius: $radius-xs;
+  margin-bottom: $spacing-xs;
   max-width: 100%;
 }
 
 .fileName {
-  font-size: 12px;
-  color: #666;
+  font-size: $text-xs;
+  color: $zinc-500;
   max-width: 150px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -824,8 +811,8 @@
 }
 
 :global(body.dark) .filePreview {
-  background: #3f3f46;
-  border-color: #52525b;
+  background: $zinc-700;
+  border-color: $zinc-600;
 }
 
 // ============================================================================
@@ -834,16 +821,16 @@
 .uploadProgress {
   width: 100%;
   height: 4px;
-  background: #eee;
+  background: $zinc-200;
   position: relative;
-  margin-top: 4px;
+  margin-top: $spacing-xs;
   border-radius: 2px;
   overflow: hidden;
 }
 
 .progressBar {
   height: 100%;
-  background: var(--primary, #3b82f6);
+  background: $blue-500;
   position: absolute;
   left: 0;
   top: 0;
@@ -851,15 +838,15 @@
 
 .progressText {
   font-size: 10px;
-  color: #666;
+  color: $zinc-500;
   margin-top: 2px;
 }
 
 .processingSpinner {
   position: absolute;
-  top: 8px;
-  right: 8px;
-  color: #3b82f6;
+  top: $spacing-sm;
+  right: $spacing-sm;
+  color: $blue-500;
 }
 
 .spinAnimation {
@@ -880,8 +867,8 @@
 // ============================================================================
 .dragging {
   .input {
-    border-color: var(--primary, #3b82f6);
-    background: #f8f9fa;
+    border-color: $blue-500;
+    background: $zinc-50;
     transform: scale(1.02);
     transition: transform 0.2s ease;
   }
@@ -896,12 +883,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(59, 130, 246, 0.1);
-  color: var(--primary, #3b82f6);
-  font-weight: bold;
+  background: rgba($blue-500, 0.1);
+  color: $blue-500;
+  font-weight: $font-weight-bold;
   z-index: 5;
   pointer-events: none;
-  border-radius: 4px;
+  border-radius: $radius-xs;
   backdrop-filter: blur(2px);
 }
 
@@ -912,11 +899,11 @@
   position: absolute;
   bottom: 100%;
   left: 0;
-  margin-bottom: 8px;
+  margin-bottom: $spacing-sm;
   width: 256px;
-  background: white;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
+  background: $white;
+  border: 1px solid $zinc-300;
+  border-radius: $radius-sm;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
   z-index: 50;
 }
@@ -933,19 +920,19 @@
     bottom: 100%;
     left: 50%;
     transform: translateX(-50%);
-    background-color: #000;
-    color: #fff;
-    padding: 6px 8px;
-    border-radius: 4px;
-    font-size: 12px;
+    background-color: $zinc-900;
+    color: $white;
+    padding: $spacing-xs $spacing-sm;
+    border-radius: $radius-xs;
+    font-size: $text-xs;
     font-family: $font-family-primary;
-    font-weight: 400;
+    font-weight: $font-weight-normal;
     white-space: nowrap;
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.3s ease, visibility 0.3s ease;
+    transition: $transition-fast;
     z-index: 1000;
-    margin-bottom: 5px;
+    margin-bottom: $spacing-xs;
     pointer-events: none;
   }
 
@@ -959,10 +946,10 @@
     height: 0;
     border-left: 4px solid transparent;
     border-right: 4px solid transparent;
-    border-top: 4px solid #000;
+    border-top: 4px solid $zinc-900;
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.3s ease, visibility 0.3s ease;
+    transition: $transition-fast;
     z-index: 1000;
     margin-bottom: 1px;
     pointer-events: none;

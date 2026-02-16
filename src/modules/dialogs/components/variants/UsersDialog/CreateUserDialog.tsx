@@ -20,7 +20,7 @@ import {
 import { DialogFooter, DialogActions } from '../../molecules';
 import { panelVariants } from '../../../config/animations';
 import { useMediaQuery } from '../../../hooks/useMediaQuery';
-import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
+import { useToast } from '@/modules/toast';
 import styles from './UsersDialog.module.scss';
 import { User, Mail, Lock, AtSign, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 
@@ -66,7 +66,7 @@ export function CreateUserDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const { success: showSuccess, error: showError } = useSonnerToast();
+  const { success: showSuccess, error: showError } = useToast();
   const isMobile = useMediaQuery('(max-width: 767px)');
 
   // Reset form when dialog closes
@@ -145,7 +145,7 @@ export function CreateUserDialog({
         throw new Error(result.error || 'Error al crear usuario');
       }
 
-      showSuccess(`Usuario "${formData.firstName} ${formData.lastName}" creado exitosamente`);
+      showSuccess('Usuario creado', `"${formData.firstName} ${formData.lastName}" ya tiene acceso al sistema.`);
       onUserCreated();
     } catch (error) {
       console.error('Error creating user:', error);

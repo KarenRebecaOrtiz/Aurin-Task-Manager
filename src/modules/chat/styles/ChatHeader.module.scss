@@ -1,6 +1,6 @@
 /**
  * Chat Header - Component Styles
- * 
+ *
  * Estilos del header del chat con información de la tarea.
  */
 
@@ -13,8 +13,8 @@
   position: relative;
   z-index: 1;
 
-  :global(.dark) & {
-    border-bottom-color: rgba(255, 255, 255, 0.05);
+  :global(body.dark) & {
+    border-bottom-color: rgba($white, 0.05);
   }
 }
 
@@ -23,24 +23,24 @@
 // ============================================================================
 
 .topSection {
-  padding: 12px 0;
+  padding: $spacing-md 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: $spacing-md;
 
   @media (max-width: 767px) {
     justify-content: center;
-    padding: 8px 0;
+    padding: $spacing-sm 0;
   }
 }
 
 .leftSection {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: $spacing-md;
   flex: 1;
-  min-width: 0; // Para que funcione el text-overflow
+  min-width: 0;
 
   @media (max-width: 767px) {
     display: none;
@@ -74,7 +74,7 @@
   background-color: transparent;
   color: rgba(0, 0, 0, 0.5);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: $transition-fast;
   flex-shrink: 0;
 
   &:hover {
@@ -86,12 +86,12 @@
     transform: scale(0.95);
   }
 
-  :global(.dark) & {
-    color: rgba(255, 255, 255, 0.5);
+  :global(body.dark) & {
+    color: rgba($white, 0.5);
 
     &:hover {
-      background-color: rgba(255, 255, 255, 0.1);
-      color: rgba(255, 255, 255, 0.9);
+      background-color: rgba($white, 0.1);
+      color: rgba($white, 0.9);
     }
   }
 
@@ -116,7 +116,7 @@
   background-color: transparent;
   color: rgba(0, 0, 0, 0.5);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: $transition-fast;
   flex-shrink: 0;
 
   &:hover {
@@ -128,12 +128,12 @@
     transform: scale(0.95);
   }
 
-  :global(.dark) & {
-    color: rgba(255, 255, 255, 0.5);
+  :global(body.dark) & {
+    color: rgba($white, 0.5);
 
     &:hover {
-      background-color: rgba(255, 255, 255, 0.1);
-      color: rgba(255, 255, 255, 0.9);
+      background-color: rgba($white, 0.1);
+      color: rgba($white, 0.9);
     }
   }
 
@@ -155,10 +155,10 @@
   height: 36px;
   border-radius: 50%;
   border: none;
-  background-color: #d0df00;
-  color: #000000;
+  background-color: $brand-primary;
+  color: $zinc-900;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: $transition-fast;
   flex-shrink: 0;
 
   &:hover {
@@ -182,32 +182,32 @@
 }
 
 .breadcrumb {
-  font-size: 12px;
+  font-size: $text-xs;
   color: $chat-text-secondary-light;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 
-  :global(.dark) & {
+  :global(body.dark) & {
     color: $chat-text-secondary-dark;
   }
 
   .separator {
-    margin: 0 6px;
+    margin: 0 $spacing-xs;
   }
 }
 
 .summaryButton {
   @include neumorphic-button;
   width: auto;
-  padding: 6px 12px;
-  font-size: 14px;
-  font-weight: 500;
-  gap: 6px;
+  padding: $spacing-xs $spacing-md;
+  font-size: $text-sm;
+  font-weight: $font-weight-medium;
+  gap: $spacing-xs;
   flex-shrink: 0;
 
   &:hover {
-    gap: 8px;
+    gap: $spacing-sm;
   }
 }
 
@@ -216,17 +216,16 @@
 // ============================================================================
 
 .taskInfo {
-  padding: 0 0 12px 0;
+  padding: 0 0 $spacing-md 0;
   display: flex;
-  gap: 20px;
+  gap: $spacing-lg;
   flex-direction: row;
 
-  // Mobile drawer: center content
   @media (max-width: 767px) {
     flex-direction: column;
     align-items: center;
     text-align: center;
-    gap: 12px;
+    gap: $spacing-md;
   }
 }
 
@@ -244,7 +243,7 @@
 .titleRow {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: $spacing-sm;
   flex-wrap: wrap;
 
   @media (max-width: 767px) {
@@ -253,33 +252,32 @@
 }
 
 .taskTitle {
-  font-size: 18px;
-  font-weight: 700;
+  font-size: $text-lg;
+  font-weight: $font-weight-bold;
   color: $chat-text-primary-light;
-  margin-bottom: 4px;
-  line-height: 1.3;
+  margin-bottom: $spacing-xs;
+  line-height: $leading-tight;
 
-  :global(.dark) & {
+  :global(body.dark) & {
     color: $chat-text-primary-dark;
   }
 
   @media (max-width: 767px) {
-    font-size: 16px;
+    font-size: $text-base;
     text-align: center;
   }
 }
 
 .taskDescription {
-  font-size: 14px;
+  font-size: $text-sm;
   color: $chat-text-secondary-light;
-  line-height: 1.5;
-  transition: all 0.3s ease;
+  line-height: $leading-normal;
+  transition: $transition-fast;
 
-  :global(.dark) & {
+  :global(body.dark) & {
     color: $chat-text-secondary-dark;
   }
 
-  // Estado colapsado: truncar con elipsis
   &.collapsed {
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -289,17 +287,15 @@
     text-overflow: ellipsis;
   }
 
-  // Estado expandido: mostrar todo
   &.expanded {
     display: block;
     overflow: visible;
   }
 
   @media (max-width: 767px) {
-    font-size: 13px;
+    font-size: $text-xs;
     text-align: center;
-    
-    // En mobile siempre truncar a 2 líneas cuando está colapsado
+
     &.collapsed {
       -webkit-line-clamp: 2;
       line-clamp: 2;
@@ -312,37 +308,37 @@
 // ============================================================================
 
 .detailsToggle {
-  padding: 0 0 12px 0;
+  padding: 0 0 $spacing-md 0;
 
   @media (max-width: 767px) {
     display: flex;
     justify-content: center;
-    padding: 0 0 8px 0;
+    padding: 0 0 $spacing-sm 0;
   }
 }
 
 .toggleButton {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  color: #3b82f6;
+  gap: $spacing-sm;
+  font-size: $text-sm;
+  font-weight: $font-weight-medium;
+  color: $blue-500;
   background: none;
   border: none;
   cursor: pointer;
   padding: 0;
-  transition: color 0.2s ease;
+  transition: $transition-fast;
 
   &:hover {
-    color: #2563eb;
+    color: $blue-500;
   }
 
-  :global(.dark) & {
-    color: #60a5fa;
+  :global(body.dark) & {
+    color: $sky-500;
 
     &:hover {
-      color: #3b82f6;
+      color: $blue-500;
     }
   }
 }
@@ -361,50 +357,50 @@
 
 .details {
   border-top: 1px solid rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
+  transition: $transition-fast;
 
-  :global(.dark) & {
-    border-top-color: rgba(255, 255, 255, 0.05);
+  :global(body.dark) & {
+    border-top-color: rgba($white, 0.05);
   }
 }
 
 .detailsContent {
-  padding: 16px 0;
+  padding: $spacing-lg 0;
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+  gap: $spacing-md;
 }
 
 .detailCard {
-  background: rgba(241, 245, 249, 0.5);
-  border-radius: 12px;
-  padding: 12px;
-  transition: background 0.2s ease;
+  background: rgba($slate-100, 0.5);
+  border-radius: $radius-lg;
+  padding: $spacing-md;
+  transition: $transition-fast;
 
-  :global(.dark) & {
-    background: rgba(39, 39, 42, 0.5);
+  :global(body.dark) & {
+    background: rgba($zinc-800, 0.5);
   }
 }
 
 .detailLabel {
-  font-size: 12px;
+  font-size: $text-xs;
   color: $chat-text-secondary-light;
-  font-weight: 500;
-  margin-bottom: 8px;
+  font-weight: $font-weight-medium;
+  margin-bottom: $spacing-sm;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 
-  :global(.dark) & {
+  :global(body.dark) & {
     color: $chat-text-secondary-dark;
   }
 }
 
 .detailValue {
-  font-size: 14px;
-  font-weight: 500;
+  font-size: $text-sm;
+  font-weight: $font-weight-medium;
   color: $chat-text-primary-light;
 
-  :global(.dark) & {
+  :global(body.dark) & {
     color: $chat-text-primary-dark;
   }
 }
@@ -416,55 +412,55 @@
 .statusBadge {
   width: 100%;
   text-align: left;
-  font-size: 14px;
-  font-weight: 500;
-  padding: 6px 8px;
-  border-radius: 8px;
+  font-size: $text-sm;
+  font-weight: $font-weight-medium;
+  padding: $spacing-xs $spacing-sm;
+  border-radius: $radius-md;
   border: none;
   cursor: pointer;
-  transition: opacity 0.2s ease;
+  transition: $transition-fast;
 
   &:hover {
     opacity: 0.8;
   }
 
   &.pending {
-    background: rgba(156, 163, 175, 0.2);
-    color: #4b5563;
+    background: rgba($zinc-400, 0.2);
+    color: $zinc-600;
 
-    :global(.dark) & {
-      background: rgba(156, 163, 175, 0.3);
-      color: #9ca3af;
+    :global(body.dark) & {
+      background: rgba($zinc-400, 0.3);
+      color: $zinc-400;
     }
   }
 
   &.inProgress {
-    background: rgba(59, 130, 246, 0.2);
-    color: #1e40af;
+    background: rgba($blue-500, 0.2);
+    color: $blue-500;
 
-    :global(.dark) & {
-      background: rgba(59, 130, 246, 0.3);
-      color: #60a5fa;
+    :global(body.dark) & {
+      background: rgba($blue-500, 0.3);
+      color: $sky-500;
     }
   }
 
   &.completed {
-    background: rgba(34, 197, 94, 0.2);
-    color: #15803d;
+    background: rgba($green-500, 0.2);
+    color: $green-500;
 
-    :global(.dark) & {
-      background: rgba(34, 197, 94, 0.3);
-      color: #4ade80;
+    :global(body.dark) & {
+      background: rgba($green-500, 0.3);
+      color: $green-500;
     }
   }
 
   &.onHold {
-    background: rgba(234, 179, 8, 0.2);
-    color: #a16207;
+    background: rgba($yellow-500, 0.2);
+    color: $yellow-500;
 
-    :global(.dark) & {
-      background: rgba(234, 179, 8, 0.3);
-      color: #facc15;
+    :global(body.dark) & {
+      background: rgba($yellow-500, 0.3);
+      color: $yellow-500;
     }
   }
 }
@@ -481,10 +477,10 @@
 .avatarGroup {
   display: flex;
   align-items: center;
-  
+
   & > div {
     margin-left: -8px;
-    transition: transform 0.15s ease;
+    transition: transform $transition-speed $transition-easing;
 
     &:first-child {
       margin-left: 0;
@@ -500,7 +496,7 @@
 .avatarWrapper {
   position: relative;
   display: inline-flex;
-  
+
   &:hover {
     z-index: 10;
   }
@@ -509,13 +505,13 @@
 .miniAvatar {
   width: 26px !important;
   height: 26px !important;
-  border: 2px solid white;
+  border: 2px solid $white;
   border-radius: 50%;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   font-size: 9px !important;
 
-  :global(.dark) & {
-    border-color: #1a1a1e;
+  :global(body.dark) & {
+    border-color: $zinc-900;
   }
 }
 
@@ -524,20 +520,20 @@
   height: 26px;
   margin-left: -8px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #e5e7eb, #d1d5db);
-  border: 2px solid white;
+  background: linear-gradient(135deg, $zinc-200, $zinc-300);
+  border: 2px solid $white;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 10px;
-  font-weight: 600;
-  color: #4b5563;
+  font-weight: $font-weight-semibold;
+  color: $zinc-600;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 
-  :global(.dark) & {
-    background: linear-gradient(135deg, #3f3f46, #52525b);
-    border-color: #1a1a1e;
-    color: #a1a1aa;
+  :global(body.dark) & {
+    background: linear-gradient(135deg, $zinc-700, $zinc-600);
+    border-color: $zinc-900;
+    color: $zinc-400;
   }
 }
 
@@ -548,55 +544,55 @@
 .datePill {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 20px;
-  background: white;
-  font-size: 13px;
-  font-weight: 500;
-  color: #374151;
-  box-shadow: 
+  gap: $spacing-xs;
+  padding: $spacing-xs $spacing-md;
+  border-radius: $radius-full;
+  background: $white;
+  font-size: $text-xs;
+  font-weight: $font-weight-medium;
+  color: $zinc-700;
+  box-shadow:
     0 1px 3px rgba(0, 0, 0, 0.08),
     0 0 0 1px rgba(0, 0, 0, 0.04);
 
-  :global(.dark) & {
-    background: rgba(255, 255, 255, 0.08);
-    color: #e5e7eb;
-    box-shadow: 
+  :global(body.dark) & {
+    background: rgba($white, 0.08);
+    color: $zinc-200;
+    box-shadow:
       0 1px 3px rgba(0, 0, 0, 0.2),
-      0 0 0 1px rgba(255, 255, 255, 0.06);
+      0 0 0 1px rgba($white, 0.06);
   }
 }
 
 .dateIcon {
-  color: #6b7280;
+  color: $color-text-secondary;
   flex-shrink: 0;
 
-  :global(.dark) & {
-    color: #9ca3af;
+  :global(body.dark) & {
+    color: $color-text-dark-secondary;
   }
 }
 
 .noDate {
   font-style: italic;
-  color: #9ca3af;
+  color: $zinc-400;
 
-  :global(.dark) & {
-    color: #6b7280;
+  :global(body.dark) & {
+    color: $zinc-500;
   }
 }
 
 // ============================================================================
-// TIME LOGGED - Now using TimeBreakdown component
+// TIME LOGGED
 // ============================================================================
 
 .timeLogged {
   display: flex;
   align-items: center;
-  gap: 6px;
-  color: #3b82f6;
+  gap: $spacing-xs;
+  color: $blue-500;
 
-  :global(.dark) & {
-    color: #60a5fa;
+  :global(body.dark) & {
+    color: $sky-500;
   }
 }

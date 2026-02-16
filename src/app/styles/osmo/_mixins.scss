@@ -1,0 +1,97 @@
+// ==========================================================================
+// Osmo Scaling System — Mixins
+// ==========================================================================
+
+@use "sass:map";
+@use "config" as *;
+@use "functions" as *;
+
+// --------------------------------------------------------------------------
+// Fluid type scale
+// --------------------------------------------------------------------------
+
+/// Generate CSS custom properties for each type scale step using clamp().
+/// Replaces the old static :root + media query approach with smooth fluid scaling.
+/// Output: :root { --text-xs: clamp(...); --text-sm: clamp(...); ... }
+@mixin osmo-type-scale() {
+  :root {
+    @each $step, $exponent in $osmo-type-steps {
+      --text-#{$step}: #{osmo-fluid-type($step)};
+    }
+  }
+}
+
+// --------------------------------------------------------------------------
+// Container scaling (for layout, not typography)
+// --------------------------------------------------------------------------
+
+/// Apply Osmo container scaling custom properties
+@mixin osmo-scaling-props($unit, $ideal, $min, $max) {
+  --size-unit: #{$unit};
+  --size-container-ideal: #{$ideal};
+  --size-container-min: #{$min};
+  --size-container-max: #{$max};
+  --size-container: clamp(var(--size-container-min), 100vw, var(--size-container-max));
+}
+
+/// Generate container breakpoints from configuration map.
+@mixin osmo-generate-breakpoints() {
+  $first: true;
+
+  @each $name, $config in $osmo-breakpoints {
+    $_valid: osmo-validate-breakpoint($name, $config);
+
+    $unit: map.get($config, unit);
+    $ideal: map.get($config, ideal);
+    $min: map.get($config, min);
+    $max: map.get($config, max);
+
+    @if $first {
+      :root {
+        @include osmo-scaling-props($unit, $ideal, $min, $max);
+        --type-ratio: #{$osmo-type-ratio};
+      }
+      $first: false;
+    } @else {
+      @media screen and (max-width: #{$max}) {
+        :root {
+          @include osmo-scaling-props($unit, $ideal, $min, $max);
+        }
+      }
+    }
+  }
+}
+
+// --------------------------------------------------------------------------
+// Debug overlay
+// --------------------------------------------------------------------------
+
+/// Shows current breakpoint info during development.
+/// Only outputs when $osmo-debug is true.
+@mixin osmo-debug-overlay() {
+  @if $osmo-debug {
+    body::after {
+      content: "Osmo Debug";
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 0.5rem 1rem;
+      background: rgba(0, 0, 0, 0.85);
+      color: #0f0;
+      font-family: monospace;
+      font-size: 12px;
+      z-index: 99999;
+      pointer-events: none;
+      text-align: center;
+
+      @each $name, $config in $osmo-breakpoints {
+        $bp-max: map.get($config, max);
+        $bp-min: map.get($config, min);
+        @media screen and (min-width: #{$bp-min}) and (max-width: #{$bp-max}) {
+          content: "[#{$name}] ideal: #{map.get($config, ideal)}px | range: #{$bp-min} – #{$bp-max}";
+        }
+      }
+    }
+  }
+}

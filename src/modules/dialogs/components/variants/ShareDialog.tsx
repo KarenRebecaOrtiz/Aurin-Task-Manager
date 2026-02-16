@@ -5,7 +5,7 @@ import { CheckIcon, CopyIcon, PlusCircle, Trash2, Link2, MessageSquare, AlertTri
 import { GradientAvatar } from '@/components/ui/GradientAvatar';
 import { CrudDialog } from '../organisms/CrudDialog';
 import { useDialog } from '../../hooks/useDialog';
-import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
+import { useToast } from '@/modules/toast';
 import { cn } from '@/lib/utils';
 import { buildGuestTaskUrl } from '@/lib/url-utils';
 import styles from '../../styles/Dialog.module.scss';
@@ -88,7 +88,7 @@ export function ShareDialog({
   const [invitationName, setInvitationName] = useState('');
   const [showDisableWarning, setShowDisableWarning] = useState(false);
 
-  const { success, error: showError } = useSonnerToast();
+  const { success, error: showError } = useToast();
   const { openConfirm } = useDialog();
 
   const MAX_INVITATIONS = 3;
@@ -176,16 +176,16 @@ export function ShareDialog({
         setIsShared(newIsShared);
 
         if (newIsShared) {
-          success(`¡Compartir activado! Se ha generado un enlace público para ${entityType === 'team' ? 'tu equipo' : 'tu tarea'}`);
+          success('Compartir activado', `Se generó un enlace público para ${entityType === 'team' ? 'tu equipo' : 'tu tarea'}.`);
         } else {
-          success('Compartir desactivado. Todas las invitaciones han sido revocadas');
+          success('Compartir desactivado', 'Todas las invitaciones han sido revocadas.');
           setGuestTokens([]);
           setInvitationName('');
         }
       } else {
         const errorMsg = result.error || 'Error al cambiar el estado de compartición.';
         setError(errorMsg);
-        showError('Error', errorMsg);
+        showError('No se pudo compartir', errorMsg);
       }
     } finally {
       setIsSubmitting(false);
@@ -211,9 +211,9 @@ export function ShareDialog({
     if (result.success) {
       const displayName = tokenName || 'Invitado';
       if (!currentValue) {
-        success(`"${displayName}" ahora puede comentar`);
+        success('Permisos actualizados', `"${displayName}" ahora puede comentar.`);
       } else {
-        success(`"${displayName}" ahora está en modo solo lectura`);
+        success('Permisos actualizados', `"${displayName}" ahora solo puede ver.`);
       }
     } else {
       // Revert on error
@@ -221,14 +221,14 @@ export function ShareDialog({
         t.id === tokenId ? { ...t, commentsEnabled: currentValue } : t
       ));
       const errorMsg = result.error || 'Error al actualizar permisos.';
-      showError('Error', errorMsg);
+      showError('No se pudo actualizar', errorMsg);
     }
   }, [taskId, success, showError]);
 
   const handleGenerateInvitation = useCallback(async () => {
     if (isAtLimit || !invitationName.trim()) {
       if (!invitationName.trim()) {
-        showError('Error', 'Ingresa un nombre para la invitación');
+        showError('Nombre requerido', 'Ingresa un nombre para la invitación.');
       }
       return;
     }
@@ -237,13 +237,13 @@ export function ShareDialog({
     setError(null);
     const result = await generateGuestTokenAction({ taskId, tokenName: invitationName.trim(), entityType });
     if (result.success) {
-      success(`¡Invitación creada! Clave de acceso para "${invitationName.trim()}" lista`);
+      success('Invitación creada', `La clave de acceso para "${invitationName.trim()}" está lista.`);
       setInvitationName('');
       await loadShareData();
     } else {
       const errorMsg = result.error || 'Error al crear la invitación.';
       setError(errorMsg);
-      showError('Error al crear invitación', errorMsg);
+      showError('No se pudo crear la invitación', errorMsg);
     }
     setIsGenerating(false);
   }, [taskId, invitationName, isAtLimit, loadShareData, success, showError, entityType]);
@@ -261,11 +261,11 @@ export function ShareDialog({
         setIsSubmitting(true);
         const result = await revokeGuestTokenAction({ taskId, tokenId, entityType });
         if (result.success) {
-          success(`Acceso de "${displayName}" revocado`);
+          success('Acceso revocado', `"${displayName}" ya no puede acceder.`);
           await loadShareData();
         } else {
           const errorMsg = result.error || 'Error al revocar la invitación.';
-          showError('Error al revocar', errorMsg);
+          showError('No se pudo revocar', errorMsg);
         }
         setIsSubmitting(false);
       },

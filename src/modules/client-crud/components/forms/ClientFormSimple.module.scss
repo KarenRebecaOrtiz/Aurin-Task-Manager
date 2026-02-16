@@ -1,12 +1,14 @@
 // ClientFormSimple.module.scss
 // Simplified form styles following design reference
 
+@use '@/app/styles/variables' as *;
+
 .form {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: $spacing-2xl;
   width: 100%;
-  padding-bottom: 24px;
+  padding-bottom: $spacing-2xl;
 }
 
 // ============================================================================
@@ -16,8 +18,8 @@
 .header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 4px 0;
+  gap: $spacing-md;
+  padding: $spacing-xs 0;
   min-height: 56px;
 }
 
@@ -25,7 +27,7 @@
   width: 25px;
   height: 25px;
   min-width: 25px;
-  border-radius: 9999px;
+  border-radius: $radius-full;
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -36,27 +38,27 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 9999px;
+  border-radius: $radius-full;
 }
 
 .headerAvatarEmpty {
-  background: #E5E7EB;
+  background: $zinc-200;
 
-  :global(.dark) & {
-    background: #3f3f46;
+  :global(body.dark) & {
+    background: $zinc-700;
   }
 }
 
 .headerTitle {
   flex: 1;
-  font-size: 18px;
-  font-weight: 500;
-  color: #19213D;
-  line-height: 1.3;
+  font-size: $text-lg;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+  line-height: $leading-snug;
   margin: 0;
 
-  :global(.dark) & {
-    color: #fafafa;
+  :global(body.dark) & {
+    color: $zinc-50;
   }
 }
 
@@ -67,10 +69,10 @@
 .divider {
   width: 100%;
   height: 1px;
-  background: #E3E3E3;
+  background: $color-border-light;
 
-  :global(.dark) & {
-    background: #3f3f46;
+  :global(body.dark) & {
+    background: $zinc-700;
   }
 }
 
@@ -81,21 +83,21 @@
 .avatarSection {
   display: flex;
   align-items: center;
-  gap: 20px;
-  padding: 8px 0;
+  gap: $spacing-xl;
+  padding: $spacing-sm 0;
   flex-wrap: wrap;
   overflow: visible;
 }
 
 .sectionLabel {
-  font-size: 14px;
-  font-weight: 500;
-  color: #19213D;
+  font-size: $text-sm;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
   line-height: 1.8;
   white-space: nowrap;
 
-  :global(.dark) & {
-    color: #fafafa;
+  :global(body.dark) & {
+    color: $zinc-50;
   }
 }
 
@@ -111,8 +113,8 @@
 
   // Compact grid for gradient circles
   :global([class*="grid"]) {
-    padding: 4px !important;
-    gap: 8px !important;
+    padding: $spacing-xs !important;
+    gap: $spacing-sm !important;
     overflow: visible !important;
 
     button {
@@ -129,12 +131,12 @@
 
 .row {
   display: flex;
-  gap: 24px;
+  gap: $spacing-2xl;
   width: 100%;
 
   @media (max-width: 600px) {
     flex-direction: column;
-    gap: 20px;
+    gap: $spacing-xl;
   }
 }
 
@@ -147,7 +149,7 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: $spacing-sm;
   position: relative;
 }
 
@@ -156,7 +158,7 @@
   min-width: 180px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: $spacing-sm;
 
   @media (max-width: 600px) {
     width: 100%;
@@ -169,20 +171,20 @@
 // ============================================================================
 
 .sectionHeader {
-  padding: 4px 0;
+  padding: $spacing-xs 0;
   min-height: 56px;
   display: flex;
   align-items: center;
 }
 
 .sectionTitle {
-  font-size: 18px;
-  font-weight: 500;
-  color: #19213D;
-  line-height: 1.3;
+  font-size: $text-lg;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+  line-height: $leading-snug;
   margin: 0;
 
-  :global(.dark) & {
-    color: #fafafa;
+  :global(body.dark) & {
+    color: $zinc-50;
   }
 }

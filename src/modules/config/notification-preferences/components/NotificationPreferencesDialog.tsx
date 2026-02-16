@@ -13,7 +13,7 @@
 
 import React, { useCallback, useMemo, useRef, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { toast } from 'sonner';
+import { sileo } from 'sileo';
 import { ChevronRight } from 'lucide-react';
 import {
   ResponsiveDialog,
@@ -306,9 +306,7 @@ export function NotificationPreferencesDialog() {
     saveTimeoutRef.current = setTimeout(async () => {
       const success = await save();
       if (success) {
-        toast.success('Cambios guardados', {
-          duration: 2000,
-        });
+        sileo.success({ title: 'Preferencias guardadas', description: 'Tus notificaciones se ajustaron correctamente.', duration: 3000 });
       }
     }, 500);
   }, [save]);

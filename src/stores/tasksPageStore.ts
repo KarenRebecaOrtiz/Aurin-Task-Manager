@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { toast } from 'sonner';
+import { sileo } from 'sileo';
 import { ContainerType } from '@/modules/header/types';
 
 // Types
@@ -228,23 +228,21 @@ export const useTasksPageStore = create<TasksPageState>((set) => ({
   }),
   
   showSuccess: (message) => {
-    // Use Sonner directly instead of legacy alert system
-    toast.success(message, { duration: 3000 });
+    sileo.success({ title: message, description: 'Los cambios se guardaron correctamente.', duration: 3000 });
     // Keep store state for backward compatibility
-    set({ 
-      successMessage: message, 
-      showSuccessAlert: true 
+    set({
+      successMessage: message,
+      showSuccessAlert: true
     });
     setTimeout(() => set({ showSuccessAlert: false }), 3000);
   },
-  
+
   showFail: (message) => {
-    // Use Sonner directly instead of legacy alert system
-    toast.error(message, { duration: 5000 });
+    sileo.error({ title: message, description: 'Revisa los datos e intenta de nuevo.', duration: 5000 });
     // Keep store state for backward compatibility
-    set({ 
-      failMessage: message, 
-      showFailAlert: true 
+    set({
+      failMessage: message,
+      showFailAlert: true
     });
     setTimeout(() => set({ showFailAlert: false }), 3000);
   },

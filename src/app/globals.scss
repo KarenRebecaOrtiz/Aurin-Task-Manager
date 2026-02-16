@@ -1,41 +1,20 @@
 // src/app/globals.scss
-// Global styles without variable imports to avoid conflicts
+// Global styles — Osmo Scaling System for fluid typography
+
+@use './styles/osmo' as osmo;
 
 @import "tailwindcss";
 
 // ============================================
-// RESPONSIVE TYPOGRAPHY - CSS Custom Properties
+// OSMO FLUID TYPOGRAPHY
 // ============================================
-// These values are consumed by SCSS variables in _variables.scss
-// Desktop font sizes (default)
-:root {
-  --text-xs: 0.75rem;    // 12px
-  --text-sm: 1rem;       // 16px
-  --text-base: 1rem;     // 16px
-  --text-lg: 1.125rem;   // 18px
-  --text-xl: 1.25rem;    // 20px
-  --text-2xl: 1.5rem;    // 24px
-  --text-3xl: 1.875rem;  // 30px
-  --text-4xl: 2.25rem;   // 36px
-  --text-5xl: 3rem;      // 48px
-  --text-6xl: 3.75rem;   // 60px
-}
+// Generates :root { --text-xs: clamp(...); ... } for each type step.
+// Scales smoothly between 320px (mobile) and 1920px (desktop).
+// Consumed by SCSS $text-* variables in _variables.scss.
+@include osmo.osmo-type-scale();
 
-// Mobile font sizes (20% smaller for viewports < 768px)
-@media (max-width: 767px) {
-  :root {
-    --text-xs: 0.6rem;     // 9.6px
-    --text-sm: 0.9rem;     // 12.8px
-    --text-base: 0.8rem;   // 12.8px
-    --text-lg: 0.9rem;     // 14.4px
-    --text-xl: 1rem;       // 16px
-    --text-2xl: 1.2rem;    // 19.2px
-    --text-3xl: 1.5rem;    // 24px
-    --text-4xl: 1.8rem;    // 28.8px
-    --text-5xl: 2.4rem;    // 38.4px
-    --text-6xl: 3rem;      // 48px
-  }
-}
+// Container scaling custom properties (for layout use)
+@include osmo.osmo-generate-breakpoints();
 
 /* Shimmer Button Animations */
 @keyframes shimmer-slide {
@@ -79,6 +58,66 @@ body.no-scroll {
   overflow: hidden;
   position: fixed;
   width: 100%;
+}
+
+// ============================================
+// SILEO TOAST — Z-Index & Theme Integration
+// ============================================
+// Force Sileo viewport above all layers (modals, overlays, sidebars, dropdowns)
+[data-sileo-viewport] {
+  z-index: 999999 !important;
+}
+
+// Light mode — glass surface matching app aesthetic
+[data-sileo-toast] {
+  --sileo-bg: rgba(255, 255, 255, 0.92) !important;
+  --sileo-border: rgba(228, 228, 231, 0.6) !important;
+  --sileo-color: #0D0D0D !important;
+  --sileo-description-color: #64748b !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  font-family: var(--font-urbanist), 'Urbanist', sans-serif !important;
+  
+  // ✅ Use Osmo fluid typography for consistent scaling
+  font-size: var(--text-base) !important;
+  line-height: 1.5 !important;
+}
+
+// Dark mode — glass surface matching dark aesthetic
+body.dark [data-sileo-toast],
+html.dark [data-sileo-toast],
+[data-theme="dark"] [data-sileo-toast] {
+  --sileo-bg: rgba(27, 27, 30, 0.92) !important;
+  --sileo-border: rgba(63, 63, 70, 0.5) !important;
+  --sileo-color: #e4e4e7 !important;
+  --sileo-description-color: #a1a1aa !important;
+}
+
+// ============================================
+// SILEO ACCESSIBILITY FIX
+// ============================================
+// 🚨 CRITICAL: Icons use state colors, texts use theme colors
+// This ensures proper contrast and accessibility
+
+// Icons (badges) keep state colors — these are fine ✅
+[data-sileo-badge][data-state] {
+  // State colors are already applied by Sileo, no override needed
+}
+
+// Titles and descriptions MUST use theme colors (not state colors) for accessibility ❌
+[data-sileo-title][data-state] {
+  --sileo-tone: var(--sileo-color) !important;
+  --sileo-tone-bg: transparent !important;
+  color: var(--sileo-color) !important;
+  font-size: var(--text-base) !important;
+  font-weight: 600 !important;
+}
+
+[data-sileo-description] {
+  color: var(--sileo-description-color) !important;
+  font-size: var(--text-sm) !important;
+  font-weight: 400 !important;
+  line-height: 1.4 !important;
 }
 
 body.dark,
@@ -155,7 +194,7 @@ body {
   margin: 0;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   font-weight: 400;
-  font-size: 16px;
+  font-size: 1rem;
   line-height: 1.5;
   background: var(--background);
   color: var(--text-primary);

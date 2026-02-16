@@ -5,26 +5,28 @@
 
 @use '../shared/variables' as vars;
 @use '../shared/mixins' as mixins;
+@use '@/app/styles/_variables' as globalVars;
 
-// ============================================================== 
-// 📝 TODO DROPDOWN - MAIN CONTAINER
-// ============================================================== 
+// ==============================================================
+// TODO DROPDOWN - MAIN CONTAINER
+// ==============================================================
 
 .todoDropdown {
   @include mixins.dropdown-base;
   @include mixins.dropdown-light;
   @include mixins.custom-scrollbar-light;
 
-  :global(.dark) & {
-     background: #171717;
-     border-color: 1px solid rgba(255, 255, 255, 0.0509803922);
+  :global(body.dark) & {
+    background: globalVars.$zinc-900;
+    border-color: rgba(globalVars.$white, 0.05);
+    box-shadow: none;
   }
 
   // Mobile drag bar
   &::before {
     content: '';
     position: absolute;
-    top: 8px;
+    top: globalVars.$spacing-sm;
     left: 50%;
     transform: translateX(-50%);
     width: 40px;
@@ -32,7 +34,7 @@
     background: rgba(156, 163, 175, 0.5);
     border-radius: 2px;
     display: none;
-    
+
     @media (max-width: vars.$mobile-breakpoint) {
       display: block;
     }
@@ -40,18 +42,18 @@
 
   &.mobile {
     @media (max-width: vars.$mobile-breakpoint) {
-      background: rgba(241, 245, 249, 0.98);
-      
-      :global(.dark) & {
+      background: rgba(globalVars.$slate-100, 0.98);
+
+      :global(body.dark) & {
         background: rgba(25, 25, 25, 0.98);
       }
     }
   }
 }
 
-// ============================================================== 
-// 📝 HEADER SECTION
-// ============================================================== 
+// ==============================================================
+// HEADER SECTION
+// ==============================================================
 
 .header {
   display: flex;
@@ -59,47 +61,47 @@
   align-items: center;
   padding: vars.$dropdown-padding;
   background: transparent;
-  
+
   @media (max-width: vars.$mobile-breakpoint) {
-    padding: 20px 24px 16px 24px;
-    background: rgba(241, 245, 249, 0.95);
+    padding: globalVars.$spacing-xl globalVars.$spacing-2xl globalVars.$spacing-lg globalVars.$spacing-2xl;
+    background: rgba(globalVars.$slate-100, 0.95);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    border-bottom: 1px solid rgba(globalVars.$white, 0.2);
     position: sticky;
     top: 0;
     z-index: vars.$z-mobile-header;
-    
-    :global(.dark) & {
-    background: #171717;
-     border-color: 1px solid rgba(255, 255, 255, 0.0509803922);
+
+    :global(body.dark) & {
+      background: globalVars.$zinc-900;
+      border-color: rgba(globalVars.$white, 0.05);
     }
   }
 }
 
 .title {
-  font-size: 16px;
-  font-weight: 600;
-  color: vars.$color-text-primary;
+  font-size: globalVars.$text-base;
+  font-weight: globalVars.$font-weight-semibold;
+  color: globalVars.$color-text-primary;
   text-align: left;
   display: flex;
   align-items: center;
-  gap: 8px;
-  
-  :global(.dark) & {
-    color: vars.$color-text-dark-primary;
+  gap: globalVars.$spacing-sm;
+
+  :global(body.dark) & {
+    color: globalVars.$color-text-dark-primary;
   }
 }
 
 .titleIcon {
   opacity: 0.8;
-  transition: opacity 0.2s ease;
+  transition: globalVars.$transition-fast;
 
   &:hover {
     opacity: 1;
   }
 
-  :global(.dark) & {
+  :global(body.dark) & {
     filter: invert(1) brightness(100%);
   }
 }
@@ -107,92 +109,92 @@
 .headerActions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: globalVars.$spacing-sm;
 }
 
 .closeButton {
   background: none;
   border: none;
   cursor: pointer;
-  padding: vars.$spacing-xs;
-  border-radius: vars.$radius-full;
-  transition: background 0.2s;
-  
+  padding: globalVars.$spacing-xs;
+  border-radius: globalVars.$radius-full;
+  transition: globalVars.$transition-fast;
+
   &:hover {
-    background: vars.$zinc-100;
+    background: globalVars.$zinc-100;
   }
-  
-  :global(.dark) & {
+
+  :global(body.dark) & {
     filter: invert(1) brightness(1);
-    
+
     &:hover {
-      background: vars.$color-bg-dark-tertiary;
+      background: globalVars.$color-bg-dark-tertiary;
     }
   }
 }
 
-// ============================================================== 
-// 📝 STATS SECTION
-// ============================================================== 
+// ==============================================================
+// STATS SECTION
+// ==============================================================
 
 .stats {
-  padding: 16px 20px;
+  padding: globalVars.$spacing-lg globalVars.$spacing-xl;
   display: flex;
-  gap: 12px;
-  font-size: 12px;
-  color: #64748b;
+  gap: globalVars.$spacing-md;
+  font-size: globalVars.$text-xs;
+  color: globalVars.$color-text-secondary;
 
-  :global(.dark) & {
-    color: vars.$color-text-dark-secondary;
+  :global(body.dark) & {
+    color: globalVars.$color-text-dark-secondary;
   }
 }
 
 .remainingCount {
-  color: vars.$color-btn-primary;
-  font-weight: 500;
+  color: globalVars.$color-btn-primary;
+  font-weight: globalVars.$font-weight-medium;
 
-  :global(.dark) & {
-    color: #D1D1D1;
+  :global(body.dark) & {
+    color: globalVars.$color-text-dark-primary;
   }
 }
 
 .completedCount {
-  color: vars.$color-text-muted;
+  color: globalVars.$color-text-muted;
 
-  :global(.dark) & {
-    color: vars.$color-text-dark-muted;
+  :global(body.dark) & {
+    color: globalVars.$color-text-dark-muted;
   }
 }
 
-// ============================================================== 
-// 📝 INPUT SECTION
-// ============================================================== 
+// ==============================================================
+// INPUT SECTION
+// ==============================================================
 
 .inputContainer {
-  padding: 16px 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  padding: globalVars.$spacing-lg globalVars.$spacing-xl;
+  border-bottom: 1px solid rgba(globalVars.$white, 0.2);
   display: flex;
-  gap: 8px;
+  gap: globalVars.$spacing-sm;
   align-items: center;
 
-  :global(.dark) & {
-    border-bottom-color: rgba(255, 255, 255, 0.1);
+  :global(body.dark) & {
+    border-bottom-color: rgba(globalVars.$white, 0.1);
   }
-  
+
   @media (max-width: vars.$mobile-breakpoint) {
-    background: vars.$color-bg-glass;
-    border: 1px solid vars.$color-border-subtle;
-    border-radius: vars.$radius-lg;
-    padding: 8px;
+    background: globalVars.$color-bg-glass;
+    border: 1px solid globalVars.$color-border-subtle;
+    border-radius: globalVars.$radius-lg;
+    padding: globalVars.$spacing-sm;
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
-    box-shadow: 
-      -2px -2px 4px rgba(255, 255, 255, 0.9),
-      2px 2px 6px rgba(0, 0, 0, 0.05);
-      
-    :global(.dark) & {
-      background: rgb(38 38 42);
-      border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow:
+      -2px -2px 4px rgba(globalVars.$white, 0.9),
+      2px 2px 6px rgba(globalVars.$black, 0.05);
+
+    :global(body.dark) & {
+      background: rgba(38, 38, 42, 1);
+      border: 1px solid rgba(globalVars.$white, 0.2);
     }
   }
 }
@@ -208,39 +210,39 @@
 
   &.error {
     @include mixins.input-error;
-    
-    :global(.dark) & {
+
+    :global(body.dark) & {
       @include mixins.input-error-dark;
     }
   }
 
-  :global(.dark) & {
+  :global(body.dark) & {
     @include mixins.input-dark;
   }
-  
+
   @media (max-width: vars.$mobile-breakpoint) {
-    background: rgba(255, 255, 255, 0.9) !important;
-    border: 1px solid rgba(255, 255, 255, 0.3) !important;
-    border-radius: vars.$radius-md !important;
+    background: rgba(globalVars.$white, 0.9) !important;
+    border: 1px solid rgba(globalVars.$white, 0.3) !important;
+    border-radius: globalVars.$radius-md !important;
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
-    box-shadow: 
-      inset -1px -1px 2px rgba(255, 255, 255, 0.8),
-      inset 1px 1px 3px rgba(0, 0, 0, 0.05);
+    box-shadow:
+      inset -1px -1px 2px rgba(globalVars.$white, 0.8),
+      inset 1px 1px 3px rgba(globalVars.$black, 0.05);
 
     &:focus {
-      background: rgba(255, 255, 255, 0.95) !important;
-      border-color: rgba(255, 255, 255, 0.5) !important;
-      box-shadow: 
-        inset -2px -2px 4px rgba(255, 255, 255, 0.8),
-        inset 2px 2px 6px rgba(0, 0, 0, 0.1),
-        0 0 0 3px rgba(59, 130, 246, 0.1);
+      background: rgba(globalVars.$white, 0.95) !important;
+      border-color: rgba(globalVars.$white, 0.5) !important;
+      box-shadow:
+        inset -2px -2px 4px rgba(globalVars.$white, 0.8),
+        inset 2px 2px 6px rgba(globalVars.$black, 0.1),
+        0 0 0 3px rgba(globalVars.$blue-500, 0.1);
     }
-    
-    :global(.dark) & {
-      background: rgb(40 40 44) !important;
-      border: 1px solid rgba(255, 255, 255, 0.3) !important;
-      border-radius: 8px !important;
+
+    :global(body.dark) & {
+      background: rgba(40, 40, 44, 1) !important;
+      border: 1px solid rgba(globalVars.$white, 0.3) !important;
+      border-radius: globalVars.$radius-md !important;
       backdrop-filter: blur(4px);
       -webkit-backdrop-filter: blur(4px);
     }
@@ -249,14 +251,14 @@
 
 .inputIcon {
   position: absolute;
-  left: 12px;
+  left: globalVars.$spacing-md;
   top: 50%;
   transform: translateY(-50%);
-  color: vars.$color-text-muted;
+  color: globalVars.$color-text-muted;
   pointer-events: none;
 
-  :global(.dark) & {
-    color: vars.$color-text-dark-muted;
+  :global(body.dark) & {
+    color: globalVars.$color-text-dark-muted;
   }
 }
 
@@ -265,22 +267,22 @@
   top: 100%;
   left: 0;
   right: 0;
-  margin-top: 4px;
-  padding: 6px 8px;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  border-radius: vars.$radius-sm;
-  color: #dc2626;
-  font-size: 12px;
-  font-weight: 500;
+  margin-top: globalVars.$spacing-xs;
+  padding: globalVars.$spacing-sm globalVars.$spacing-sm;
+  background: rgba(globalVars.$red-100, 0.9);
+  border: 1px solid rgba(globalVars.$red-400, 0.4);
+  border-radius: globalVars.$radius-sm;
+  color: globalVars.$red-600;
+  font-size: globalVars.$text-xs;
+  font-weight: globalVars.$font-weight-medium;
   z-index: 10;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgba(globalVars.$black, 0.1);
 
-  :global(.dark) & {
+  :global(body.dark) & {
     background: rgba(30, 30, 30, 0.95);
-    border-color: #f87171;
-    color: #fca5a5;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    border-color: globalVars.$red-400;
+    color: globalVars.$red-400;
+    box-shadow: 0 2px 4px rgba(globalVars.$black, 0.3);
   }
 }
 
@@ -290,19 +292,19 @@
   justify-content: center;
   width: 32px;
   height: 32px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: vars.$radius-lg;
-  background: rgba(255, 255, 255, 0.8);
-  color: vars.$color-text-primary;
+  border: 1px solid rgba(globalVars.$white, 0.3);
+  border-radius: globalVars.$radius-lg;
+  background: rgba(globalVars.$white, 0.8);
+  color: globalVars.$color-text-primary;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: globalVars.$transition-fast;
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
 
   &:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.9);
-    border-color: rgba(255, 255, 255, 0.5);
-    color: vars.$color-btn-primary;
+    background: rgba(globalVars.$white, 0.9);
+    border-color: rgba(globalVars.$white, 0.5);
+    color: globalVars.$color-btn-primary;
     transform: translateY(-1px);
   }
 
@@ -316,77 +318,77 @@
     transform: none;
   }
 
-  :global(.dark) & {
+  :global(body.dark) & {
     background: rgba(30, 30, 30, 0.8);
-    border-color: rgba(255, 255, 255, 0.2);
-    color: vars.$color-text-dark-primary;
+    border-color: rgba(globalVars.$white, 0.2);
+    color: globalVars.$color-text-dark-primary;
 
     &:hover:not(:disabled) {
       background: rgba(30, 30, 30, 0.9);
-      border-color: rgba(255, 255, 255, 0.4);
-      color: vars.$color-btn-primary;
+      border-color: rgba(globalVars.$white, 0.4);
+      color: globalVars.$color-btn-primary-dark;
     }
   }
-  
+
   @media (max-width: vars.$mobile-breakpoint) {
-    background: vars.$color-bg-glass !important;
-    border: 1px solid vars.$color-border-subtle !important;
-    border-radius: vars.$radius-md !important;
+    background: globalVars.$color-bg-glass !important;
+    border: 1px solid globalVars.$color-border-subtle !important;
+    border-radius: globalVars.$radius-md !important;
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
-    box-shadow: 
-      -2px -2px 4px rgba(255, 255, 255, 0.9),
-      2px 2px 6px rgba(0, 0, 0, 0.05);
+    box-shadow:
+      -2px -2px 4px rgba(globalVars.$white, 0.9),
+      2px 2px 6px rgba(globalVars.$black, 0.05);
 
     &:hover:not(:disabled) {
-      background: vars.$color-bg-glass-hover !important;
-      border-color: rgba(255, 255, 255, 0.4) !important;
+      background: globalVars.$color-bg-glass-hover !important;
+      border-color: rgba(globalVars.$white, 0.4) !important;
       transform: translateY(-1px) scale(1.05);
-      box-shadow: 
-        -4px -4px 8px rgba(255, 255, 255, 0.9),
-        4px 4px 12px rgba(0, 0, 0, 0.1);
+      box-shadow:
+        -4px -4px 8px rgba(globalVars.$white, 0.9),
+        4px 4px 12px rgba(globalVars.$black, 0.1);
     }
 
     &:active:not(:disabled) {
       transform: translateY(0) scale(0.95);
-      background: rgba(241, 245, 249, 0.6) !important;
-      border-color: rgba(255, 255, 255, 0.15) !important;
-      box-shadow: 
-        inset -2px -2px 4px rgba(255, 255, 255, 0.9),
-        inset 2px 2px 6px rgba(0, 0, 0, 0.05);
+      background: rgba(globalVars.$slate-100, 0.6) !important;
+      border-color: rgba(globalVars.$white, 0.15) !important;
+      box-shadow:
+        inset -2px -2px 4px rgba(globalVars.$white, 0.9),
+        inset 2px 2px 6px rgba(globalVars.$black, 0.05);
     }
-    
-    :global(.dark) & {
-      background: rgb(0 0 0 / 0%) !important;
-      border: 1px solid rgba(255, 255, 255, 0.2) !important;
-      border-radius: 8px !important;
+
+    :global(body.dark) & {
+      background: transparent !important;
+      border: 1px solid rgba(globalVars.$white, 0.2) !important;
+      border-radius: globalVars.$radius-md !important;
       backdrop-filter: blur(8px);
       -webkit-backdrop-filter: blur(8px);
     }
   }
 }
 
-// ============================================================== 
-// 📝 CONTENT SECTION
-// ============================================================== 
+// ==============================================================
+// CONTENT SECTION
+// ==============================================================
 
 .content {
   flex: 1;
   overflow-y: auto;
   max-height: 300px;
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+  scrollbar-color: rgba(globalVars.$white, 0.2) transparent;
   @include mixins.custom-scrollbar-light;
 
-  :global(.dark) & {
-    scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+  :global(body.dark) & {
+    scrollbar-color: rgba(globalVars.$white, 0.1) transparent;
     @include mixins.custom-scrollbar-dark;
   }
-  
+
   @media (max-width: vars.$mobile-breakpoint) {
     max-height: none;
     flex: 1;
-    padding: 100px 24px;
+    padding: 100px globalVars.$spacing-2xl;
     padding-bottom: 120px !important;
   }
 }
@@ -402,11 +404,11 @@
   align-items: center;
   justify-content: space-between;
   padding: vars.$item-padding;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  transition: background-color 0.2s ease;
+  border-bottom: 1px solid rgba(globalVars.$white, 0.1);
+  transition: globalVars.$transition-fast;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(globalVars.$white, 0.1);
   }
 
   &:last-child {
@@ -417,14 +419,14 @@
     opacity: 0.7;
   }
 
-  :global(.dark) & {
-    border-bottom-color: rgba(255, 255, 255, 0.05);
+  :global(body.dark) & {
+    border-bottom-color: rgba(globalVars.$white, 0.05);
 
     &:hover {
-      background: rgba(255, 255, 255, 0.05);
+      background: rgba(globalVars.$white, 0.05);
     }
   }
-  
+
   @media (max-width: vars.$mobile-breakpoint) {
     &:hover {
       background: transparent !important;
@@ -436,18 +438,18 @@
   background: none;
   border: none;
   cursor: pointer;
-  padding: 4px;
-  margin-right: 12px;
-  border-radius: vars.$radius-sm;
-  transition: background 0.2s ease;
+  padding: globalVars.$spacing-xs;
+  margin-right: globalVars.$spacing-md;
+  border-radius: globalVars.$radius-sm;
+  transition: globalVars.$transition-fast;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(globalVars.$white, 0.1);
   }
 
-  :global(.dark) & {
+  :global(body.dark) & {
     &:hover {
-      background: rgba(255, 255, 255, 0.05);
+      background: rgba(globalVars.$white, 0.05);
     }
   }
 }
@@ -455,58 +457,63 @@
 .checkbox {
   width: 18px;
   height: 18px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 4px;
+  border: 2px solid rgba(globalVars.$white, 0.3);
+  border-radius: globalVars.$radius-xs;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  transition: globalVars.$transition-fast;
 
   &.checked {
-    background: vars.$color-btn-primary;
-    border-color: vars.$color-btn-primary;
+    background: globalVars.$color-btn-primary;
+    border-color: globalVars.$color-btn-primary;
   }
 
-  :global(.dark) & {
-    border-color: rgba(255, 255, 255, 0.2);
+  :global(body.dark) & {
+    border-color: rgba(globalVars.$white, 0.2);
+
+    &.checked {
+      background: globalVars.$color-btn-primary-dark;
+      border-color: globalVars.$color-btn-primary-dark;
+    }
   }
 }
 
 .checkmark {
-  color: white;
-  font-size: 12px;
-  font-weight: bold;
+  color: globalVars.$white;
+  font-size: globalVars.$text-xs;
+  font-weight: globalVars.$font-weight-bold;
 }
 
 .todoText {
   flex: 1;
-  font-size: 14px;
-  line-height: 1.4;
+  font-size: globalVars.$text-sm;
+  line-height: globalVars.$leading-tight;
   word-break: break-word;
-  transition: all 0.2s ease;
-  color: vars.$color-text-primary;
+  transition: globalVars.$transition-fast;
+  color: globalVars.$color-text-primary;
 
   &.completed {
-    color: vars.$color-text-muted;
+    color: globalVars.$color-text-muted;
     text-decoration: line-through;
-    text-decoration-color: vars.$color-text-muted;
+    text-decoration-color: globalVars.$color-text-muted;
   }
 
-  :global(.dark) & {
-    color: #D1D1D1;
+  :global(body.dark) & {
+    color: globalVars.$color-text-dark-primary;
 
     &.completed {
-      color: vars.$color-text-dark-muted;
-      text-decoration-color: vars.$color-text-dark-muted;
+      color: globalVars.$color-text-dark-muted;
+      text-decoration-color: globalVars.$color-text-dark-muted;
     }
   }
-  
+
   @media (max-width: vars.$mobile-breakpoint) {
-    font-size: 22px !important;
-    font-weight: bold !important;
-    
-    :global(.dark) & {
-      color: #FFFFFF !important;
+    font-size: globalVars.$text-xl !important;
+    font-weight: globalVars.$font-weight-bold !important;
+
+    :global(body.dark) & {
+      color: globalVars.$white !important;
     }
   }
 }
@@ -515,14 +522,14 @@
   background: none;
   border: none;
   cursor: pointer;
-  padding: 4px 8px;
-  margin-left: 8px;
-  border-radius: vars.$radius-sm;
-  transition: all 0.2s ease;
+  padding: globalVars.$spacing-xs globalVars.$spacing-sm;
+  margin-left: globalVars.$spacing-sm;
+  border-radius: globalVars.$radius-sm;
+  transition: globalVars.$transition-fast;
   opacity: 0.7;
 
   &:hover {
-    background: rgba(239, 68, 68, 0.1);
+    background: rgba(globalVars.$red-500, 0.1);
     opacity: 1;
     transform: scale(1.1);
   }
@@ -531,43 +538,43 @@
     transform: scale(0.95);
   }
 
-  :global(.dark) & {
+  :global(body.dark) & {
     &:hover {
-      background: rgba(248, 113, 113, 0.1);
+      background: rgba(globalVars.$red-400, 0.1);
     }
   }
 }
 
-// ============================================================== 
-// 📝 FOOTER SECTION
-// ============================================================== 
+// ==============================================================
+// FOOTER SECTION
+// ==============================================================
 
 .footer {
-  padding: 16px 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding: globalVars.$spacing-lg globalVars.$spacing-xl;
+  border-top: 1px solid rgba(globalVars.$white, 0.1);
   display: flex;
   justify-content: center;
 
-  :global(.dark) & {
-    border-top-color: rgba(255, 255, 255, 0.05);
+  :global(body.dark) & {
+    border-top-color: rgba(globalVars.$white, 0.05);
   }
-  
+
   @media (max-width: vars.$mobile-breakpoint) {
     position: fixed;
     left: 0;
     right: 0;
     bottom: 0;
     width: 100vw;
-    padding: 16px 16px 24px 16px;
+    padding: globalVars.$spacing-lg globalVars.$spacing-lg globalVars.$spacing-2xl globalVars.$spacing-lg;
     z-index: vars.$z-mobile-footer;
-    background: rgba(241, 245, 249, 0.95);
+    background: rgba(globalVars.$slate-100, 0.95);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    border-top: 1px solid rgba(255, 255, 255, 0.2);
-    
-    :global(.dark) & {
+    border-top: 1px solid rgba(globalVars.$white, 0.2);
+
+    :global(body.dark) & {
       background: rgba(25, 25, 25, 0.95);
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      border-top: 1px solid rgba(globalVars.$white, 0.1);
     }
   }
 }
@@ -576,53 +583,53 @@
   background: none;
   border: none;
   cursor: pointer;
-  padding: vars.$spacing-xs;
-  border-radius: vars.$radius-full;
-  transition: all 0.2s ease;
+  padding: globalVars.$spacing-xs;
+  border-radius: globalVars.$radius-full;
+  transition: globalVars.$transition-fast;
   opacity: 0.8;
-  font-size: 14px;
-  color: vars.$color-btn-primary;
-  
+  font-size: globalVars.$text-sm;
+  color: globalVars.$color-btn-primary;
+
   &:hover {
-    background: vars.$zinc-100;
+    background: globalVars.$zinc-100;
     opacity: 1;
     transform: scale(1.05);
   }
-  
+
   &:active {
     transform: scale(0.95);
   }
-  
-  :global(.dark) & {
-    color: vars.$color-btn-primary;
-    
+
+  :global(body.dark) & {
+    color: globalVars.$color-btn-primary-dark;
+
     &:hover {
-      background: vars.$color-bg-dark-tertiary;
+      background: globalVars.$color-bg-dark-tertiary;
     }
   }
 }
 
-// ============================================================== 
-// 📝 EMPTY STATES
-// ============================================================== 
+// ==============================================================
+// EMPTY STATES
+// ==============================================================
 
 .emptyState {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 40px 20px;
-  gap: 12px;
+  padding: globalVars.$spacing-4xl globalVars.$spacing-xl;
+  gap: globalVars.$spacing-md;
 
   p {
-    font-size: 16px;
-    color: #232323;
-    font-weight: 500;
+    font-size: globalVars.$text-base;
+    color: globalVars.$color-text-primary;
+    font-weight: globalVars.$font-weight-medium;
     margin: 0;
     text-align: center;
-    
-    :global(.dark) & {
-      color: #D1D1D1;
+
+    :global(body.dark) & {
+      color: globalVars.$color-text-dark-primary;
     }
   }
 }
@@ -632,32 +639,32 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 40px 20px;
-  gap: 12px;
-  
+  padding: globalVars.$spacing-4xl globalVars.$spacing-xl;
+  gap: globalVars.$spacing-md;
+
   .spinner {
     width: 24px;
     height: 24px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-top-color: vars.$color-btn-primary;
+    border: 2px solid rgba(globalVars.$white, 0.3);
+    border-top-color: globalVars.$color-btn-primary;
     border-radius: 50%;
     animation: spin 1s linear infinite;
   }
-  
+
   span {
-    font-size: 14px;
-    color: vars.$color-text-secondary;
-    font-weight: 500;
+    font-size: globalVars.$text-sm;
+    color: globalVars.$color-text-secondary;
+    font-weight: globalVars.$font-weight-medium;
   }
-  
-  :global(.dark) & {
+
+  :global(body.dark) & {
     .spinner {
-      border-color: rgba(255, 255, 255, 0.2);
-      border-top-color: vars.$color-btn-primary;
+      border-color: rgba(globalVars.$white, 0.2);
+      border-top-color: globalVars.$color-btn-primary-dark;
     }
-    
+
     span {
-      color: vars.$color-text-dark-secondary;
+      color: globalVars.$color-text-dark-secondary;
     }
   }
 }
@@ -667,19 +674,19 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 40px 20px;
-  gap: 12px;
-  
+  padding: globalVars.$spacing-4xl globalVars.$spacing-xl;
+  gap: globalVars.$spacing-md;
+
   span {
-    font-size: 14px;
-    color: vars.$color-text-secondary;
-    font-weight: 500;
+    font-size: globalVars.$text-sm;
+    color: globalVars.$color-text-secondary;
+    font-weight: globalVars.$font-weight-medium;
     text-align: center;
   }
-  
-  :global(.dark) & {
+
+  :global(body.dark) & {
     span {
-      color: vars.$color-text-dark-secondary;
+      color: globalVars.$color-text-dark-secondary;
     }
   }
 }

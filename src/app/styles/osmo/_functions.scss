@@ -1,0 +1,185 @@
+// ==========================================================================
+// Osmo Scaling System — Functions
+// ==========================================================================
+
+@use "sass:math";
+@use "sass:map";
+@use "sass:meta";
+@use "config" as *;
+
+// --------------------------------------------------------------------------
+// Math helpers
+// --------------------------------------------------------------------------
+
+/// Sass pow() supporting fractional exponents via Taylor series
+/// @param {Number} $base
+/// @param {Number} $exp
+/// @return {Number}
+@function osmo-pow($base, $exp) {
+  @if $exp == 0 { @return 1; }
+
+  // Integer exponents — exact
+  @if $exp == math.round($exp) {
+    $result: 1;
+    $abs-exp: math.abs($exp);
+    @for $i from 1 through $abs-exp {
+      $result: $result * $base;
+    }
+    @return if($exp < 0, math.div(1, $result), $result);
+  }
+
+  // Fractional exponents — e^(exp * ln(base)) via Taylor series
+  // ln(base) = 2 * sum[ ((x-1)/(x+1))^(2k+1) / (2k+1) ] for k=0..n
+  $ln-base: 0;
+  $term: math.div($base - 1, $base + 1);
+  $term-sq: $term * $term;
+  $current: $term;
+  @for $k from 0 through 19 {
+    $ln-base: $ln-base + math.div($current, 2 * $k + 1);
+    $current: $current * $term-sq;
+  }
+  $ln-base: 2 * $ln-base;
+
+  // e^x via Taylor series: sum(x^n / n!)
+  $x: $exp * $ln-base;
+  $result: 1;
+  $factorial: 1;
+  $power: 1;
+  @for $i from 1 through 20 {
+    $power: $power * $x;
+    $factorial: $factorial * $i;
+    $result: $result + math.div($power, $factorial);
+  }
+
+  @return $result;
+}
+
+/// Round a number to N decimal places
+/// @param {Number} $number
+/// @param {Number} $places [3]
+/// @return {Number}
+@function osmo-round($number, $places: 3) {
+  $factor: osmo-pow(10, $places);
+  @return math.div(math.round($number * $factor), $factor);
+}
+
+// --------------------------------------------------------------------------
+// Validation
+// --------------------------------------------------------------------------
+
+/// Validate a single breakpoint config map
+@function osmo-validate-breakpoint($name, $config) {
+  $required-keys: (unit, ideal, min, max);
+
+  @each $key in $required-keys {
+    @if not map.has-key($config, $key) {
+      @error "Osmo: Breakpoint '#{$name}' is missing required key '#{$key}'.";
+    }
+  }
+
+  $unit: map.get($config, unit);
+  $ideal: map.get($config, ideal);
+  $min: map.get($config, min);
+  $max: map.get($config, max);
+
+  @if math.unit($unit) != "" {
+    @error "Osmo: '#{$name}.unit' must be unitless. Got #{$unit}.";
+  }
+  @if math.unit($ideal) != "" {
+    @error "Osmo: '#{$name}.ideal' must be unitless. Got #{$ideal}.";
+  }
+  @if $min >= $max {
+    @error "Osmo: '#{$name}.min' (#{$min}) must be < '#{$name}.max' (#{$max}).";
+  }
+
+  @return true;
+}
+
+// --------------------------------------------------------------------------
+// Core typography functions
+// --------------------------------------------------------------------------
+
+/// Convert a pixel value to rem
+/// @param {Number} $px - Pixel value (with or without px unit)
+/// @param {Number} $base [$osmo-base-font] - Base font size
+/// @return {Number} rem value
+@function osmo-rem($px, $base: $osmo-base-font) {
+  @if meta.type-of($px) != "number" {
+    @error "Osmo: osmo-rem() expects a number. Got #{meta.type-of($px)}.";
+  }
+  @if math.unit($px) == "px" {
+    $px: math.div($px, 1px);
+  }
+  @return math.div($px, $base) * 1rem;
+}
+
+/// Get desktop px size for a type scale step
+/// @param {Number} $exponent - The scale step exponent
+/// @return {Number} Pixel size (unitless)
+@function osmo-desktop-size($exponent) {
+  @return osmo-round($osmo-base-font * osmo-pow($osmo-type-ratio, $exponent), 2);
+}
+
+/// Get mobile px size for a type scale step
+/// @param {Number} $exponent - The scale step exponent
+/// @return {Number} Pixel size (unitless)
+@function osmo-mobile-size($exponent) {
+  @return osmo-round($osmo-mobile-base * osmo-pow($osmo-mobile-type-ratio, $exponent), 2);
+}
+
+/// Generate a CSS clamp() expression for fluid typography
+/// Smoothly interpolates between min-px and max-px across the viewport range.
+/// @param {Number} $min-px - Size at viewport-min (unitless px)
+/// @param {Number} $max-px - Size at viewport-max (unitless px)
+/// @return {String} CSS clamp() expression
+@function osmo-clamp($min-px, $max-px) {
+  // If sizes are equal, no need for clamp
+  @if $min-px == $max-px {
+    @return osmo-rem($min-px);
+  }
+
+  $min-rem: osmo-round(math.div($min-px, $osmo-base-font), 3);
+  $max-rem: osmo-round(math.div($max-px, $osmo-base-font), 3);
+
+  // Linear interpolation: preferred = intercept + slope * viewport
+  $slope: math.div($max-px - $min-px, $osmo-viewport-max - $osmo-viewport-min);
+  $slope-vw: osmo-round($slope * 100, 3);
+  $intercept-px: $min-px - $slope * $osmo-viewport-min;
+  $intercept-rem: osmo-round(math.div($intercept-px, $osmo-base-font), 3);
+
+  @return clamp(#{$min-rem * 1rem}, #{$intercept-rem * 1rem} + #{$slope-vw * 1vw}, #{$max-rem * 1rem});
+}
+
+/// Generate a fluid clamp() for a named type step
+/// @param {String} $step - Step name from $osmo-type-steps
+/// @return {String} CSS clamp() expression
+@function osmo-fluid-type($step) {
+  @if not map.has-key($osmo-type-steps, $step) {
+    @error "Osmo: Unknown type step '#{$step}'. Available: #{map.keys($osmo-type-steps)}.";
+  }
+
+  $exponent: map.get($osmo-type-steps, $step);
+  $desktop-px: osmo-desktop-size($exponent);
+  $mobile-px: osmo-mobile-size($exponent);
+
+  @return osmo-clamp($mobile-px, $desktop-px);
+}
+
+/// Get the static desktop rem value for a type scale step
+/// @param {String} $step - Step name
+/// @return {Number} rem value
+@function osmo-type($step) {
+  @if not map.has-key($osmo-type-steps, $step) {
+    @error "Osmo: Unknown type step '#{$step}'. Available: #{map.keys($osmo-type-steps)}.";
+  }
+  $exponent: map.get($osmo-type-steps, $step);
+  @return osmo-rem(osmo-desktop-size($exponent));
+}
+
+/// Get a breakpoint config from the map
+@function osmo-get-bp($name) {
+  @if not map.has-key($osmo-breakpoints, $name) {
+    @error "Osmo: Unknown breakpoint '#{$name}'. Available: #{map.keys($osmo-breakpoints)}.";
+  }
+  @return map.get($osmo-breakpoints, $name);
+}

@@ -1,17 +1,16 @@
 @use '@/app/styles/variables' as *;
 @use '@/app/styles/mixins' as *;
-@use '@/app/styles/utils' as *;
 
 // ==============================================================
-// 🔮 OPTIMIZED MARQUEE - SMOOTH ANIMATION WITH HOVER EFFECTS
-// =================================================================
+// OPTIMIZED MARQUEE - SMOOTH ANIMATION WITH HOVER EFFECTS
+// ==============================================================
 
 .marquee {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
-  background-color: #d3e048;
+  background-color: $brand-primary;
   color: $color-text-primary;
   font-family: $font-family-primary;
   font-weight: $font-weight-semibold;
@@ -23,9 +22,9 @@
   overflow: hidden;
   cursor: pointer;
 
-  @media (max-width: 768px) {
+  @media (max-width: 767px) {
     font-size: $text-sm;
-    padding: 8px 15px;
+    padding: $spacing-sm $spacing-md;
   }
 }
 
@@ -45,33 +44,37 @@
 .marqueeText {
   display: inline-block;
   white-space: nowrap;
-  transition: all 0.3s ease;
+  transition: $transition-fast;
 }
 
 .marqueeContent {
   display: inline-block;
-  margin-right: 2rem;
+  margin-right: $spacing-3xl;
   white-space: nowrap;
+
+  @media (max-width: 767px) {
+    margin-right: $spacing-lg;
+  }
 }
 
 .hoverableText {
-  transition: all 0.3s ease;
+  transition: $transition-fast;
   cursor: pointer;
-  
+
   &:hover {
     transform: scale(1.02);
-    color: #000000;
+    color: $black;
   }
 }
 
 .adviceItem {
   margin-right: $spacing-sm;
-  transition: all 0.3s ease;
+  transition: $transition-fast;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: $spacing-sm;
   white-space: nowrap;
-  
+
   &:hover {
     transform: translateY(-1px);
   }
@@ -85,17 +88,17 @@
 .followingTooltip {
   position: fixed;
   z-index: 999999;
-  transition: all 0.3s ease;
-  padding: 8px 16px;
-  border-radius: 20px;
+  transition: $transition-fast;
+  padding: $spacing-sm $spacing-lg;
+  border-radius: $radius-full;
   white-space: nowrap;
-  background: rgba(241, 245, 249, 1);
-  color: #1e293b;
-  font-size: 13px;
-  font-weight: 500;
+  background: $color-bg-glass;
+  color: $zinc-900;
+  font-size: $text-xs;
+  font-weight: $font-weight-medium;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid $color-border-subtle;
   box-shadow:
     -4px -4px 8px rgba(255, 255, 255, 0.8),
     4px 4px 8px rgba(0, 0, 0, 0.05),
@@ -103,11 +106,15 @@
     inset 2px 2px 6px rgba(0, 0, 0, 0.05);
   pointer-events: none;
   transform-origin: center;
-  
+
   p {
     margin: 0;
-    font-weight: 500;
-    letter-spacing: 0.5px;
+    font-weight: $font-weight-medium;
+    letter-spacing: 0.03em;
+  }
+
+  @media (max-width: 767px) {
+    display: none;
   }
 }
 
@@ -119,52 +126,34 @@
   opacity: 0;
 }
 
-// Smooth animation optimizations
-.marqueeInner {
-  transform: translateZ(0);
-  backface-visibility: hidden;
-  perspective: 1000px;
-}
+// ==============================================================
+// DARK MODE
+// ==============================================================
 
-// Performance optimizations for mobile
-@media (max-width: 768px) {
+:global(body.dark) {
   .marquee {
-    font-size: $text-sm;
-    padding: 8px 15px;
+    background-color: $brand-primary;
+    color: $color-text-dark-primary;
   }
-  
+
   .followingTooltip {
-    display: none; // Hide tooltip on mobile for better performance
+    background: $color-bg-glass-dark;
+    color: $color-text-dark-primary;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow:
+      -4px -4px 8px rgba(0, 0, 0, 0.5),
+      4px 4px 8px rgba(255, 255, 255, 0.02),
+      inset -2px -2px 4px rgba(0, 0, 0, 0.4),
+      inset 2px 2px 6px rgba(255, 255, 255, 0.03);
   }
-  
-  .marqueeContent {
-    margin-right: 1rem;
+
+  .messageText {
+    color: $black;
+  }
+
+  .hoverableText {
+    &:hover {
+      color: $white;
+    }
   }
 }
-
-// Dark mode support
-body.dark .marquee {
-  background-color: #d3e048; // Keep the same background color
-  color: $color-text-dark-primary;
-}
-
-body.dark .followingTooltip {
-  background: rgba(39, 39, 42, 0.8);
-  color: #d1d1d1;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow:
-    -4px -4px 8px rgba(0, 0, 0, 0.5),
-    4px 4px 8px rgba(255, 255, 255, 0.02),
-    inset -2px -2px 4px rgba(0, 0, 0, 0.4),
-    inset 2px 2px 6px rgba(255, 255, 255, 0.03);
-}
-
-body.dark .messageText {
-  color: black;
-}
-
-body.dark .hoverableText {
-  &:hover {
-    color: #ffffff;
-  }
-} 

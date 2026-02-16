@@ -11,7 +11,7 @@ import {
 } from '@/modules/dialogs';
 import { useAuth } from '@/contexts/AuthContext';
 import styles from './ClientOverlay.module.scss';
-import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
+import { useToast } from '@/modules/toast';
 import Loader from '@/modules/loader';
 import { createPortal } from 'react-dom';
 import { invalidateClientsCache } from '@/lib/cache-utils';
@@ -53,7 +53,7 @@ const ClientOverlay: React.FC<ClientOverlayProps> = ({
 }) => {
   const { isAdmin, isLoading } = useAuth();
   const { user } = useUser();
-  const { success, error } = useSonnerToast();
+  const { success, error } = useToast();
   const [localIsLoading, setLocalIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -266,16 +266,16 @@ const ClientOverlay: React.FC<ClientOverlayProps> = ({
         // Invalidar cache después de guardar cliente
         invalidateClientsCache();
 
-        // Use Sonner for success notification
-        success('Cliente guardado exitosamente.');
-        
+        // Use Sileo for success notification
+        success('Cliente guardado', 'Los cambios se aplicaron correctamente.');
+
         // Keep backward compatibility
-        setSuccessMessage('Cliente guardado exitosamente.');
-        if (onAlertChange) onAlertChange({ type: 'success', message: 'Cliente guardado exitosamente.' });
+        setSuccessMessage('Cliente guardado.');
+        if (onAlertChange) onAlertChange({ type: 'success', message: 'Cliente guardado.' });
       } catch (error) {
         console.error('[ClientOverlay] Error saving client:', error);
-        // Use Sonner for error notification
-        error('Error al guardar el cliente.', error.message || 'Unknown error');
+        // Use Sileo for error notification
+        error('No se pudo guardar el cliente', error.message || 'Revisa los datos e intenta de nuevo.');
         
         // Keep backward compatibility
         setFailMessage({

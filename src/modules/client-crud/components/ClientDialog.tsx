@@ -9,7 +9,7 @@
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
+import { useToast } from '@/modules/toast';
 import { DestructiveConfirmDialog } from '@/modules/dialogs/components/variants';
 import {
   ResponsiveDialog,
@@ -39,7 +39,7 @@ export function ClientDialog({
   mode: initialMode = 'create',
 }: ClientDialogProps) {
   const { user } = useUser();
-  const { success: showSuccess, error: showError } = useSonnerToast();
+  const { success: showSuccess, error: showError } = useToast();
 
   // Check if user is admin
   const isAdmin =
@@ -232,7 +232,7 @@ export function ClientDialog({
 
   const handleConfirmDelete = useCallback(async () => {
     if (!isAdmin || !clientId) {
-      showError('Solo los administradores pueden eliminar cuentas.');
+      showError('Sin permisos', 'Solo administradores pueden eliminar cuentas.');
       return;
     }
 
@@ -246,7 +246,7 @@ export function ClientDialog({
       setClients(updatedClients);
       invalidateClientsCache();
 
-      showSuccess('La cuenta ha sido eliminada exitosamente.');
+      showSuccess('Cuenta eliminada', 'Se eliminó permanentemente del sistema.');
       setShowDeleteConfirm(false);
       onOpenChange(false);
     } catch (error) {

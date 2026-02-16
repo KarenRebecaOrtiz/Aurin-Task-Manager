@@ -14,7 +14,7 @@ import { useEncryption } from "@/hooks/useEncryption";
 import { useVirtuosoMessages } from "../hooks/useVirtuosoMessages";
 import { useMessageActions } from "@/hooks/useMessageActions";
 import { ManualTimeDialog } from "@/modules/dialogs";
-import { toast } from "@/components/ui/use-toast";
+import { sileo } from "sileo";
 import { teamNotificationService } from "@/modules/teams/services";
 import type { ChatSidebarProps } from "../types";
 import type { Message } from "../types";
@@ -183,7 +183,7 @@ const ChatSidebarVirtualized: React.FC<ChatSidebarProps> = memo(({
 
   const handleCopyMessage = useCallback(async (text: string) => {
     await navigator.clipboard.writeText(text);
-    toast({ title: "Copiado al portapapeles" });
+    sileo.success({ title: "Mensaje copiado", description: "Ya puedes pegarlo donde lo necesites." });
   }, []);
 
   const handleDownloadFile = useCallback((message: Message) => {

@@ -5,7 +5,7 @@
   @include flex-center;
   justify-content: center;
   cursor: default;
-  transition: transform 0.2s ease, opacity 0.2s ease;
+  transition: transform $transition-fast ease, opacity $transition-fast ease;
   position: relative;
   width: 40px;
   height: 40px;
@@ -23,8 +23,8 @@
         content: '';
         position: absolute;
         inset: 0;
-        border-radius: 999px;
-        box-shadow: 0 0 0 2px var(--primary-color, #3b82f6);
+        border-radius: $radius-full;
+        box-shadow: 0 0 0 2px $blue-500;
         pointer-events: none;
         animation: pulse 1.5s infinite;
       }
@@ -35,15 +35,15 @@
     }
 
     &:focus-visible {
-      outline: 2px solid var(--primary-color, #3b82f6);
+      outline: 2px solid $blue-500;
       outline-offset: 2px;
-      border-radius: 999px;
+      border-radius: $radius-full;
     }
   }
 }
 
 .clientImage {
-  border-radius: 999px;
+  border-radius: $radius-full;
   object-fit: cover;
 }
 
@@ -53,15 +53,15 @@
   justify-content: center;
   width: 40px;
   height: 40px;
-  border-radius: 999px;
-  background: #e5e7eb;
-  color: #9ca3af;
-  font-size: 12px;
-  font-weight: 500;
+  border-radius: $radius-full;
+  background: $zinc-200;
+  color: $zinc-400;
+  font-size: $text-xs;
+  font-weight: $font-weight-medium;
 
   :global(body.dark) & {
-    background: #374151;
-    color: #6b7280;
+    background: $zinc-700;
+    color: $color-text-muted;
   }
 }
 

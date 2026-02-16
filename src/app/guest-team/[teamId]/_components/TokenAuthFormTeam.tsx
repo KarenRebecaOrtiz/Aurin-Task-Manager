@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { validateTokenForTeam } from '@/modules/shareTask/actions/tokenAuth.actions';
 import { useGuestTeamAuth } from '@/contexts/GuestTeamAuthContext';
-import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
+import { useToast } from '@/modules/toast';
 import { Lock, ArrowRight } from 'lucide-react';
 import styles from './TokenAuthFormTeam.module.scss';
 
@@ -16,13 +16,13 @@ export function TokenAuthFormTeam({ teamId, teamName }: TokenAuthFormTeamProps) 
   const [token, setToken] = useState('');
   const [isPending, startTransition] = useTransition();
   const { setGuestSession } = useGuestTeamAuth();
-  const { success, error: showError } = useSonnerToast();
+  const { success, error: showError } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!token.trim()) {
-      showError('Error', 'Por favor ingresa un token válido');
+      showError('Token requerido', 'Ingresa un token válido para continuar.');
       return;
     }
 
@@ -39,11 +39,11 @@ export function TokenAuthFormTeam({ teamId, teamName }: TokenAuthFormTeamProps) 
           authenticatedAt: new Date().toISOString(),
         });
 
-        success('¡Autenticación exitosa! Cargando equipo...');
+        success('Autenticación exitosa', 'Ya puedes ver el equipo compartido.');
         // Force reload to show authenticated view
         window.location.reload();
       } else {
-        showError('Error de autenticación', result.error || 'Token inválido');
+        showError('Token inválido', result.error || 'Verifica el token e intenta de nuevo.');
       }
     });
   };

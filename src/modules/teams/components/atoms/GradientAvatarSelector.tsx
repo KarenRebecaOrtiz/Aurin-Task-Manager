@@ -9,7 +9,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import Image from 'next/image';
-import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
+import { useToast } from '@/modules/toast';
 import styles from './GradientAvatarSelector.module.scss';
 
 // Max file size in bytes (2MB)
@@ -59,7 +59,7 @@ export function GradientAvatarSelector({
   const [isShuffling, setIsShuffling] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { error: showError } = useSonnerToast();
+  const { error: showError } = useToast();
 
   const handleShuffle = useCallback(() => {
     setIsShuffling(true);

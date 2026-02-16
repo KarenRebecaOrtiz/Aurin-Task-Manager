@@ -4,7 +4,7 @@ import { Urbanist } from "next/font/google";
 import "./globals.scss";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { DialogProvider } from "@/modules/dialogs";
-import { SonnerToaster } from "@/modules/sonner";
+import { SileoToaster } from "@/modules/toast";
 import { InteractiveBackground } from "@/components/ui/InteractiveBackground";
 import { LightRaysWrapper } from "@/components/ui/LightRaysWrapper";
 
@@ -110,7 +110,7 @@ export default function RootLayout({
             <DialogProvider>
               {children}
             </DialogProvider>
-            <SonnerToaster />
+            <SileoToaster position="top-right" />
             <div id="portal-root" />
           </body>
         </html>

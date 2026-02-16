@@ -1,10 +1,12 @@
+@use '@/app/styles/variables' as *;
+
 .footer {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 1rem;
-    padding: 1rem;
+    gap: $spacing-lg;
+    padding: $spacing-lg;
     padding-bottom: 100px;
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
@@ -22,11 +24,11 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 0.5rem;
+      margin-bottom: $spacing-sm;
       
       img {
         opacity: 1 !important;
-        transition: all 0.3s ease;
+        transition: $transition-base;
       }
     }
 
@@ -34,8 +36,8 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 0.75rem;
-      margin-bottom: 0.5rem;
+      gap: $spacing-md;
+      margin-bottom: $spacing-sm;
     }
 
     .quickLinkButton {
@@ -44,10 +46,10 @@
       justify-content: center;
       width: 36px;
       height: 36px;
-      border-radius: 8px;
-      background: rgba(71, 85, 105, 0.15);
-      border: 1px solid rgba(71, 85, 105, 0.2);
-      transition: all 0.3s ease;
+      border-radius: $radius-md;
+      background: rgba($slate-500, 0.15);
+      border: 1px solid rgba($slate-500, 0.2);
+      transition: $transition-base;
       cursor: pointer;
 
       img {
@@ -55,7 +57,7 @@
         height: 20px;
         object-fit: contain;
         filter: brightness(0) saturate(100%) invert(30%) sepia(10%) saturate(500%) hue-rotate(180deg);
-        transition: all 0.3s ease;
+        transition: $transition-base;
       }
 
       .pngIcon {
@@ -64,9 +66,9 @@
 
       &:hover {
         transform: translateY(-2px);
-        background: rgba(71, 85, 105, 0.25);
-        border-color: rgba(71, 85, 105, 0.35);
-        box-shadow: -2px -2px 4px rgba(255, 255, 255, 0.95), 2px 2px 4px rgba(0, 0, 0, 0.12);
+        background: rgba($slate-500, 0.25);
+        border-color: rgba($slate-500, 0.35);
+        box-shadow: -2px -2px 4px rgba($white, 0.95), 2px 2px 4px rgba($black, 0.12);
 
         img {
           filter: brightness(0) saturate(100%) invert(20%) sepia(15%) saturate(600%) hue-rotate(180deg);
@@ -79,7 +81,7 @@
 
       &:active {
         transform: translateY(0);
-        box-shadow: inset -1px -1px 2px rgba(255, 255, 255, 0.4), inset 1px 1px 2px rgba(209, 217, 230, 0.2);
+        box-shadow: inset -1px -1px 2px rgba($white, 0.4), inset 1px 1px 2px rgba($slate-200, 0.2);
       }
     }
     
@@ -87,58 +89,58 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 1.5rem;
+      gap: $spacing-xl;
       flex-wrap: wrap;
       
       @media (max-width: 768px) {
         flex-direction: column;
-        gap: 1rem;
+        gap: $spacing-lg;
       }
     }
   
     .info {
       p {
-        color: #475569;
-        font-size: 0.875rem;
+        color: $slate-500;
+        font-size: $text-sm;
         margin: 0;
   
         span {
-          font-weight: 600;
-          color: #1e293b;
+          font-weight: $font-weight-semibold;
+          color: $slate-900;
         }
       }
     }
   
     .feedbackForm {
       display: flex;
-      gap: 0.5rem;
+      gap: $spacing-sm;
       align-items: center;
   
       .feedbackInput {
         width: 300px;
-        padding: 0.5rem 0.75rem;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 8px;
-        background: rgba(241, 245, 249, 0.7);
+        padding: $spacing-sm $spacing-md;
+        border: 1px solid rgba($white, 0.2);
+        border-radius: $radius-md;
+        background: rgba($slate-100, 0.7);
         backdrop-filter: blur(6px);
         -webkit-backdrop-filter: blur(6px);
-        color: #1e293b;
-        font-size: 0.875rem;
+        color: $slate-900;
+        font-size: $text-sm;
         outline: none;
-        transition: all 0.3s ease;
+        transition: $transition-base;
   
         &::placeholder {
-          color: #94a3b8;
+          color: $slate-400;
         }
   
         &:hover {
-          background: rgba(241, 245, 249, 0.85);
-          border-color: rgba(255, 255, 255, 0.4);
+          background: rgba($slate-100, 0.85);
+          border-color: rgba($white, 0.4);
         }
   
         &:focus {
-          border-color: #475569;
-          box-shadow: inset -2px -2px 4px rgba(255, 255, 255, 0.6), inset 2px 2px 4px rgba(209, 217, 230, 0.4);
+          border-color: $slate-500;
+          box-shadow: inset -2px -2px 4px rgba($white, 0.6), inset 2px 2px 4px rgba($slate-200, 0.4);
         }
   
         @media (max-width: 768px) {
@@ -149,18 +151,18 @@
       .sendButton {
         display: flex;
         align-items: center;
-        gap: 0.25rem;
-        padding: 0.5rem 0.75rem;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 8px;
-        background: rgba(241, 245, 249, 0.7);
+        gap: $spacing-xs;
+        padding: $spacing-sm $spacing-md;
+        border: 1px solid rgba($white, 0.2);
+        border-radius: $radius-md;
+        background: rgba($slate-100, 0.7);
         backdrop-filter: blur(6px);
         -webkit-backdrop-filter: blur(6px);
-        color: #475569;
-        font-size: 0.875rem;
-        font-weight: 500;
+        color: $slate-500;
+        font-size: $text-sm;
+        font-weight: $font-weight-medium;
         cursor: pointer;
-        transition: all 0.3s ease;
+        transition: $transition-base;
   
         svg {
           transform: translateY(1px);
@@ -168,15 +170,15 @@
   
         &:hover {
           transform: translateY(-1px);
-          background: rgba(241, 245, 249, 0.85);
-          border-color: rgba(255, 255, 255, 0.4);
-          box-shadow: -2px -2px 4px rgba(255, 255, 255, 0.95), 2px 2px 4px rgba(0, 0, 0, 0.12);
+          background: rgba($slate-100, 0.85);
+          border-color: rgba($white, 0.4);
+          box-shadow: -2px -2px 4px rgba($white, 0.95), 2px 2px 4px rgba($black, 0.12);
         }
   
         &:active {
           transform: translateY(0);
-          background: rgba(241, 245, 249, 0.6);
-          box-shadow: inset -1px -1px 2px rgba(255, 255, 255, 0.4), inset 1px 1px 2px rgba(209, 217, 230, 0.2);
+          background: rgba($slate-100, 0.6);
+          box-shadow: inset -1px -1px 2px rgba($white, 0.4), inset 1px 1px 2px rgba($slate-200, 0.2);
         }
   
         &:disabled {
@@ -187,21 +189,21 @@
     }
   
     .message {
-      color: #475569;
-      font-size: 0.75rem;
+      color: $slate-500;
+      font-size: $text-xs;
       margin: 0;
       text-align: center;
       flex-basis: 100%;
     }
   
-    :global(.dark) & {
+    :global(body.dark) & {
       background: transparent;
       border-color:none;
       box-shadow: none;
 
       .quickLinkButton {
-        background: rgba(255, 255, 255, 0.08);
-        border-color: rgba(255, 255, 255, 0.12);
+        background: rgba($white, 0.08);
+        border-color: rgba($white, 0.12);
 
         img {
           filter: brightness(0) saturate(100%) invert(100%);
@@ -212,9 +214,9 @@
         }
 
         &:hover {
-          background: rgba(255, 255, 255, 0.15);
-          border-color: rgba(255, 255, 255, 0.25);
-          box-shadow: -2px -2px 4px rgba(0, 0, 0, 0.6), 2px 2px 4px rgba(255, 255, 255, 0.03);
+          background: rgba($white, 0.15);
+          border-color: rgba($white, 0.25);
+          box-shadow: -2px -2px 4px rgba($black, 0.6), 2px 2px 4px rgba($white, 0.03);
 
           img {
             filter: brightness(0) saturate(100%) invert(100%);
@@ -226,62 +228,62 @@
         }
 
         &:active {
-          background: rgba(255, 255, 255, 0.05);
-          box-shadow: inset -1px -1px 2px rgba(0, 0, 0, 0.35), inset 1px 1px 2px rgba(255, 255, 255, 0.02);
+          background: rgba($white, 0.05);
+          box-shadow: inset -1px -1px 2px rgba($black, 0.35), inset 1px 1px 2px rgba($white, 0.02);
         }
       }
 
       .info {
         p {
-          color: #e2e8f0;
+          color: $slate-200;
   
           span {
-            color: #f8fafc;
+            color: $zinc-50;
           }
         }
       }
   
       .feedbackForm {
         .feedbackInput {
-          background: rgba(30, 30, 30, 0.7);
-          border-color: rgba(255, 255, 255, 0.1);
-          color: #e2e8f0;
+          background: rgba($zinc-900, 0.7);
+          border-color: rgba($white, 0.1);
+          color: $slate-200;
   
           &::placeholder {
-            color: #64748b;
+            color: $slate-500;
           }
   
           &:hover {
-            background: rgba(30, 30, 30, 0.85);
-            border-color: rgba(255, 255, 255, 0.2);
+            background: rgba($zinc-900, 0.85);
+            border-color: rgba($white, 0.2);
           }
   
           &:focus {
-            border-color: #e2e8f0;
-            box-shadow: inset -2px -2px 4px rgba(0, 0, 0, 0.45), inset 2px 2px 4px rgba(255, 255, 255, 0.04);
+            border-color: $slate-200;
+            box-shadow: inset -2px -2px 4px rgba($black, 0.45), inset 2px 2px 4px rgba($white, 0.04);
           }
         }
   
         .sendButton {
-          background: rgba(30, 30, 30, 0.7);
-          border-color: rgba(255, 255, 255, 0.1);
-          color: #e2e8f0;
+          background: rgba($zinc-900, 0.7);
+          border-color: rgba($white, 0.1);
+          color: $slate-200;
   
           &:hover {
-            background: rgba(30, 30, 30, 0.85);
-            border-color: rgba(255, 255, 255, 0.2);
-            box-shadow: -2px -2px 4px rgba(0, 0, 0, 0.6), 2px 2px 4px rgba(255, 255, 255, 0.03);
+            background: rgba($zinc-900, 0.85);
+            border-color: rgba($white, 0.2);
+            box-shadow: -2px -2px 4px rgba($black, 0.6), 2px 2px 4px rgba($white, 0.03);
           }
   
           &:active {
-            background: rgba(30, 30, 30, 0.6);
-            box-shadow: inset -1px -1px 2px rgba(0, 0, 0, 0.35), inset 1px 1px 2px rgba(255, 255, 255, 0.02);
+            background: rgba($zinc-900, 0.6);
+            box-shadow: inset -1px -1px 2px rgba($black, 0.35), inset 1px 1px 2px rgba($white, 0.02);
           }
         }
       }
   
       .message {
-        color: #e2e8f0;
+        color: $slate-200;
       }
     }
   }

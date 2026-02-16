@@ -26,7 +26,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserDataStore } from '@/stores/userDataStore';
 import { useDataStore } from '@/stores/dataStore';
-import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
+import { useToast } from '@/modules/toast';
 import type { ActionCommandItem } from '../../types/commandPalette.types';
 import { CommandItem } from '../items/CommandItem';
 import { QUICK_AI_SUGGESTIONS } from '../../constants/actions';
@@ -66,7 +66,7 @@ export function TaskActions({
   const { isAdmin } = useAuth();
   const currentUserId = useUserDataStore((state) => state.userData?.userId || '');
   const tasks = useDataStore((state) => state.tasks);
-  const { success: showSuccess } = useSonnerToast();
+  const { success: showSuccess } = useToast();
 
   // Verificar si el usuario está involucrado en la tarea
   const { isInvolved, isCreator } = useMemo(() => {
@@ -86,7 +86,7 @@ export function TaskActions({
   const handleCopyLink = useCallback(() => {
     const url = `${window.location.origin}/dashboard/tasks/${taskId}`;
     navigator.clipboard.writeText(url);
-    showSuccess('Enlace copiado al portapapeles');
+    showSuccess('Enlace copiado', 'Ya puedes pegarlo donde lo necesites.');
   }, [taskId, showSuccess]);
 
   // Construir lista de acciones según permisos

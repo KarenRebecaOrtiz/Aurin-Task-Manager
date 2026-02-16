@@ -1,10 +1,9 @@
 @use '@/app/styles/variables' as *;
-
+@use '@/app/styles/mixins' as *;
 
 .socialLinks {
-  display: flex;
-  flex-direction: column;
+  @include flex-column;
   align-items: stretch;
-  gap: 8px;
-  margin-bottom: 32px;
+  gap: $spacing-sm;
+  margin: 0;
 }

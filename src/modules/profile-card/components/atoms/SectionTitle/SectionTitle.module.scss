@@ -1,14 +1,6 @@
 @use '@/app/styles/variables' as *;
-
+@use '@/app/styles/mixins' as *;
 
 .sectionTitle {
-  font-size: 16px;
-  font-weight: 600;
-  color: $color-text-primary;
-  margin-bottom: 12px;
-  text-align: center;
-
-  :global(body.dark) & {
-    color: $color-text-dark-primary;
-  }
+  @include profile-card-section-title;
 }

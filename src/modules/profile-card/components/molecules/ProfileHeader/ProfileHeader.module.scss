@@ -1,17 +1,27 @@
 @use '@/app/styles/variables' as *;
-
+@use '@/app/styles/mixins' as *;
 
 .coverPhotoSection {
   position: relative;
-  width: 100%;
+  width: calc(100% + ($profile-card-padding * 2));
+  margin-left: -$profile-card-padding;
+  margin-right: -$profile-card-padding;
   height: $profile-card-header-height;
-  overflow: hidden;
 
   @media (min-width: $breakpoint-sm) {
+    width: calc(100% + ($profile-card-padding-md * 2));
+    margin-left: -$profile-card-padding-md;
+    margin-right: -$profile-card-padding-md;
+  }
+
+  @media (min-width: $breakpoint-md) {
     height: $profile-card-header-height-md;
   }
 
   @media (min-width: $breakpoint-lg) {
+    width: calc(100% + ($profile-card-padding-lg * 2));
+    margin-left: -$profile-card-padding-lg;
+    margin-right: -$profile-card-padding-lg;
     height: $profile-card-header-height-lg;
   }
 }
@@ -23,18 +33,24 @@
   background-position: center;
   background-repeat: no-repeat;
   background-color: $color-bg-light;
+
+  :global(body.dark) & {
+    background-color: $color-bg-dark-secondary;
+  }
 }
 
 .profilePhotoOverlay {
   position: relative;
   margin-top: -40px;
-  margin-left: 20px;
+  margin-left: $profile-card-padding;
   z-index: 10;
 
-  @media (max-width: 640px) {
-    margin-left: 0;
-    align-self: flex-start;
-    margin-left: 32px;
+  @media (min-width: $breakpoint-sm) {
+    margin-left: $profile-card-padding-md;
+  }
+
+  @media (min-width: $breakpoint-lg) {
+    margin-left: $profile-card-padding-lg;
   }
 }
 
@@ -42,13 +58,22 @@
   display: flex;
   align-items: start;
   flex-direction: row;
-  gap: 20px;
+  gap: $spacing-xl;
   width: 100%;
+  padding: 0 $profile-card-padding;
 
-  @media (max-width: 640px) {
+  @media (min-width: $breakpoint-sm) {
+    padding: 0 $profile-card-padding-md;
+  }
+
+  @media (min-width: $breakpoint-lg) {
+    padding: 0 $profile-card-padding-lg;
+  }
+
+  @include responsive(sm) {
     flex-direction: column;
     align-items: start;
-    gap: 16px;
+    gap: $spacing-lg;
   }
 }
 
@@ -58,24 +83,17 @@
   align-items: center;
   justify-content: start;
   flex: 1;
-  gap: 12px;
+  gap: $spacing-md;
 }
 
 .actionButtons {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: $spacing-sm;
 }
 
 .name {
-  font-size: 24px;
-  font-weight: bold;
-  color: $color-text-primary;
-  margin: 0;
-
-  :global(body.dark) & {
-    color: $color-text-dark-primary;
-  }
+  @include profile-card-name;
 }
 
 .badgeContainer {
@@ -83,15 +101,7 @@
   justify-content: flex-start;
   margin: 0;
 
-  .badge {
-    transform: scale(0.8);
-
-    @media (min-width: 640px) {
-      transform: scale(0.9);
-    }
-  }
-
-  @media (max-width: 640px) {
+  @include responsive(sm) {
     justify-content: center;
   }
 }

@@ -1,16 +1,29 @@
+@use '@/app/styles/variables' as *;
+
 .badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  border-radius: 100px;
+  gap: $spacing-sm;
+  border-radius: $radius-full;
   padding-left: 0.8rem;
   padding-right: 0.8rem;
   padding-top: 0.55rem;
   padding-bottom: 0.55rem;
-  font-size: 0.775rem;
-  font-weight: 600;
+  font-size: $text-xs;
+  font-weight: $font-weight-semibold;
   border: 1px solid transparent;
-  transition: all 0.3s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: default;
+
+  &:hover {
+    transform: translateY(-1px) scale(1.05);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    filter: brightness(0.95);
+  }
+
+  &:active {
+    transform: scale(0.97);
+  }
 }
 
 .icon {

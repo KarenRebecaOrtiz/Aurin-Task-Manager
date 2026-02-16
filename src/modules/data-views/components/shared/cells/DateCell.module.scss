@@ -3,24 +3,48 @@
 
 .dateWrapper {
   @include flex-center;
+  padding: $spacing-xs $spacing-sm;
+  border-radius: $radius-md;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: default;
+
+  &:hover {
+    background: rgba($slate-200, 0.5);
+
+    .date {
+      color: $blue-600;
+    }
+  }
+
+  :global(body.dark) & {
+    &:hover {
+      background: rgba($white, 0.06);
+
+      .date {
+        color: $blue-400;
+      }
+    }
+  }
 }
 
 .date {
-  color: #1e293b;
-  font-size: 14px;
-  font-weight: 500;
+  color: $color-text-primary;
+  font-size: $text-sm;
+  font-weight: $font-weight-medium;
+  transition: color 0.2s ease;
 
   :global(body.dark) & {
-    color: #e5e7eb;
+    color: $zinc-200;
   }
 }
 
 .emptyDate {
-  color: #94a3b8;
-  font-size: 14px;
+  color: $slate-500;
+  font-size: $text-sm;
   font-style: italic;
+  transition: color 0.2s ease;
 
   :global(body.dark) & {
-    color: #6b7280;
+    color: $color-text-muted;
   }
 }

@@ -6,13 +6,13 @@ import { db } from '@/lib/firebase';
 import { useUser } from '@clerk/nextjs';
 import { useDataStore } from '@/stores/dataStore';
 import { useDialog, TaskDialog } from '@/modules/dialogs';
-import { useSonnerToast } from '@/modules/sonner';
+import { useToast } from '@/modules/toast';
 import { AccountDetailsCard } from '@/modules/data-views/clients/components/modals';
 
 export default function TasksPageModals() {
   const { user } = useUser();
   const { openConfirm } = useDialog();
-  const { success, error: showError } = useSonnerToast();
+  const { success, error: showError } = useToast();
   
   // Optimized selectors to prevent unnecessary re-renders
   const deleteTarget = useTasksPageStore(useShallow(state => state.deleteTarget));
@@ -114,10 +114,10 @@ export default function TasksPageModals() {
       }
 
       handleClientSidebarClose();
-      success('Cliente guardado exitosamente');
+      success('Cliente guardado', 'Los cambios se aplicaron correctamente.');
     } catch (err) {
       console.error('[TasksPageModals] Error saving client:', err);
-      showError('Error al guardar el cliente');
+      showError('No se pudo guardar el cliente', 'Intenta de nuevo.');
     } finally {
       const { setIsClientLoading } = useTasksPageStore.getState();
       setIsClientLoading(false);
@@ -142,7 +142,7 @@ export default function TasksPageModals() {
             const deletedTask = deleteTaskOptimistic(deleteTarget.id);
 
             if (!deletedTask) {
-              showError('Tarea no encontrada');
+              showError('Tarea no encontrada', 'Fue eliminada o ya no existe.');
               return;
             }
 
@@ -156,7 +156,7 @@ export default function TasksPageModals() {
 
               const { closeDeletePopup } = useTasksPageStore.getState();
               closeDeletePopup();
-              success('Tarea eliminada exitosamente');
+              success('Tarea eliminada', 'Se eliminó permanentemente.');
             } catch (err) {
               console.error('[TasksPageModals] Error deleting task:', err);
 
@@ -164,7 +164,7 @@ export default function TasksPageModals() {
               addTask(deletedTask);
               console.log('[TasksPageModals] Task restored to local state after error');
 
-              showError('Error al eliminar la tarea');
+              showError('No se pudo eliminar', 'Intenta de nuevo.');
             }
           }
         },
@@ -206,10 +206,10 @@ export default function TasksPageModals() {
             const { setIsDeleteClientOpen, setDeleteConfirm } = useTasksPageStore.getState();
             setIsDeleteClientOpen(false);
             setDeleteConfirm('');
-            success('Cliente eliminado exitosamente');
+            success('Cliente eliminado', 'Se eliminó permanentemente.');
           } catch (err) {
             console.error('Error deleting client:', err);
-            showError('Error al eliminar la cuenta');
+            showError('No se pudo eliminar', 'Intenta de nuevo.');
           }
         },
         onCancel: () => {

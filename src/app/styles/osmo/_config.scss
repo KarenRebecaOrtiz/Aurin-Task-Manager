@@ -1,0 +1,59 @@
+// ==========================================================================
+// Osmo Scaling System — Configuration
+// ==========================================================================
+//
+// Fluid typography using clamp() on CSS custom properties.
+// Each --text-* property scales smoothly between mobile and desktop sizes.
+// No media queries needed — a single clamp() expression per step.
+
+// Viewport range for fluid interpolation
+$osmo-viewport-min: 320 !default;   // Mobile min (px, unitless)
+$osmo-viewport-max: 1920 !default;  // Desktop ideal (px, unitless)
+
+// Base font sizes (px, unitless)
+$osmo-base-font: 16 !default;       // Desktop base
+$osmo-mobile-base: 14 !default;     // Mobile base
+
+// Type scale ratios
+$osmo-type-ratio: 1.25 !default;        // Desktop — Major Third
+$osmo-mobile-type-ratio: 1.2 !default;  // Mobile — Minor Third (compressed)
+
+// Type scale steps — maps token name to exponent of the ratio
+// step 0 = base, step 1 = xl, step -1 = xs, etc.
+$osmo-type-steps: (
+  "6xl": 6,
+  "5xl": 5,
+  "4xl": 4,
+  "3xl": 3,
+  "2xl": 2,
+  "xl":  1,
+  "lg":  0.5,
+  "base": 0,
+  "sm":  0,
+  "xs": -1,
+) !default;
+
+// Container breakpoints (for layout scaling, not typography)
+$osmo-breakpoints: (
+  desktop: (
+    unit: 16,
+    ideal: 1920,
+    min: 1280px,
+    max: 2560px,
+  ),
+  tablet: (
+    unit: 16,
+    ideal: 1024,
+    min: 768px,
+    max: 1279px,
+  ),
+  mobile: (
+    unit: 16,
+    ideal: 390,
+    min: 320px,
+    max: 767px,
+  ),
+) !default;
+
+// Debug mode — set true during development
+$osmo-debug: false !default;

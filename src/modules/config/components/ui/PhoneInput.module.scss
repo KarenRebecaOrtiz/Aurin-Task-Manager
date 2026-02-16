@@ -3,59 +3,57 @@
 .phoneInputWrapper {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: $spacing-md;
   flex: 1;
   width: 100%;
 }
 
 .label {
-  font-size: 14px; // text-sm - Form Field Labels estándar
-  font-weight: 600; // font-semibold
-  color: #1f2937; // text-gray-800
-  margin-bottom: 8px; // mb-2
-  letter-spacing: 0.01em; // tracking-wide
+  font-size: $text-sm;
+  font-weight: $font-weight-semibold;
+  color: $zinc-800;
+  margin-bottom: $spacing-sm;
+  letter-spacing: 0.01em;
 
   :global(.dark) & {
-    color: #e5e7eb; // text-gray-200
+    color: $zinc-200;
   }
 }
 
 .phoneInputContainer {
   display: flex;
   flex-direction: row;
-  gap: 0; // No gap - components should be seamlessly joined
-  align-items: stretch; // Changed to stretch for equal heights
+  gap: 0;
+  align-items: stretch;
   width: 100%;
 
   > div:first-child {
     flex: 0 0 auto;
-    // Width is controlled by CountrySelect component itself
   }
 
   > div:last-child {
     flex: 1;
     min-width: 0;
 
-    // Make input connect seamlessly with dropdown
     input {
-      border-radius: 0 8px 8px 0 !important; // Only right side rounded
-      border-left: none !important; // Remove left border to connect
+      border-radius: 0 $radius-md $radius-md 0 !important;
+      border-left: none !important;
 
       &:focus {
-        border-left: none !important; // Keep border removed on focus
+        border-left: none !important;
       }
     }
   }
 
   @media (max-width: 1024px) {
     > div:last-child input {
-      border-radius: 0 8px 8px 0 !important;
+      border-radius: 0 $radius-md $radius-md 0 !important;
     }
   }
 
-  @media (max-width: 768px) {
+  @media (max-width: 767px) {
     > div:last-child input {
-      border-radius: 0 8px 8px 0 !important;
+      border-radius: 0 $radius-md $radius-md 0 !important;
     }
   }
 }

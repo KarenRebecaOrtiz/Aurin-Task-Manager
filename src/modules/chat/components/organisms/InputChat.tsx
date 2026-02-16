@@ -13,7 +13,7 @@ import React, { useRef, useState, useCallback, useEffect, useMemo } from 'react'
 import { ArrowUp, Paperclip, Mic, X, Square, StopCircle, Globe } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAudioRecorder } from '@/modules/chat/hooks/useAudioRecorder'
-import { toast } from '@/components/ui/use-toast'
+import { sileo } from 'sileo'
 import styles from '@/modules/n8n-chatbot/styles/components/input-area.module.scss'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10 MB
@@ -148,11 +148,7 @@ export const InputChat: React.FC<InputChatProps> = ({
   }, [])
 
   const handleAudioError = useCallback((error: string) => {
-    toast({
-      title: 'Error de audio',
-      description: error,
-      variant: 'error',
-    })
+    sileo.error({ title: 'Audio no disponible', description: error })
   }, [])
 
   // ========== AUDIO RECORDING HOOK ==========
@@ -254,22 +250,14 @@ export const InputChat: React.FC<InputChatProps> = ({
 
   const handleFileSelect = useCallback((file: File): boolean => {
     if (file.size > MAX_FILE_SIZE) {
-      toast({
-        title: 'Archivo demasiado grande',
-        description: 'El archivo supera los 10 MB.',
-        variant: 'error',
-      })
+      sileo.error({ title: 'Archivo muy grande', description: 'El límite es 10 MB. Reduce el tamaño e intenta de nuevo.' })
       return false
     }
 
     const fileExtension = file.name.split('.').pop()?.toLowerCase()
     const validExtensions = ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'doc', 'docx', 'txt']
     if (!fileExtension || !validExtensions.includes(fileExtension)) {
-      toast({
-        title: 'Extensión no permitida',
-        description: `Extensión no permitida. Permitidas: ${validExtensions.join(', ')}`,
-        variant: 'error',
-      })
+      sileo.error({ title: 'Formato no soportado', description: `Formatos permitidos: ${validExtensions.join(', ')}` })
       return false
     }
 
@@ -387,11 +375,7 @@ export const InputChat: React.FC<InputChatProps> = ({
       setWebSearchEnabled(false)
 
     } catch (error) {
-      toast({
-        title: 'Error al enviar',
-        description: 'Error al enviar el mensaje. Intenta de nuevo.',
-        variant: 'error',
-      })
+      sileo.error({ title: 'No se pudo enviar', description: 'Revisa tu conexión e intenta de nuevo.' })
     } finally {
       setIsSending(false)
     }

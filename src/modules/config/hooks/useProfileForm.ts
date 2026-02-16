@@ -551,7 +551,7 @@ export const useProfileForm = ({ userId, onSuccess, onError }: UseProfileFormOpt
       useConfigPageStore.getState().clearTabChanges(activeTab);
 
       if (onSuccessRef.current) {
-        onSuccessRef.current('Configuración guardada exitosamente');
+        onSuccessRef.current('Configuración guardada');
       }
     } catch (error) {
       if (onErrorRef.current) {

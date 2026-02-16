@@ -1,20 +1,22 @@
 // ClientDialog.module.scss
 // Styles for the client create/edit dialog
 
+@use '@/app/styles/variables' as *;
+
 // ============================================================================
 // CONTENT
 // ============================================================================
 
 .content {
-  padding: 24px;
-  padding-top: 16px;
+  padding: $spacing-2xl;
+  padding-top: $spacing-lg;
   overflow-y: auto;
   overflow-x: visible;
   flex: 1;
 
   @media (max-width: 600px) {
-    padding: 16px;
-    padding-top: 12px;
+    padding: $spacing-lg;
+    padding-top: $spacing-md;
   }
 }
 
@@ -23,15 +25,15 @@
 // ============================================================================
 
 .footer {
-  padding: 16px 24px;
-  border-top: 1px solid #E3E3E3;
+  padding: $spacing-lg $spacing-2xl;
+  border-top: 1px solid $color-border-light;
 
-  :global(.dark) & {
-    border-top-color: #3f3f46;
+  :global(body.dark) & {
+    border-top-color: $zinc-700;
   }
 
   @media (max-width: 600px) {
-    padding: 16px;
+    padding: $spacing-lg;
   }
 }
 
@@ -39,7 +41,7 @@
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  gap: 12px;
+  gap: $spacing-md;
 
   // Ensure buttons have consistent sizing
   button {

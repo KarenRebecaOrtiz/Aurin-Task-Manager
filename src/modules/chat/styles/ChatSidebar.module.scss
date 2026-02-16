@@ -1,8 +1,7 @@
 /**
  * Chat Sidebar - Main Container Styles
- * 
+ *
  * Estilos del contenedor principal del sidebar de chat.
- * Basado en src/components/ChatSidebar.module.scss pero modularizado.
  */
 
 @use './variables' as *;
@@ -23,8 +22,6 @@
   justify-content: space-between;
   z-index: $chat-sidebar-z-index;
   overflow: hidden;
-  // Note: Animations now handled by Motion Dev (framer-motion)
-  // transform and transition removed - controlled by sidebarContainerVariants
   box-shadow:
     -5px 1px 11px rgba(0, 0, 0, 0.05),
     -19px 3px 19px rgba(0, 0, 0, 0.009),
@@ -53,7 +50,6 @@
   background: rgba(0, 0, 0, 0.5);
   z-index: calc($chat-sidebar-z-index - 1);
   backdrop-filter: blur(4px);
-  // Note: opacity animation now handled by Motion Dev (overlayVariants)
 }
 
 :global(body.dark) .overlay {
@@ -69,7 +65,7 @@
   flex-direction: column;
   gap: $chat-gap-sm;
   position: relative;
-  z-index: 10; // Above content and date separators (z-index: 5)
+  z-index: 10;
 }
 
 .controls {
@@ -127,18 +123,18 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 16px;
-  background: rgba(156, 163, 175, 0.1);
-  border-radius: 12px;
-  color: #6b7280;
-  font-size: 0.875rem;
-  font-weight: 500;
+  gap: $chat-gap-sm;
+  padding: $chat-gap-xl;
+  background: rgba($zinc-400, 0.1);
+  border-radius: $radius-lg;
+  color: $color-text-secondary;
+  font-size: $text-sm;
+  font-weight: $font-weight-medium;
   text-align: center;
 
-  :global(.dark) & {
-    background: rgba(75, 85, 99, 0.2);
-    color: #9ca3af;
+  :global(body.dark) & {
+    background: rgba($zinc-600, 0.2);
+    color: $color-text-dark-secondary;
   }
 
   svg {
@@ -146,6 +142,6 @@
   }
 
   span {
-    line-height: 1.4;
+    line-height: $leading-snug;
   }
 }

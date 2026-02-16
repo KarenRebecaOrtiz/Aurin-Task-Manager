@@ -22,7 +22,7 @@ import { DialogFooter } from '../../molecules';
 import { DialogLoadingState } from '../../atoms';
 import { panelVariants } from '../../../config/animations';
 import { useMediaQuery } from '../../../hooks/useMediaQuery';
-import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
+import { useToast } from '@/modules/toast';
 import { useDialog } from '../../../hooks/useDialog';
 import { CreateUserDialog } from './CreateUserDialog';
 import styles from './UsersDialog.module.scss';
@@ -52,7 +52,7 @@ export function UsersDialog({ isOpen, onOpenChange }: UsersDialogProps) {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
 
-  const { success: showSuccess, error: showError } = useSonnerToast();
+  const { success: showSuccess, error: showError } = useToast();
   const { openConfirm } = useDialog();
   const isMobile = useMediaQuery('(max-width: 767px)');
 
@@ -70,7 +70,7 @@ export function UsersDialog({ isOpen, onOpenChange }: UsersDialogProps) {
       }
     } catch (error) {
       console.error('Error fetching users:', error);
-      showError('Error al cargar usuarios', 'No se pudieron obtener los usuarios del sistema');
+      showError('No se pudieron cargar usuarios', 'Intenta de nuevo.');
     } finally {
       setIsLoading(false);
     }
@@ -115,7 +115,7 @@ export function UsersDialog({ isOpen, onOpenChange }: UsersDialogProps) {
 
           // Remove user from local state
           setUsers((prev) => prev.filter((u) => u.id !== user.id));
-          showSuccess(`Usuario "${userName}" eliminado exitosamente`);
+          showSuccess(`Usuario eliminado`, `"${userName}" fue eliminado del sistema.`);
         } catch (error) {
           console.error('Error deleting user:', error);
           showError(

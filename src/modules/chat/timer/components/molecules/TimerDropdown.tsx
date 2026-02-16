@@ -23,7 +23,7 @@ import { TimerStatus } from '../../types/timer.types';
 import type { TimerSwitchAction } from '../../types/timer.types';
 import { ConfirmTimerSwitch } from '../organisms/ConfirmTimerSwitch';
 import { formatSecondsToHHMMSS } from '../../utils/timerFormatters';
-import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
+import { useToast } from '@/modules/toast';
 import { firebaseService } from '../../../services/firebaseService';
 import { createTimeLog } from '../../services/timeLogFirebase';
 import { useDataStore } from '@/stores/dataStore';
@@ -82,7 +82,7 @@ export function TimerDropdown({
   const isMobile = useMediaQuery('(max-width: 767px)');
 
   // Toast notifications
-  const { success: showSuccess, error: showError, info: showInfo } = useSonnerToast();
+  const { success: showSuccess, error: showError, info: showInfo } = useToast();
 
   // Get tasks from store to display task names
   const tasks = useDataStore((state) => state.tasks);
@@ -116,15 +116,15 @@ export function TimerDropdown({
 
     try {
       if (action === 'send') {
-        showInfo('Guardando timer anterior...');
+        showInfo('Guardando timer anterior...', 'El timer actual se guardará antes de cambiar.');
       } else {
-        showInfo('Descartando timer anterior...');
+        showInfo('Descartando timer anterior...', 'El timer actual se descartará antes de cambiar.');
       }
 
       pendingTimerSwitch.resolve({ confirmed: true, action });
     } catch (error) {
       console.error('[TimerDropdown] Error handling timer switch:', error);
-      showError('Error al cambiar el timer');
+      showError('No se pudo cambiar el timer', 'Intenta de nuevo más tarde.');
       pendingTimerSwitch.resolve({ confirmed: true, action: 'send' });
     } finally {
       setShowSwitchDialog(false);
@@ -172,12 +172,12 @@ export function TimerDropdown({
     try {
       const started = await startTimer();
       if (started) {
-        showSuccess('Timer iniciado');
+        showSuccess('Timer iniciado', 'El timer comenzó a correr.');
         setIsOpen(false);
       }
       // If not started (user cancelled), do nothing
     } catch {
-      showError('Error al iniciar el timer');
+      showError('No se pudo iniciar el timer', 'Intenta de nuevo.');
     }
   }, [startTimer, showSuccess, showError]);
 
@@ -185,10 +185,10 @@ export function TimerDropdown({
   const handlePauseTimer = useCallback(async () => {
     try {
       await pauseTimer();
-      showInfo('Timer pausado');
+      showInfo('Timer pausado', 'Puedes reanudar cuando quieras.');
       setIsOpen(false);
     } catch {
-      showError('Error al pausar el timer');
+      showError('No se pudo pausar el timer', 'Intenta de nuevo.');
     }
   }, [pauseTimer, showInfo, showError]);
 
@@ -197,18 +197,18 @@ export function TimerDropdown({
     try {
       const started = await startTimer();
       if (started) {
-        showSuccess('Timer reanudado');
+        showSuccess('Timer reanudado', 'El timer continúa corriendo.');
         setIsOpen(false);
       }
     } catch {
-      showError('Error al reanudar el timer');
+      showError('No se pudo reanudar el timer', 'Intenta de nuevo.');
     }
   }, [startTimer, showSuccess, showError]);
 
   // Handle finishing and sending timelog
   const handleFinishAndSend = useCallback(async () => {
     if (timerSeconds === 0) {
-      showInfo('No hay tiempo para enviar');
+      showInfo('No hay tiempo para enviar', 'El timer está en cero.');
       return;
     }
 
@@ -291,10 +291,10 @@ export function TimerDropdown({
       // Reset timer after sending
       await resetTimer();
 
-      showSuccess('Tiempo registrado correctamente');
+      showSuccess('Tiempo registrado', 'El timelog se guardó correctamente.');
       setIsOpen(false);
     } catch {
-      showError('Error al registrar el tiempo');
+      showError('No se pudo registrar el tiempo', 'Intenta de nuevo.');
     } finally {
       setIsSendingLog(false);
     }
@@ -304,10 +304,10 @@ export function TimerDropdown({
   const handleDiscard = useCallback(async () => {
     try {
       await resetTimer();
-      showInfo('Timer descartado');
+      showInfo('Timer descartado', 'El tiempo no se guardó.');
       setIsOpen(false);
     } catch {
-      showError('Error al descartar el timer');
+      showError('No se pudo descartar el timer', 'Intenta de nuevo.');
     }
   }, [resetTimer, showInfo, showError]);
 

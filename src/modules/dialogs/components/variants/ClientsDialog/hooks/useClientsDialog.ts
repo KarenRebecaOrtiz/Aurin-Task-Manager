@@ -12,7 +12,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useDataStore, useClients, useClientsLoading } from '@/stores/dataStore';
 import { useClientsDataStore } from '@/stores/clientsDataStore';
 import { useMediaQuery } from '../../../../hooks/useMediaQuery';
-import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
+import { useToast } from '@/modules/toast';
 import { clientService } from '@/modules/client-crud/services/clientService';
 import { invalidateClientsCache } from '@/lib/cache-utils';
 import { Client } from '@/types';
@@ -86,7 +86,7 @@ export function useClientsDialog(isOpen: boolean): UseClientsDialogReturn {
   const buttonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const menuRef = useRef<HTMLDivElement>(null);
   const isMobile = useMediaQuery('(max-width: 767px)');
-  const { success: showSuccess, error: showError } = useSonnerToast();
+  const { success: showSuccess, error: showError } = useToast();
 
   // ============================================================
   // EFFECTS
@@ -203,7 +203,7 @@ export function useClientsDialog(isOpen: boolean): UseClientsDialogReturn {
       invalidateClientsCache();
 
       // 4. Show success
-      showSuccess(`Cuenta "${clientToDelete.name}" eliminada exitosamente`);
+      showSuccess('Cuenta eliminada', `"${clientToDelete.name}" se eliminó del sistema.`);
       setDeleteConfirm({ show: false, client: null, isDeleting: false });
     } catch (error) {
       console.error('Error deleting client:', error);

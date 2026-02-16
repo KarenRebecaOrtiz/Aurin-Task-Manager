@@ -1,6 +1,6 @@
 /**
  * Image Preview Overlay - Component Styles
- * 
+ *
  * Overlay para previsualizar imágenes en pantalla completa.
  */
 
@@ -20,7 +20,7 @@
   cursor: pointer;
   animation: fadeIn 0.2s ease-out;
 
-  :global(.dark) & {
+  :global(body.dark) & {
     background: rgba(0, 0, 0, 0.95);
   }
 }
@@ -32,7 +32,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: $spacing-lg;
   cursor: default;
 }
 
@@ -45,14 +45,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba($white, 0.1);
   border: none;
   border-radius: 50%;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: $transition-fast;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba($white, 0.2);
     transform: scale(1.1);
   }
 
@@ -67,7 +67,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 12px;
+  border-radius: $radius-lg;
   overflow: hidden;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
 }
@@ -76,16 +76,16 @@
   max-width: 100%;
   max-height: calc(90vh - 60px);
   object-fit: contain;
-  border-radius: 12px;
+  border-radius: $radius-lg;
 }
 
 .fileName {
-  padding: 8px 16px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  color: white;
-  font-size: 14px;
-  font-weight: 500;
+  padding: $spacing-sm $spacing-lg;
+  background: rgba($white, 0.1);
+  border-radius: $radius-md;
+  color: $white;
+  font-size: $text-sm;
+  font-weight: $font-weight-medium;
   text-align: center;
 }
 

@@ -1,19 +1,16 @@
-/**
- * Mobile Loader Styles
- * Loader simple centrado solo visible en móviles
- */
+@use '@/app/styles/variables' as *;
 
 .mobileLoader {
-  display: none; // Oculto por defecto (desktop)
+  display: none;
 
-  @media (max-width: 768px) {
+  @media (max-width: 767px) {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     min-height: 300px;
-    padding: 2rem;
-    gap: 1rem;
+    padding: $spacing-3xl;
+    gap: $spacing-lg;
   }
 }
 
@@ -23,15 +20,15 @@
   justify-content: center;
 
   svg {
-    color: var(--accent-color, #3b82f6);
+    color: $color-border-focus;
     filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
   }
 }
 
 .loadingText {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--text-secondary, #6b7280);
+  font-size: $text-sm;
+  font-weight: $font-weight-medium;
+  color: $color-text-secondary;
   text-align: center;
   margin: 0;
 }

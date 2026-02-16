@@ -15,7 +15,7 @@ import { SaveActions } from '../ui';
 import { useConfigPageStore, useProfileFormStore } from '../../stores';
 import { useProfileForm } from '../../hooks';
 import type { Config } from '../../types';
-import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
+import { useToast } from '@/modules/toast';
 import styles from './ConfigPage.module.scss';
 
 interface ConfigPageProps {
@@ -35,16 +35,16 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
   const { activeTab, setActiveTab, tabChanges } = useConfigPageStore();
   const { setFormData } = useProfileFormStore();
   const [loading, setLoading] = useState(true);
-  const { success, error } = useSonnerToast();
+  const { success, error } = useToast();
 
-  // Create handlers that use both Sonner and legacy callbacks
+  // Create handlers that use both Sileo and legacy callbacks
   const handleSuccess = (message: string) => {
-    success(message);
+    success(message, 'Los cambios se aplicaron correctamente.');
     if (onShowSuccessAlert) onShowSuccessAlert(message);
   };
 
   const handleError = (message: string, errorDetails?: string) => {
-    error(message, errorDetails);
+    error(message, errorDetails || 'Revisa los datos e intenta de nuevo.');
     if (onShowFailAlert) onShowFailAlert(message, errorDetails);
   };
 

@@ -103,7 +103,7 @@ export const useSecuritySettings = ({ onSuccess, onError }: UseSecuritySettingsO
       setRevokingSessionId(sessionId);
       await revokeSessionWithReverification(sessionId);
       await fetchSessions();
-      if (onSuccess) onSuccess('Sesión revocada exitosamente');
+      if (onSuccess) onSuccess('Sesión revocada');
     } catch (error) {
       console.error('[useSecuritySettings] Error revoking session:', error);
       if (onError) onError('Error al revocar la sesión', error instanceof Error ? error.message : 'Error desconocido');
@@ -152,7 +152,7 @@ export const useSecuritySettings = ({ onSuccess, onError }: UseSecuritySettingsO
         newPassword,
       });
 
-      if (onSuccess) onSuccess('Contraseña actualizada exitosamente');
+      if (onSuccess) onSuccess('Contraseña actualizada');
       setShowPasswordForm(false);
       clearPasswordFields();
     } catch (error: unknown) {

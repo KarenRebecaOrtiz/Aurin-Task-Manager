@@ -1,14 +1,15 @@
 /**
  * ToDoDynamic Mixins
- * Shared SCSS mixins for the ToDoDynamic submódule
+ * Shared SCSS mixins for the ToDoDynamic submodule
  */
 
 @use '@/app/styles/_mixins' as *;
+@use '@/app/styles/_variables' as globalVars;
 @use './variables' as vars;
 
-// ============================================================== 
-// 🎨 GLASSMORPHISM MIXINS
-// ============================================================== 
+// ==============================================================
+// GLASSMORPHISM MIXINS
+// ==============================================================
 
 @mixin glassmorphism-light {
   background: vars.$button-bg-light;
@@ -50,9 +51,9 @@
   box-shadow: vars.$shadow-active-dark;
 }
 
-// ============================================================== 
-// 🎨 BUTTON MIXINS
-// ============================================================== 
+// ==============================================================
+// BUTTON MIXINS
+// ==============================================================
 
 @mixin todo-button-base {
   display: flex;
@@ -64,9 +65,9 @@
   border-radius: vars.$button-border-radius !important;
   opacity: 0.9;
   z-index: 50;
-  padding: 8px;
+  padding: globalVars.$spacing-sm;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: globalVars.$transition-base;
 
   @media (max-width: vars.$mobile-breakpoint) {
     width: vars.$button-mobile-size;
@@ -102,20 +103,20 @@
   }
 }
 
-// ============================================================== 
-// 🎨 DROPDOWN MIXINS
-// ============================================================== 
+// ==============================================================
+// DROPDOWN MIXINS
+// ==============================================================
 
 @mixin dropdown-base {
   position: absolute !important;
   width: vars.$dropdown-width;
   max-height: vars.$dropdown-max-height;
-  border-radius: vars.$radius-xl;
+  border-radius: globalVars.$radius-xl;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   overflow: visible;
   pointer-events: auto;
-  z-index: vars.$z-dropdown;
+  z-index: vars.$z-todo-dropdown;
   display: flex;
   flex-direction: column;
   transform: none !important;
@@ -124,7 +125,7 @@
   @media (max-width: vars.$tablet-breakpoint) {
     width: vars.$dropdown-width;
     max-height: vars.$dropdown-mobile-max-height;
-    padding: 10px;
+    padding: globalVars.$spacing-md;
   }
 
   @media (max-width: vars.$mobile-breakpoint) {
@@ -146,40 +147,40 @@
 @mixin dropdown-light {
   background: vars.$dropdown-bg-light;
   border: 1px solid vars.$border-light;
-  box-shadow: 
-    -8px -8px 16px rgba(255, 255, 255, 0.8),
-    8px 8px 16px rgba(0, 0, 0, 0.05),
-    inset -4px -4px 8px rgba(255, 255, 255, 0.5),
+  box-shadow:
+    -8px -8px 16px rgba(globalVars.$white, 0.8),
+    8px 8px 16px rgba(globalVars.$black, 0.05),
+    inset -4px -4px 8px rgba(globalVars.$white, 0.5),
     inset 4px 4px 8px rgba(209, 217, 230, 0.3);
 }
 
 @mixin dropdown-dark {
   background: vars.$dropdown-bg-dark;
   border-color: vars.$border-dark;
-  box-shadow: 
-    -8px -8px 16px rgba(0, 0, 0, 0.3),
-    8px 8px 16px rgba(0, 0, 0, 0.2),
-    inset -4px -4px 8px rgba(255, 255, 255, 0.05),
-    inset 4px 4px 8px rgba(0, 0, 0, 0.1);
+  box-shadow:
+    -8px -8px 16px rgba(globalVars.$black, 0.3),
+    8px 8px 16px rgba(globalVars.$black, 0.2),
+    inset -4px -4px 8px rgba(globalVars.$white, 0.05),
+    inset 4px 4px 8px rgba(globalVars.$black, 0.1);
 }
 
-// ============================================================== 
-// 🎨 INPUT MIXINS
-// ============================================================== 
+// ==============================================================
+// INPUT MIXINS
+// ==============================================================
 
 @mixin input-base {
   width: 100%;
   padding: vars.$input-padding;
-  border-radius: 10px;
-  font-size: 14px;
+  border-radius: globalVars.$radius-lg;
+  font-size: globalVars.$text-sm;
   font-family: inherit;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(globalVars.$white, 0.3);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
-  transition: all 0.2s ease;
+  transition: globalVars.$transition-fast;
 
   &::placeholder {
-    color: vars.$color-text-muted;
+    color: globalVars.$color-text-muted;
   }
 
   &:focus {
@@ -189,63 +190,63 @@
 
 @mixin input-light {
   background: vars.$input-bg-light;
-  color: #0D0D0D;
+  color: globalVars.$color-text-primary;
 
   &:focus {
-    border-color: rgba(255, 255, 255, 0.5);
+    border-color: rgba(globalVars.$white, 0.5);
     background: vars.$input-bg-focus-light;
   }
 }
 
 @mixin input-dark {
   background: vars.$input-bg-dark;
-  color: #D1D1D1;
+  color: globalVars.$color-text-dark-primary;
 
   &::placeholder {
-    color: vars.$color-text-dark-muted;
+    color: globalVars.$color-text-dark-muted;
   }
 
   &:focus {
-    border-color: rgba(255, 255, 255, 0.4);
+    border-color: rgba(globalVars.$white, 0.4);
     background: vars.$input-bg-focus-dark;
   }
 }
 
 @mixin input-error {
-  border-color: #ef4444;
+  border-color: globalVars.$color-error;
   background: rgba(254, 242, 242, 0.9);
-  box-shadow: 
+  box-shadow:
     -2px -2px 4px rgba(254, 242, 242, 0.8),
-    2px 2px 4px rgba(239, 68, 68, 0.1);
+    2px 2px 4px rgba(globalVars.$red-500, 0.1);
 
   &:focus {
-    border-color: #dc2626;
+    border-color: globalVars.$red-600;
     background: rgba(254, 242, 242, 0.95);
-    box-shadow: 
+    box-shadow:
       -2px -2px 4px rgba(254, 242, 242, 0.8),
-      2px 2px 4px rgba(239, 68, 68, 0.2);
+      2px 2px 4px rgba(globalVars.$red-500, 0.2);
   }
 }
 
 @mixin input-error-dark {
-  border-color: #f87171;
+  border-color: globalVars.$red-400;
   background: rgba(30, 30, 30, 0.9);
-  box-shadow: 
-    -2px -2px 4px rgba(0, 0, 0, 0.3),
-    2px 2px 4px rgba(248, 113, 113, 0.2);
+  box-shadow:
+    -2px -2px 4px rgba(globalVars.$black, 0.3),
+    2px 2px 4px rgba(globalVars.$red-400, 0.2);
 
   &:focus {
     border-color: #fca5a5;
     background: rgba(30, 30, 30, 0.95);
-    box-shadow: 
-      -2px -2px 4px rgba(0, 0, 0, 0.3),
-      2px 2px 4px rgba(248, 113, 113, 0.3);
+    box-shadow:
+      -2px -2px 4px rgba(globalVars.$black, 0.3),
+      2px 2px 4px rgba(globalVars.$red-400, 0.3);
   }
 }
 
-// ============================================================== 
-// 🎨 SCROLLBAR MIXINS
-// ============================================================== 
+// ==============================================================
+// SCROLLBAR MIXINS
+// ==============================================================
 
 @mixin custom-scrollbar-light {
   &::-webkit-scrollbar {
@@ -257,19 +258,19 @@
   }
 
   &::-webkit-scrollbar-thumb {
-    background: rgba(209, 213, 219, 0.7);
-    border-radius: 12px;
+    background: rgba(globalVars.$zinc-300, 0.7);
+    border-radius: globalVars.$radius-xl;
     box-shadow:
-      inset -2px -2px 4px rgba(255, 255, 255, 0.5),
-      inset 2px 2px 4px rgba(0, 0, 0, 0.1);
+      inset -2px -2px 4px rgba(globalVars.$white, 0.5),
+      inset 2px 2px 4px rgba(globalVars.$black, 0.1);
   }
 }
 
 @mixin custom-scrollbar-dark {
   &::-webkit-scrollbar-thumb {
-    background: rgba(75, 85, 99, 0.7);
+    background: rgba(globalVars.$zinc-600, 0.7);
     box-shadow:
-      inset -2px -2px 4px rgba(255, 255, 255, 0.03),
-      inset 2px 2px 4px rgba(0, 0, 0, 0.3);
+      inset -2px -2px 4px rgba(globalVars.$white, 0.03),
+      inset 2px 2px 4px rgba(globalVars.$black, 0.3);
   }
 }

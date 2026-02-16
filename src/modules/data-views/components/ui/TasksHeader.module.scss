@@ -1,3 +1,5 @@
+@use '@/app/styles/variables' as *;
+
 // Header wrapper containing toolbar and view switcher
 .headerWrapper {
   display: flex;
@@ -8,17 +10,17 @@
 .toolbar {
   display: flex;
   flex-direction: row;
-  gap: 16px;
+  gap: $spacing-lg;
   width: 100%;
   height: 100%;
-  padding: 16px 0;
+  padding: $spacing-lg 0;
   background: transparent;
 
   @media (max-width: 768px) {
     flex-direction: row;
     flex-wrap: nowrap;
-    gap: 12px;
-    padding: 12px;
+    gap: $spacing-md;
+    padding: $spacing-md;
     width: 100%;
     align-items: center;
   }
@@ -33,14 +35,14 @@
   margin: 0;
 
   @media (max-width: 768px) {
-    padding: 0 12px;
+    padding: 0 $spacing-md;
   }
 }
 
 .searchSection {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: $spacing-lg;
   width: 100%;
   height: 100%;
   flex: 1;
@@ -48,7 +50,7 @@
   @media (max-width: 768px) {
     flex-direction: row;
     flex-wrap: nowrap;
-    gap: 12px;
+    gap: $spacing-md;
     width: 100%;
     align-items: center;
     flex: 1;
@@ -59,10 +61,10 @@
 .leftActions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: $spacing-sm;
   flex-shrink: 0;
   height: 100%;
-  
+
   @media (max-width: 768px) {
     width: auto;
     display: none;
@@ -93,12 +95,17 @@
   border: none;
   background: transparent;
   cursor: pointer;
-  border-radius: 8px;
-  transition: all 0.2s ease;
+  border-radius: $radius-md;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 
   &:hover {
-    background: rgba(0, 0, 0, 0.05);
-    transform: scale(1.05);
+    background: rgba($blue-500, 0.08);
+    transform: translateY(-1px) scale(1.08);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+
+    img {
+      filter: brightness(0.7);
+    }
   }
 
   &:active {
@@ -106,9 +113,20 @@
   }
 
   img {
-    width: 16px;
-    height: 16px;
+    width: $spacing-lg;
+    height: $spacing-lg;
     object-fit: contain;
+    transition: filter 0.2s ease;
+  }
+
+  :global(body.dark) & {
+    &:hover {
+      background: rgba($white, 0.08);
+
+      img {
+        filter: brightness(1.3);
+      }
+    }
   }
 }
 
@@ -119,9 +137,9 @@
   transform: translateX(-50%);
   background: rgba(0, 0, 0, 0.8);
   color: white;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
+  padding: $spacing-xs $spacing-sm;
+  border-radius: $radius-xs;
+  font-size: $text-xs;
   white-space: nowrap;
   opacity: 0;
   pointer-events: none;
@@ -137,7 +155,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: $spacing-lg;
   height: 100%;
   max-width: 600px;
   flex-shrink: 0;
@@ -150,7 +168,7 @@
 .filters {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: $spacing-md;
   height: 100%;
   max-width: 300px;
 
@@ -164,7 +182,7 @@
 .rightActions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: $spacing-sm;
   flex-shrink: 0;
   height: 100%;
   max-width: 280px;
@@ -184,12 +202,12 @@
 .priorityOption {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: $spacing-sm;
   width: 100%;
 
   svg {
     flex-shrink: 0;
-    transition: all 0.2s ease;
+    transition: $transition-fast;
   }
 
   span {

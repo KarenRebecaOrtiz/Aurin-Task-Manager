@@ -1,19 +1,21 @@
 /**
- * InputChat Module - Styles
+ * InputChat Module - Styles (styles directory version)
  *
  * SCSS styles for modular InputChat component
  */
 
+@use './variables' as *;
+
 .inputWrapper {
   position: relative;
-  background: white;
-  border-top: 1px solid var(--border-color, #e5e7eb);
+  background: $white;
+  border-top: 1px solid $zinc-200;
 }
 
 .replyBanner {
-  padding: 0.5rem 1rem;
-  background: var(--gray-50, #f9fafb);
-  border-bottom: 1px solid var(--gray-200, #e5e7eb);
+  padding: $spacing-sm $spacing-lg;
+  background: $zinc-50;
+  border-bottom: 1px solid $zinc-200;
 }
 
 .inputContainer {
@@ -33,56 +35,50 @@
     min-height: 60px;
     max-height: 200px;
     overflow-y: auto;
-    padding: 1rem;
+    padding: $spacing-lg;
     outline: none;
-    font-family: 'Inter Tight', sans-serif;
-    font-size: 0.875rem;
-    line-height: 1.5;
+    font-family: $font-family-primary;
+    font-size: $text-sm;
+    line-height: $leading-normal;
 
     &:empty:before {
       content: attr(data-placeholder);
-      color: var(--text-muted, #9ca3af);
+      color: $color-text-muted;
       pointer-events: none;
       position: absolute;
     }
 
-    // Lists
     ul,
     ol {
       padding-left: 1.5rem;
-      margin: 0.5rem 0;
+      margin: $spacing-sm 0;
     }
 
-    // Code
     code {
-      background: var(--gray-100, #f3f4f6);
+      background: $zinc-100;
       padding: 0.125rem 0.25rem;
-      border-radius: 0.25rem;
+      border-radius: $radius-xs;
       font-family: monospace;
       font-size: 0.875em;
     }
 
-    // Strong/Bold
     strong {
-      font-weight: 600;
+      font-weight: $font-weight-semibold;
     }
 
-    // Emphasis/Italic
     em {
       font-style: italic;
     }
 
-    // Underline
     u {
       text-decoration: underline;
     }
 
-    // Paragraphs
     p {
       margin: 0;
 
       + p {
-        margin-top: 0.5rem;
+        margin-top: $spacing-sm;
       }
     }
   }
@@ -92,9 +88,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.75rem 1rem;
-  border-top: 1px solid var(--gray-200, #e5e7eb);
-  gap: 1rem;
+  padding: $spacing-md $spacing-lg;
+  border-top: 1px solid $zinc-200;
+  gap: $spacing-lg;
 }
 
 .timerSection {
@@ -115,6 +111,6 @@
   }
 
   .actionsBar {
-    padding: 0.5rem;
+    padding: $spacing-sm;
   }
 }

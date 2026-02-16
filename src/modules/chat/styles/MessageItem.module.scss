@@ -1,8 +1,7 @@
 /**
  * Message Item - Component Styles
- * 
+ *
  * Estilos para los mensajes individuales del chat.
- * Incluye burbujas, acciones, estados (pending, error), etc.
  */
 
 @use './variables' as *;
@@ -15,15 +14,14 @@
 .messageWrapper {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-bottom: 16px;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-lg;
   position: relative;
 
   @include fade-in(0.2s);
 
-  // Grouping positions
   &.single {
-    margin-bottom: 16px;
+    margin-bottom: $spacing-lg;
   }
 
   &.first {
@@ -37,16 +35,16 @@
 
   &.last {
     margin-top: 2px;
-    margin-bottom: 16px;
+    margin-bottom: $spacing-lg;
   }
 }
 
 .message {
   display: flex;
-  gap: 12px;
+  gap: $spacing-md;
   align-items: flex-start;
   position: relative;
-  transition: opacity 0.2s ease;
+  transition: $transition-fast;
 
   &.pending {
     opacity: 0.6;
@@ -66,7 +64,7 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  overflow: visible; // Cambiado para permitir el status dot
+  overflow: visible;
   position: relative;
 
   img {
@@ -77,7 +75,6 @@
   }
 }
 
-// Status indicator dot for availability
 .statusDot {
   position: absolute;
   bottom: 0;
@@ -85,13 +82,13 @@
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  border: 2px solid white;
+  border: 2px solid $white;
   box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
   z-index: 10;
-  transition: background-color 0.2s ease;
+  transition: $transition-fast;
 
-  :global(.dark) & {
-    border-color: #171717;
+  :global(body.dark) & {
+    border-color: $zinc-900;
   }
 }
 
@@ -115,73 +112,71 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  min-width: 0; // Para que funcione text-overflow
+  gap: $spacing-xs;
+  min-width: 0;
 }
 
 .senderName {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: $text-xs;
+  font-weight: $font-weight-semibold;
   color: $chat-text-primary-light;
   margin-bottom: 2px;
 
-  :global(.dark) & {
+  :global(body.dark) & {
     color: $chat-text-primary-dark;
   }
 }
 
 .bubble {
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba($white, 0.9);
   border: 1px solid rgba(0, 0, 0, 0.05);
-  border-radius: 12px;
-  padding: 10px 14px;
+  border-radius: $radius-lg;
+  padding: $spacing-sm $spacing-md;
   max-width: 100%;
   word-wrap: break-word;
   position: relative;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 
-  :global(.dark) & {
-    background: rgba(39, 39, 42, 0.9);
-    border-color: rgba(255, 255, 255, 0.05);
+  :global(body.dark) & {
+    background: rgba($zinc-800, 0.9);
+    border-color: rgba($white, 0.05);
   }
 
-  // Grouping: ajustar bordes según posición
   .messageWrapper.first & {
-    border-bottom-left-radius: 4px;
+    border-bottom-left-radius: $radius-xs;
   }
 
   .messageWrapper.middle & {
-    border-radius: 4px 12px 12px 4px;
+    border-radius: $radius-xs $radius-lg $radius-lg $radius-xs;
   }
 
   .messageWrapper.last & {
-    border-top-left-radius: 4px;
+    border-top-left-radius: $radius-xs;
   }
 }
 
 .messageText {
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: $text-sm;
+  line-height: $leading-normal;
   color: $chat-text-primary-light;
   white-space: pre-wrap;
 
-  :global(.dark) & {
+  :global(body.dark) & {
     color: $chat-text-primary-dark;
   }
 
-  // Estilos para HTML renderizado (markdown)
   :global {
     h1, h2, h3 {
-      margin: 8px 0 4px 0;
-      font-weight: 600;
+      margin: $spacing-sm 0 $spacing-xs 0;
+      font-weight: $font-weight-semibold;
     }
 
-    h1 { font-size: 18px; }
-    h2 { font-size: 16px; }
-    h3 { font-size: 14px; }
+    h1 { font-size: $text-lg; }
+    h2 { font-size: $text-base; }
+    h3 { font-size: $text-sm; }
 
     strong {
-      font-weight: 600;
+      font-weight: $font-weight-semibold;
     }
 
     em {
@@ -189,8 +184,8 @@
     }
 
     ul {
-      margin: 4px 0;
-      padding-left: 20px;
+      margin: $spacing-xs 0;
+      padding-left: $spacing-lg;
     }
 
     li {
@@ -198,7 +193,7 @@
     }
 
     p {
-      margin: 4px 0;
+      margin: $spacing-xs 0;
     }
   }
 }
@@ -209,24 +204,24 @@
 
 .replyPreview {
   background: rgba(0, 0, 0, 0.05);
-  border-left: 3px solid #3b82f6;
-  border-radius: 6px;
-  padding: 6px 10px;
-  margin-bottom: 8px;
-  font-size: 12px;
+  border-left: 3px solid $blue-500;
+  border-radius: $radius-sm;
+  padding: $spacing-xs $spacing-sm;
+  margin-bottom: $spacing-sm;
+  font-size: $text-xs;
 
-  :global(.dark) & {
-    background: rgba(255, 255, 255, 0.05);
+  :global(body.dark) & {
+    background: rgba($white, 0.05);
   }
 }
 
 .replyAuthor {
-  font-weight: 600;
-  color: #3b82f6;
+  font-weight: $font-weight-semibold;
+  color: $blue-500;
   margin-bottom: 2px;
 
-  :global(.dark) & {
-    color: #60a5fa;
+  :global(body.dark) & {
+    color: $sky-500;
   }
 }
 
@@ -236,7 +231,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 
-  :global(.dark) & {
+  :global(body.dark) & {
     color: $chat-text-secondary-dark;
   }
 }
@@ -246,12 +241,12 @@
 // ============================================================================
 
 .imageContainer {
-  margin-top: 8px;
-  border-radius: 12px;
+  margin-top: $spacing-sm;
+  border-radius: $radius-lg;
   overflow: hidden;
   cursor: pointer;
   max-width: 300px;
-  transition: transform 0.2s ease;
+  transition: $transition-fast;
 
   &:hover {
     transform: scale(1.02);
@@ -271,23 +266,23 @@
 .fileAttachment {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px;
+  gap: $spacing-sm;
+  padding: $spacing-sm;
   background: rgba(0, 0, 0, 0.03);
-  border-radius: 8px;
-  margin-top: 8px;
+  border-radius: $radius-md;
+  margin-top: $spacing-sm;
   cursor: pointer;
-  transition: background 0.2s ease;
+  transition: $transition-fast;
 
   &:hover {
     background: rgba(0, 0, 0, 0.05);
   }
 
-  :global(.dark) & {
-    background: rgba(255, 255, 255, 0.03);
+  :global(body.dark) & {
+    background: rgba($white, 0.03);
 
     &:hover {
-      background: rgba(255, 255, 255, 0.05);
+      background: rgba($white, 0.05);
     }
   }
 }
@@ -298,8 +293,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(59, 130, 246, 0.1);
-  border-radius: 6px;
+  background: rgba($blue-500, 0.1);
+  border-radius: $radius-sm;
 }
 
 .fileInfo {
@@ -308,14 +303,14 @@
 }
 
 .fileName {
-  font-size: 13px;
-  font-weight: 500;
+  font-size: $text-xs;
+  font-weight: $font-weight-medium;
   color: $chat-text-primary-light;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 
-  :global(.dark) & {
+  :global(body.dark) & {
     color: $chat-text-primary-dark;
   }
 }
@@ -324,7 +319,7 @@
   font-size: 11px;
   color: $chat-text-secondary-light;
 
-  :global(.dark) & {
+  :global(body.dark) & {
     color: $chat-text-secondary-dark;
   }
 }
@@ -336,18 +331,18 @@
 .timeLog {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  background: rgba(59, 130, 246, 0.1);
-  border-radius: 8px;
-  margin-top: 8px;
-  font-size: 13px;
-  font-weight: 500;
-  color: #3b82f6;
+  gap: $spacing-xs;
+  padding: $spacing-xs $spacing-sm;
+  background: rgba($blue-500, 0.1);
+  border-radius: $radius-md;
+  margin-top: $spacing-sm;
+  font-size: $text-xs;
+  font-weight: $font-weight-medium;
+  color: $blue-500;
 
-  :global(.dark) & {
-    background: rgba(59, 130, 246, 0.2);
-    color: #60a5fa;
+  :global(body.dark) & {
+    background: rgba($blue-500, 0.2);
+    color: $sky-500;
 
     img {
       filter: invert(1);
@@ -362,15 +357,15 @@
 .metadata {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 4px;
+  gap: $spacing-sm;
+  margin-top: $spacing-xs;
 }
 
 .timestamp {
   font-size: 11px;
   color: $chat-text-secondary-light;
 
-  :global(.dark) & {
+  :global(body.dark) & {
     color: $chat-text-secondary-dark;
   }
 }
@@ -387,7 +382,7 @@
   }
 
   &.error {
-    color: #ef4444;
+    color: $red-500;
   }
 }
 
@@ -398,7 +393,7 @@
 .actionButton {
   @include neumorphic-button(28px);
   opacity: 0;
-  transition: opacity 0.2s ease;
+  transition: $transition-fast;
   margin-left: auto;
 
   .messageWrapper:hover & {
@@ -408,30 +403,30 @@
 
 .actionMenu {
   position: absolute;
-  background: white;
+  background: $white;
   border: 1px solid rgba(0, 0, 0, 0.1);
-  border-radius: 12px;
+  border-radius: $radius-lg;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  padding: 6px;
+  padding: $spacing-xs;
   z-index: 1000;
   min-width: 150px;
 
-  :global(.dark) & {
-    background: #1a1a1a;
-    border-color: rgba(255, 255, 255, 0.1);
+  :global(body.dark) & {
+    background: $zinc-900;
+    border-color: rgba($white, 0.1);
   }
 }
 
 .actionMenuItem {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  border-radius: 8px;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  border-radius: $radius-md;
   cursor: pointer;
-  font-size: 14px;
+  font-size: $text-sm;
   color: $chat-text-primary-light;
-  transition: background 0.2s ease;
+  transition: $transition-fast;
   border: none;
   background: none;
   width: 100%;
@@ -442,22 +437,22 @@
   }
 
   &.danger {
-    color: #ef4444;
+    color: $red-500;
 
     &:hover {
-      background: rgba(239, 68, 68, 0.1);
+      background: rgba($red-500, 0.1);
     }
   }
 
-  :global(.dark) & {
+  :global(body.dark) & {
     color: $chat-text-primary-dark;
 
     &:hover {
-      background: rgba(255, 255, 255, 0.05);
+      background: rgba($white, 0.05);
     }
 
     &.danger:hover {
-      background: rgba(239, 68, 68, 0.15);
+      background: rgba($red-500, 0.15);
     }
   }
 }
@@ -469,35 +464,35 @@
 .errorBanner {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  border-radius: 8px;
-  margin-top: 6px;
-  font-size: 12px;
-  color: #dc2626;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  background: rgba($red-500, 0.1);
+  border: 1px solid rgba($red-500, 0.3);
+  border-radius: $radius-md;
+  margin-top: $spacing-xs;
+  font-size: $text-xs;
+  color: $red-600;
 
-  :global(.dark) & {
-    background: rgba(239, 68, 68, 0.15);
-    color: #f87171;
+  :global(body.dark) & {
+    background: rgba($red-500, 0.15);
+    color: $red-400;
   }
 }
 
 .retryButton {
   margin-left: auto;
-  padding: 4px 12px;
-  background: #ef4444;
-  color: white;
+  padding: $spacing-xs $spacing-md;
+  background: $red-500;
+  color: $white;
   border: none;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 500;
+  border-radius: $radius-sm;
+  font-size: $text-xs;
+  font-weight: $font-weight-medium;
   cursor: pointer;
-  transition: background 0.2s ease;
+  transition: $transition-fast;
 
   &:hover {
-    background: #dc2626;
+    background: $red-600;
   }
 }
 
@@ -511,7 +506,7 @@
   top: 50%;
   transform: translateY(-50%);
   opacity: 0;
-  transition: opacity 0.2s ease;
+  transition: $transition-fast;
 
   &.active {
     opacity: 1;
@@ -525,22 +520,22 @@
 .loadingMessage {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px;
+  gap: $spacing-sm;
+  padding: $spacing-md;
   background: rgba(0, 0, 0, 0.03);
-  border-radius: 12px;
-  font-size: 14px;
+  border-radius: $radius-lg;
+  font-size: $text-sm;
   color: $chat-text-secondary-light;
 
-  :global(.dark) & {
-    background: rgba(255, 255, 255, 0.03);
+  :global(body.dark) & {
+    background: rgba($white, 0.03);
     color: $chat-text-secondary-dark;
   }
 }
 
 .loadingDots {
   display: flex;
-  gap: 4px;
+  gap: $spacing-xs;
 
   span {
     width: 6px;

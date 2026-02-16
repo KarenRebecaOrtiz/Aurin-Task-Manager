@@ -14,7 +14,7 @@ import { createTimeLog } from '../services/timeLogFirebase';
 import { firebaseService } from '../../services/firebaseService';
 import { timerFormSchema } from '../utils/timerValidation';
 import { getDefaultTimerValues } from '../utils/timerConstants';
-import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
+import { useToast } from '@/modules/toast';
 import { useDataStore } from '@/stores/dataStore';
 import type { UseTimeEntryReturn, TimeEntryFormData } from '../types/timer.types';
 
@@ -72,7 +72,7 @@ export function useTimeEntry(
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Toast notifications
-  const { success: showSuccess, error: showError } = useSonnerToast();
+  const { success: showSuccess, error: showError } = useToast();
 
   // Set up react-hook-form with Zod validation
   // Use getDefaultTimerValues() to ensure fresh date on each form mount
@@ -234,7 +234,7 @@ export function useTimeEntry(
         form.reset(getDefaultTimerValues());
 
         // Show success toast
-        showSuccess('Tiempo registrado correctamente');
+        showSuccess('Tiempo registrado', 'El timelog se guardó correctamente.');
 
         // Call success callback
         if (onSuccess) {
@@ -244,7 +244,7 @@ export function useTimeEntry(
         const errorMessage = (error as Error).message || 'Error al guardar el tiempo';
         
         // Show error toast
-        showError(errorMessage);
+        showError(errorMessage, 'Intenta de nuevo más tarde.');
         
         // Set form error
         form.setError('root', {

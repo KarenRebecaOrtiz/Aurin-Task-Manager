@@ -9,7 +9,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { CrudDialog } from '../organisms/CrudDialog';
-import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
+import { useToast } from '@/modules/toast';
 import { clientService } from '@/modules/client-crud/services/clientService';
 import { useClientForm } from '@/modules/client-crud/hooks/form/useClientForm';
 import { ClientForm } from '@/modules/client-crud/components/forms/ClientForm';
@@ -27,7 +27,7 @@ export function ClientDialog({
   mode: initialMode = 'create',
 }: ClientDialogProps) {
   const { user } = useUser();
-  const { success: showSuccess, error: showError } = useSonnerToast();
+  const { success: showSuccess, error: showError } = useToast();
 
   // Check if user is admin
   const isAdmin = user?.publicMetadata?.role === 'admin' || user?.publicMetadata?.role === 'Admin';

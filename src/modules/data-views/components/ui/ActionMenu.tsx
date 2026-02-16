@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/drawer';
 import { Pencil, Archive, Trash2, Pin, PinOff, Building2 } from 'lucide-react';
 import { usePinnedTasksStore, MAX_PINNED } from '@/modules/data-views/tasks/stores/pinnedTasksStore';
-import { useSonnerToast } from '@/modules/sonner';
+import { useToast } from '@/modules/toast';
 
 interface Task {
   id: string;
@@ -100,7 +100,7 @@ const ActionMenu = memo<ActionMenuProps>(({
   // Pin functionality
   const { isPinned, togglePin, canPin } = usePinnedTasksStore();
   const taskIsPinned = isPinned(task.id);
-  const { success: toastSuccess, warning: toastWarning } = useSonnerToast();
+  const { success: toastSuccess, warning: toastWarning } = useToast();
 
   // Selectors optimizados con shallow
   const {

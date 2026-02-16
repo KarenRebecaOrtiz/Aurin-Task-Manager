@@ -4,7 +4,7 @@ import { useUser } from '@clerk/nextjs';
 import { UserAvatar } from '@/modules/shared/components/atoms/Avatar/UserAvatar';
 import Badge from '@/components/Badge';
 import { ActionButton } from '../../atoms/ActionButton/ActionButton';
-import { itemVariants, transitions } from '@/modules/dialogs';
+import { transitions } from '@/modules/dialogs';
 import type { UserProfile } from '../../../types';
 import styles from './ProfileHeader.module.scss';
 
@@ -63,7 +63,12 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
         />
       </motion.div>
 
-      <motion.div className={styles.headerSection} variants={itemVariants}>
+      <motion.div
+        className={styles.headerSection}
+        initial={shouldReduceMotion ? false : { opacity: 0, y: 4 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ ...transitions.fast, delay: shouldReduceMotion ? 0 : 0.06 }}
+      >
         <div className={styles.nameAndBadgeContainer}>
           <h2 className={styles.name}>{profile.fullName || 'Sin nombre'}</h2>
 

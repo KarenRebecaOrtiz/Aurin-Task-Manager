@@ -7,7 +7,7 @@ import { useSidebarStateStore } from '@/stores/sidebarStateStore';
 import { useDataStore } from '@/stores/dataStore';
 import { useUserDataStore } from '@/stores/userDataStore';
 import { useAuth } from '@/contexts/AuthContext';
-import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
+import { useToast } from '@/modules/toast';
 import TasksTableIsolated from '../tasks/components/tables/TasksTableIsolated';
 import TasksKanban from '../tasks/components/tables/KanbanBoard/TasksKanban';
 import ArchiveTable from '../tasks/components/tables/ArchiveTable/ArchiveTable';
@@ -81,7 +81,7 @@ export default function DataViewsContainer() {
   // Get current user info for permission check
   const userId = useUserDataStore((state) => state.userData?.userId || '');
   const { isAdmin } = useAuth();
-  const { error: showError } = useSonnerToast();
+  const { error: showError } = useToast();
 
   // Track if we've already processed the initial URL task param
   const initialTaskProcessed = useRef(false);
@@ -113,7 +113,7 @@ export default function DataViewsContainer() {
       const url = new URL(window.location.href);
       url.searchParams.delete('task');
       window.history.replaceState(null, '', url.toString());
-      showError('Tarea no encontrada', 'La tarea solicitada no existe o fue eliminada.');
+      showError('Tarea no encontrada', 'Fue eliminada o ya no existe.');
       initialTaskProcessed.current = true;
       return;
     }
@@ -125,7 +125,7 @@ export default function DataViewsContainer() {
       const url = new URL(window.location.href);
       url.searchParams.delete('task');
       window.history.replaceState(null, '', url.toString());
-      showError('Acceso denegado', 'No tienes permisos para ver esta tarea.');
+      showError('Sin permisos', 'No tienes acceso a esta tarea.');
       initialTaskProcessed.current = true;
       return;
     }

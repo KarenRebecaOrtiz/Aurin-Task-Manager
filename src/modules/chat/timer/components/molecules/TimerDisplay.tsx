@@ -20,7 +20,7 @@ import { useDataStore } from '@/stores/dataStore';
 import { useShallow } from 'zustand/react/shallow';
 import { createTimeLog } from '../../services/timeLogFirebase';
 import { firebaseService } from '../../../services/firebaseService';
-import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
+import { useToast } from '@/modules/toast';
 import styles from './TimerDisplay.module.scss';
 
 /**
@@ -57,7 +57,7 @@ export function TimerDisplay({
   } | null>(null);
 
   // Toast notifications
-  const { success: showSuccess, error: showError, info: showInfo } = useSonnerToast();
+  const { success: showSuccess, error: showError, info: showInfo } = useToast();
 
   // Get tasks from store to display task names
   const tasks = useDataStore(useShallow((state) => state.tasks));
@@ -90,9 +90,9 @@ export function TimerDisplay({
 
     try {
       if (action === 'send') {
-        showInfo('Guardando timer anterior...');
+        showInfo('Guardando timer anterior...', 'El timer actual se guardará antes de cambiar.');
       } else {
-        showInfo('Descartando timer anterior...');
+        showInfo('Descartando timer anterior...', 'El timer actual se descartará antes de cambiar.');
       }
 
       // Resolve the promise to allow the new timer to start
@@ -100,7 +100,7 @@ export function TimerDisplay({
       pendingTimerSwitch.resolve({ confirmed: true, action });
     } catch (error) {
       console.error('[TimerDisplay] Error handling timer switch:', error);
-      showError('Error al cambiar el timer');
+      showError('No se pudo cambiar el timer', 'Intenta de nuevo más tarde.');
       // Still resolve to confirmed with send action as fallback
       pendingTimerSwitch.resolve({ confirmed: true, action: 'send' });
     } finally {

@@ -1,4 +1,5 @@
 @use "sass:color";
+@use "./osmo/functions" as osmo;
 
 $profile-card-padding: 1.5rem;
 
@@ -12,18 +13,18 @@ $font-weight-semibold: 600;
 $font-weight-bold: 700;
 $font-weight-extrabold: 800;
 
-// Font Sizes - CSS Custom Properties for responsive typography
-// Desktop values (default)
-$text-xs: var(--text-xs);      // 12px → 9.6px on mobile
-$text-sm: var(--text-sm);      // 16px → 12.8px on mobile
-$text-base: var(--text-base);  // 16px → 12.8px on mobile
-$text-lg: var(--text-lg);      // 18px → 14.4px on mobile
-$text-xl: var(--text-xl);      // 20px → 16px on mobile
-$text-2xl: var(--text-2xl);    // 24px → 19.2px on mobile
-$text-3xl: var(--text-3xl);    // 30px → 24px on mobile
-$text-4xl: var(--text-4xl);    // 36px → 28.8px on mobile
-$text-5xl: var(--text-5xl);    // 48px → 38.4px on mobile
-$text-6xl: var(--text-6xl);    // 60px → 48px on mobile
+// Font Sizes — Osmo Fluid Typography (clamp-based, no media queries)
+// Each var() references a clamp() value that scales smoothly 320px → 1920px
+$text-xs: var(--text-xs);      // 11.67px → 12.8px  (ratio^-1)
+$text-sm: var(--text-sm);      // 14px → 16px       (base)
+$text-base: var(--text-base);  // 14px → 16px       (base)
+$text-lg: var(--text-lg);      // 15.33px → 17.89px (ratio^0.5)
+$text-xl: var(--text-xl);      // 16.8px → 20px     (ratio^1)
+$text-2xl: var(--text-2xl);    // 20.16px → 25px    (ratio^2)
+$text-3xl: var(--text-3xl);    // 24.19px → 31.25px (ratio^3)
+$text-4xl: var(--text-4xl);    // 29.03px → 39.06px (ratio^4)
+$text-5xl: var(--text-5xl);    // 34.84px → 48.83px (ratio^5)
+$text-6xl: var(--text-6xl);    // 41.81px → 61.04px (ratio^6)
 
 // Line Heights
 $leading-none: 1;
@@ -75,24 +76,56 @@ $brand-primary-active: #cacf8b;
 $brand-primary-dark-hover: #c5d700;
 
 $primary: #3B82F6;
+
+// Extended color palette (100-900 variants used across modules)
+$blue-100: #DBEAFE;
+$blue-300: #93C5FD;
+$blue-400: #60A5FA;
 $blue-500: #3B82F6;
+$blue-600: #2563EB;
+
+$red-100: #FEE2E2;
+$red-400: #F87171;
 $red-500: #EF4444;
+$red-600: #DC2626;
+
+$green-100: #DCFCE7;
+$green-400: #4ADE80;
 $green-500: #22C55E;
+$green-600: #16A34A;
+
+$yellow-300: #FDE047;
+$yellow-400: #FACC15;
 $yellow-500: #EAB308;
+
+$amber-100: #FEF3C7;
+$amber-400: #FBBF24;
+$amber-500: #F59E0B;
+
+$sky-400: #38BDF8;
+$sky-500: #0EA5E9;
+
+$slate-100: #F1F5F9;
+$slate-200: #E2E8F0;
+$slate-400: #94A3B8;
+$slate-500: #64748B;
+$slate-900: #0F172A;
+
+$purple-400: #C084FC;
 $purple-500: #A855F7;
+$pink-400: #F472B6;
 $pink-500: #EC4899;
 $indigo-500: #6366F1;
 $emerald-500: #10B981;
 $orange-500: #F97316;
 $teal-500: #14B8A6;
 $cyan-500: #06B6D4;
+$lime-400: #d0df00;
 $lime-500: #84CC16;
+$lime-700: #4D7C0F;
 $rose-500: #F43F5E;
 $violet-500: #8B5CF6;
 $fuchsia-500: #D946EF;
-$amber-500: #F59E0B;
-$sky-500: #0EA5E9;
-$slate-500: #64748B;
 $gray-500: #6B7280;
 $neutral-500: #737373;
 $stone-500: #78716C;
@@ -199,6 +232,7 @@ $transition-slow: all 0.4s ease;
 $z-dropdown: 1100;
 $z-popup: 2000;
 $z-overlay: 9999;
+$z-toast: 999999;
 $z-tooltip: 100;
 $z-vignette: 10;
 $z-avatar: 2;
@@ -338,16 +372,16 @@ $profile-card-avatar-size: 94px;
 $profile-card-avatar-size-md: 110px;
 $profile-card-avatar-size-lg: 120px;
 
-$profile-card-name-size: 24px;
-$profile-card-name-size-md: 28px;
-$profile-card-name-size-lg: 32px;
+$profile-card-name-size: osmo.osmo-clamp(26, 36);         // 26px → 36px fluid (stronger hierarchy)
+$profile-card-name-size-md: osmo.osmo-rem(30);             // legacy compat
+$profile-card-name-size-lg: osmo.osmo-rem(36);             // legacy compat
 
-$profile-card-email-size: 14px;
-$profile-card-email-size-md: 16px;
+$profile-card-email-size: osmo.osmo-clamp(13, 15);         // 13px → 15px fluid
+$profile-card-email-size-md: osmo.osmo-rem(15);            // legacy compat
 
-$profile-card-section-title-size: 20px;
-$profile-card-section-title-size-md: 22px;
-$profile-card-section-title-size-lg: 24px;
+$profile-card-section-title-size: osmo.osmo-clamp(15, 18); // 15px → 18px fluid (subtle, not competing with name)
+$profile-card-section-title-size-md: osmo.osmo-rem(17);    // legacy compat
+$profile-card-section-title-size-lg: osmo.osmo-rem(18);    // legacy compat
 
 $profile-card-section-content-bg: rgba(241, 245, 249, 0.5);
 $profile-card-section-content-bg-dark: rgb(18, 18, 19);
@@ -371,22 +405,22 @@ $profile-card-tag-radius: 12px;
 $profile-card-tag-padding: 0.6em 0.9em;
 $profile-card-tag-padding-md: 0.8em 1em;
 $profile-card-tag-padding-lg: 0.9em 1.2em;
-$profile-card-tag-size: 12px;
-$profile-card-tag-size-md: 14px;
-$profile-card-tag-size-lg: 16px;
+$profile-card-tag-size: osmo.osmo-clamp(12, 16);           // 12px → 16px fluid
+$profile-card-tag-size-md: osmo.osmo-rem(14);              // legacy compat
+$profile-card-tag-size-lg: osmo.osmo-rem(16);              // legacy compat
 
 $profile-card-button-bg: rgba(9, 9, 11, 0.7);
 $profile-card-button-bg-dark: rgba(26, 26, 26, 0.7);
 $profile-card-button-bg-hover: rgba(9, 9, 11, 0.85);
 $profile-card-button-radius: 12px;
 $profile-card-button-padding: 10px 20px;
-$profile-card-button-size: 14px;
-$profile-card-button-size-md: 16px;
-$profile-card-button-size-lg: 18px;
+$profile-card-button-size: osmo.osmo-clamp(14, 18);        // 14px → 18px fluid
+$profile-card-button-size-md: osmo.osmo-rem(16);           // legacy compat
+$profile-card-button-size-lg: osmo.osmo-rem(18);           // legacy compat
 
-$profile-card-close-button-size: 16px;
-$profile-card-close-button-size-md: 18px;
-$profile-card-close-button-size-lg: 20px;
+$profile-card-close-button-size: osmo.osmo-clamp(16, 20);  // 16px → 20px fluid
+$profile-card-close-button-size-md: osmo.osmo-rem(18);     // legacy compat
+$profile-card-close-button-size-lg: osmo.osmo-rem(20);     // legacy compat
 $profile-card-close-button-padding: 4px;
 $profile-card-close-button-padding-md: 6px;
 $profile-card-close-button-padding-lg: 8px;
@@ -407,9 +441,9 @@ $digital-clock-shadow: 0px 6px 24px rgba(0, 0, 0, 0.2);
 $digital-clock-shadow-dark: 0px 6px 24px rgba(0, 0, 0, 0.4);
 $digital-clock-z-index: 10000;
 
-$digital-clock-text-size: 14px;
-$digital-clock-text-size-md: 16px;
-$digital-clock-text-size-lg: 18px;
+$digital-clock-text-size: osmo.osmo-clamp(14, 18);         // 14px → 18px fluid
+$digital-clock-text-size-md: osmo.osmo-rem(16);            // legacy compat
+$digital-clock-text-size-lg: osmo.osmo-rem(18);            // legacy compat
 $digital-clock-text-color: $color-text-primary;
 $digital-clock-text-color-dark: $color-text-dark-primary;
 $digital-clock-text-weight: $font-weight-semibold;

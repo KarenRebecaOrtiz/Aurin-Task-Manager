@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { CrudDialog } from '@/modules/dialogs/components/organisms/CrudDialog';
 import { DialogActions } from '@/modules/dialogs/components/molecules';
-import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
+import { useToast } from '@/modules/toast';
 import { getUsers } from '@/services/userService';
 import { useWorkspacesStore, type Workspace } from '@/stores/workspacesStore';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -33,7 +33,7 @@ export function CreateWorkspaceDialog({
   onWorkspaceCreated,
 }: CreateWorkspaceDialogProps) {
   const { user } = useUser();
-  const { success: showSuccess, error: showError } = useSonnerToast();
+  const { success: showSuccess, error: showError } = useToast();
   const addWorkspace = useWorkspacesStore((state) => state.addWorkspace);
 
   // State
@@ -62,7 +62,7 @@ export function CreateWorkspaceDialog({
         }
       } catch (error) {
         console.error('Error loading users:', error);
-        showError('Error al cargar usuarios', 'No se pudieron cargar los usuarios del sistema.');
+        showError('No se pudieron cargar usuarios', 'Intenta de nuevo.');
       } finally {
         setIsLoadingUsers(false);
       }
@@ -139,7 +139,7 @@ export function CreateWorkspaceDialog({
   // Handle submit
   const handleSubmit = useCallback(async () => {
     if (!user?.id) {
-      showError('Error', 'Debes iniciar sesión para crear un workspace.');
+      showError('Sesión requerida', 'Inicia sesión para crear un workspace.');
       return;
     }
 
@@ -170,7 +170,7 @@ export function CreateWorkspaceDialog({
       // Add to store
       addWorkspace(newWorkspace);
 
-      showSuccess(`Workspace "${workspaceName}" creado exitosamente.`);
+      showSuccess('Workspace creado', `"${workspaceName}" ya está disponible para tu equipo.`);
 
       // Call callback
       onWorkspaceCreated?.(newWorkspace);
@@ -179,7 +179,7 @@ export function CreateWorkspaceDialog({
       onOpenChange(false);
     } catch (error) {
       console.error('Error creating workspace:', error);
-      showError('Error al crear workspace', 'No se pudo crear el workspace. Intenta de nuevo.');
+      showError('No se pudo crear el workspace', 'Intenta de nuevo.');
     } finally {
       setIsSubmitting(false);
     }

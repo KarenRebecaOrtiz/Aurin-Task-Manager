@@ -5,7 +5,7 @@
   position: relative;
   display: block;
   width: 100%;
-  
+
 }
 
 .searchInput {
@@ -16,12 +16,12 @@
   border-radius: $radius-lg;
   border: 1px solid $color-border-subtle;
   @include neomorphic-shadow(light);
-  @include typography(14px, $font-weight-medium, $color-text-primary);
+  @include typography($text-sm, $font-weight-medium, $color-text-primary);
   cursor: text;
   transition: $transition-base;
 
   &::placeholder {
-    font-size: 14px;
+    font-size: $text-sm;
   }
 
   &:hover {
@@ -44,15 +44,15 @@
     color: rgba(255, 255, 255, 0.532);
 
     &:hover {
-      background: #27272a;
-      border-color: #52525b;
+      background: $zinc-800;
+      border-color: $zinc-600;
       transform: translateY(-1px);
       box-shadow: none;
     }
 
     &:focus {
-      background: #27272a;
-      border-color: #52525b;
+      background: $zinc-800;
+      border-color: $zinc-600;
       transform: translateY(-2px);
       box-shadow: none;
     }
@@ -61,13 +61,13 @@
   @media (max-width: 1024px) {
     height: 46px;
     padding: $spacing-sm 16px;
-    font-size: 13px;
+    font-size: $text-xs;
   }
 
   @media (max-width: 768px) {
     height: 43px;
     padding: $spacing-xs $spacing-md;
-    font-size: 12px;
+    font-size: $text-xs;
   }
 }
 
@@ -105,7 +105,7 @@
   }
 
   @media (max-width: 1024px) {
-    padding: 6px 0;
+    padding: $spacing-sm 0;
     border-radius: $radius-lg;
   }
 
@@ -133,14 +133,14 @@
   letter-spacing: 0.5px;
   margin-bottom: $spacing-md;
   display: block;
-  font-size: 11px;
+  font-size: $text-xs;
 }
 
 .categoryButton {
   @include flex-center;
   gap: $spacing-sm;
   padding: $spacing-md $spacing-lg;
-  @include typography(13px, $font-weight-medium, $color-text-primary);
+  @include typography($text-xs, $font-weight-medium, $color-text-primary);
   cursor: pointer;
   @include glassmorphism($color-bg-glass);
   border-radius: $radius-sm;
@@ -164,7 +164,7 @@
   &.selected {
     background: rgba(59, 130, 246, 0.1);
     border-color: rgba(59, 130, 246, 0.3);
-    color: #2563eb;
+    color: $blue-600;
     font-weight: $font-weight-semibold;
   }
 
@@ -173,12 +173,12 @@
     color: rgba(255, 255, 255, 0.532);
     border: 1px solid #3f3f46;
     box-shadow: none !important;
-    transition: all 0.3s ease;
+    transition: $transition-base;
 
     &:hover {
       background: #3f3f46;
       color: rgba(255, 255, 255, 0.9);
-      border-color: #52525b;
+      border-color: $zinc-600;
       transform: translateY(-1px) scale(1.01);
       box-shadow: none;
     }
@@ -186,25 +186,25 @@
     &:active {
       background: #3f3f46;
       color: rgba(255, 255, 255, 0.9);
-      border-color: #52525b;
+      border-color: $zinc-600;
       box-shadow: none;
     }
 
     &.selected {
       background: #3f3f46;
-      border-color: #52525b;
+      border-color: $zinc-600;
       color: rgba(255, 255, 255, 0.9);
     }
   }
 
   @media (max-width: 1024px) {
     padding: $spacing-sm $spacing-md;
-    font-size: 12px;
+    font-size: $text-xs;
   }
 
   @media (max-width: 768px) {
-    padding: 6px $spacing-md;
-    font-size: 11px;
+    padding: $spacing-sm $spacing-md;
+    font-size: $text-xs;
   }
 }
 
@@ -231,7 +231,7 @@
 }
 
 .infoText {
-  @include typography(12px, $font-weight-normal, $color-text-secondary);
+  @include typography($text-xs, $font-weight-normal, $color-text-secondary);
   flex: 1;
   gap: $spacing-md;
 }
@@ -269,9 +269,9 @@
   // Badge inside priority buttons should not have additional padding
   :global(.badge) {
     margin: 0;
-    padding: 4px 8px;
-    font-size: 11px;
-    font-weight: 500;
+    padding: $spacing-xs $spacing-sm;
+    font-size: $text-xs;
+    font-weight: $font-weight-medium;
   }
 
   // When priority button is selected, make the badge more prominent

@@ -1,11 +1,13 @@
 /**
  * ToDoDynamic Animations
- * Shared CSS animations for the ToDoDynamic submódule
+ * Shared CSS animations for the ToDoDynamic submodule
  */
 
-// ============================================================== 
-// 🎬 KEYFRAME ANIMATIONS
-// ============================================================== 
+@use '@/app/styles/_variables' as *;
+
+// ==============================================================
+// KEYFRAME ANIMATIONS
+// ==============================================================
 
 @keyframes spin {
   to {
@@ -84,9 +86,9 @@
   }
 }
 
-// ============================================================== 
-// 🎬 ANIMATION CLASSES
-// ============================================================== 
+// ==============================================================
+// ANIMATION CLASSES
+// ==============================================================
 
 .animate-spin {
   animation: spin 1s linear infinite;
@@ -120,20 +122,20 @@
   animation: scaleOut 0.2s ease-in;
 }
 
-// ============================================================== 
-// 🎬 TRANSITION CLASSES
-// ============================================================== 
+// ==============================================================
+// TRANSITION CLASSES
+// ==============================================================
 
 .transition-base {
-  transition: all 0.2s ease;
+  transition: $transition-base;
 }
 
 .transition-fast {
-  transition: all 0.15s ease;
+  transition: $transition-fast;
 }
 
 .transition-slow {
-  transition: all 0.3s ease;
+  transition: $transition-slow;
 }
 
 .transition-transform {
@@ -148,9 +150,9 @@
   transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
-// ============================================================== 
-// 🎬 HOVER EFFECTS
-// ============================================================== 
+// ==============================================================
+// HOVER EFFECTS
+// ==============================================================
 
 .hover-lift {
   &:hover {
@@ -166,18 +168,18 @@
 
 .hover-glow {
   &:hover {
-    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+    box-shadow: 0 0 20px rgba($blue-500, 0.3);
   }
 }
 
-// ============================================================== 
-// 🎬 LOADING STATES
-// ============================================================== 
+// ==============================================================
+// LOADING STATES
+// ==============================================================
 
 .loading-spinner {
   width: 24px;
   height: 24px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
+  border: 2px solid rgba($white, 0.3);
   border-top-color: $color-btn-primary;
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -185,8 +187,8 @@
 
 .loading-dots {
   display: inline-flex;
-  gap: 4px;
-  
+  gap: $spacing-xs;
+
   &::after {
     content: '';
     width: 4px;
@@ -195,7 +197,7 @@
     background: currentColor;
     animation: pulse 1.5s ease-in-out infinite;
   }
-  
+
   &::before {
     content: '';
     width: 4px;
@@ -206,19 +208,19 @@
   }
 }
 
-// ============================================================== 
-// 🎬 MOBILE SPECIFIC ANIMATIONS
-// ============================================================== 
+// ==============================================================
+// MOBILE SPECIFIC ANIMATIONS
+// ==============================================================
 
 @media (max-width: 768px) {
   .mobile-slide-up {
     animation: slideInFromTop 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   }
-  
+
   .mobile-slide-down {
     animation: slideOutToTop 0.4s cubic-bezier(0.55, 0.06, 0.68, 0.19);
   }
-  
+
   // Disable hover effects on mobile
   .hover-lift,
   .hover-scale,

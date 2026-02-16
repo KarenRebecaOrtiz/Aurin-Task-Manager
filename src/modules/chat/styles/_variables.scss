@@ -1,45 +1,48 @@
 /**
  * Chat Module - SCSS Variables
- * 
+ *
  * Variables específicas del módulo de chat.
- * Complementa las variables globales del proyecto.
+ * References global design tokens from @/app/styles/variables.
  */
+
+@use '@/app/styles/variables' as *;
+@forward '@/app/styles/variables';
 
 // ============================================================================
 // LAYOUT
 // ============================================================================
 
 $chat-sidebar-width: 450px;
-$chat-sidebar-padding: 25px;
+$chat-sidebar-padding: $spacing-xl;
 $chat-sidebar-border-radius: 24px;
 $chat-sidebar-z-index: 1000;
 
 // ============================================================================
-// COLORS - Light Mode
+// COLORS - Light Mode (mapped to global tokens)
 // ============================================================================
 
-$chat-bg-light: #f6f6f6;
-$chat-header-bg-light: rgba(241, 245, 249, 0.7);
-$chat-border-light: rgba(255, 255, 255, 0.2);
-$chat-text-primary-light: #1a1a1a;
-$chat-text-secondary-light: #6b7280;
+$chat-bg-light: $zinc-100;
+$chat-header-bg-light: $color-bg-glass;
+$chat-border-light: rgba($white, 0.2);
+$chat-text-primary-light: $color-text-primary;
+$chat-text-secondary-light: $color-text-secondary;
 
 // ============================================================================
-// COLORS - Dark Mode
+// COLORS - Dark Mode (mapped to global tokens)
 // ============================================================================
 
 $chat-bg-dark: rgba(16, 15, 15, 0.985);
-$chat-header-bg-dark: rgba(39, 39, 42, 0.7);
-$chat-border-dark: rgba(255, 255, 255, 0.1);
-$chat-text-primary-dark: #ffffff;
-$chat-text-secondary-dark: #9ca3af;
+$chat-header-bg-dark: rgba($zinc-800, 0.7);
+$chat-border-dark: rgba($white, 0.1);
+$chat-text-primary-dark: $color-text-dark-primary;
+$chat-text-secondary-dark: $color-text-dark-secondary;
 
 // ============================================================================
 // BUTTON STYLES
 // ============================================================================
 
 $button-size: 32px;
-$button-border-radius: 12px;
+$button-border-radius: $radius-lg;
 
 // ============================================================================
 // ANIMATIONS
@@ -61,7 +64,7 @@ $noise-opacity-dark: 0.08;
 // SPACING
 // ============================================================================
 
-$chat-gap-sm: 5px;
-$chat-gap-md: 10px;
-$chat-gap-lg: 15px;
-$chat-gap-xl: 20px;
+$chat-gap-sm: $spacing-xs;
+$chat-gap-md: $spacing-sm;
+$chat-gap-lg: $spacing-md;
+$chat-gap-xl: $spacing-lg;

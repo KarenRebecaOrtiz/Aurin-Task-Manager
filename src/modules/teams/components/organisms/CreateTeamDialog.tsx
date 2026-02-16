@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
+import { useToast } from '@/modules/toast';
 import { CrudDialog } from '@/modules/dialogs/components/organisms';
 import { DialogActions } from '@/modules/dialogs/components/molecules';
 import { CrystalInput, CrystalTextarea } from '@/components/ui/inputs';
@@ -29,7 +29,7 @@ export function CreateTeamDialog({
   onTeamDeleted,
 }: CreateTeamDialogProps & { onTeamDeleted?: () => void }) {
   const { user } = useUser();
-  const { success: showSuccess, error: showError } = useSonnerToast();
+  const { success: showSuccess, error: showError } = useToast();
   const { openConfirm } = useDialog();
 
   // Get teams, users and store actions from unified dataStore
@@ -169,12 +169,12 @@ export function CreateTeamDialog({
     if (isSubmitting) return;
 
     if (!user) {
-      showError('Debes iniciar sesión para crear un equipo');
+      showError('Sesión requerida', 'Inicia sesión para crear un equipo.');
       return;
     }
 
     if (!clientId) {
-      showError('Debes seleccionar una cuenta primero');
+      showError('Cuenta requerida', 'Selecciona una cuenta primero.');
       return;
     }
 
@@ -194,7 +194,7 @@ export function CreateTeamDialog({
         });
         // Add to unified dataStore for immediate UI update
         addTeam(newTeam);
-        showSuccess(`El equipo "${formData.name}" se ha creado exitosamente.`);
+        showSuccess('Equipo creado', `"${formData.name}" está listo. Los miembros fueron notificados.`);
 
         // Send notifications to all members (except the creator)
         // This notification is ALWAYS sent (not configurable)
@@ -208,7 +208,7 @@ export function CreateTeamDialog({
       } else if (mode === 'edit' && teamId && existingTeam) {
         await teamService.updateTeam(teamId, formData);
         updateTeamInStore(teamId, formData);
-        showSuccess(`El equipo "${formData.name}" se ha actualizado exitosamente.`);
+        showSuccess('Equipo actualizado', `Los cambios en "${formData.name}" se guardaron.`);
 
         // Detect newly added members
         const previousMemberIds = existingTeam.memberIds;

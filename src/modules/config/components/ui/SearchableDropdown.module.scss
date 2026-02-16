@@ -1,4 +1,4 @@
-// SearchableDropdown - Hardcoded values
+@use '@/app/styles/variables' as *;
 
 .searchableDropdown {
   position: relative;
@@ -8,22 +8,22 @@
 .selectButton {
   width: 100%;
   height: 44px;
-  gap: 8px;
-  padding: 0 16px;
-  border-radius: 10px;
+  gap: $spacing-sm;
+  padding: 0 $spacing-lg;
+  border-radius: $radius-lg;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid $color-border-subtle;
   cursor: pointer;
-  background: rgba(241, 245, 249, 0.7);
-  font-size: 14px;
-  font-weight: 400;
-  color: #0f172a;
-  transition: background-color 0.2s ease;
+  background: rgba($color-bg-glass, 0.7);
+  font-size: $text-sm;
+  font-weight: $font-weight-normal;
+  color: $zinc-900;
+  transition: $transition-fast;
 
   img {
-    transition: filter 0.3s ease;
+    transition: $transition-fast;
   }
 
   :global(body.dark) & {
@@ -37,7 +37,7 @@
   }
 
   &.disabled {
-    background: rgba(241, 245, 249, 0.4);
+    background: rgba($color-bg-glass, 0.4);
     cursor: not-allowed;
     opacity: 0.6;
   }
@@ -45,10 +45,10 @@
   :global(body.dark) & {
     background: rgba(30, 30, 30, 0.7);
     border-color: rgba(255, 255, 255, 0.1);
-    color: #d1d1d1;
+    color: $color-text-dark-primary;
 
     &:hover {
-      background: #3f3f46;
+      background: $zinc-700;
     }
   }
 }
@@ -56,7 +56,7 @@
 .buttonContent {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: $spacing-sm;
   flex: 1;
 }
 
@@ -71,7 +71,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  
+
   svg {
     width: 100%;
     height: 100%;
@@ -89,33 +89,33 @@
 .selectedTags {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
+  gap: $spacing-sm;
+  margin-top: $spacing-md;
 }
 
 .tag {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  background: rgba(241, 245, 249, 1);
-  border-radius: 8px;
-  font-size: 12px;
-  color: #0f172a;
-  border: 1px solid rgba(209, 217, 230, 0.5);
-  transition: background-color 0.2s ease;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  background: $color-bg-glass;
+  border-radius: $radius-md;
+  font-size: $text-xs;
+  color: $zinc-900;
+  border: 1px solid rgba($zinc-300, 0.5);
+  transition: $transition-fast;
 
   &:hover {
-    background: rgba(241, 245, 249, 0.9);
+    background: rgba($color-bg-glass, 0.9);
   }
 
   :global(body.dark) & {
-    background: #27272a;
-    color: #d1d1d1;
+    background: $zinc-800;
+    color: $color-text-dark-primary;
     border-color: rgba(255, 255, 255, 0.1);
 
     &:hover {
-      background: #3f3f46;
+      background: $zinc-700;
     }
   }
 }
@@ -139,17 +139,17 @@
 }
 
 .tagText {
-  font-size: 12px;
-  font-weight: 400;
+  font-size: $text-xs;
+  font-weight: $font-weight-normal;
 }
 
 .tagRemove {
   background: none;
   border: none;
-  color: #64748b;
+  color: $color-text-secondary;
   cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
+  font-size: $text-sm;
+  font-weight: $font-weight-medium;
   padding: 0;
   width: 16px;
   height: 16px;
@@ -157,32 +157,32 @@
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  transition: color 0.2s ease;
+  transition: $transition-fast;
 
   &:hover {
-    color: #0f172a;
+    color: $zinc-900;
   }
 
   :global(body.dark) & {
-    color: #a1a1aa;
+    color: $color-text-dark-secondary;
 
     &:hover {
-      color: #d1d1d1;
+      color: $color-text-dark-primary;
     }
   }
 }
 
 .tagMore {
-  padding: 6px 10px;
-  background: rgba(148, 163, 184, 0.2);
-  border-radius: 8px;
-  font-size: 12px;
-  color: #64748b;
-  font-weight: 400;
+  padding: $spacing-sm $spacing-md;
+  background: rgba($slate-500, 0.2);
+  border-radius: $radius-md;
+  font-size: $text-xs;
+  color: $color-text-secondary;
+  font-weight: $font-weight-normal;
 
-  :global(.dark) & {
-    background: rgba(148, 163, 184, 0.1);
-    color: #a1a1aa;
+  :global(body.dark) & {
+    background: rgba($slate-500, 0.1);
+    color: $color-text-dark-secondary;
   }
 }
 
@@ -194,14 +194,14 @@
   display: flex;
   flex-direction: column;
   z-index: 3200;
-  padding: 8px 0;
+  padding: $spacing-sm 0;
   max-height: 300px;
   overflow-y: auto;
-  background: rgba(241, 245, 249, 0.95);
-  border-radius: 12px;
+  background: rgba($color-bg-glass, 0.95);
+  border-radius: $radius-xl;
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  margin-top: 4px;
+  border: 1px solid $color-border-subtle;
+  margin-top: $spacing-xs;
 
   &::-webkit-scrollbar {
     width: 6px;
@@ -212,23 +212,23 @@
   }
 
   &::-webkit-scrollbar-thumb {
-    background: rgba(148, 163, 184, 0.5);
+    background: rgba($slate-500, 0.5);
     border-radius: 3px;
 
     &:hover {
-      background: rgba(148, 163, 184, 0.7);
+      background: rgba($slate-500, 0.7);
     }
   }
 
-  :global(.dark) & {
-    background: #171717;
+  :global(body.dark) & {
+    background: $zinc-900;
     border-color: rgba(255, 255, 255, 0.05);
 
     &::-webkit-scrollbar-thumb {
-      background: rgba(148, 163, 184, 0.3);
+      background: rgba($slate-500, 0.3);
 
       &:hover {
-        background: rgba(148, 163, 184, 0.5);
+        background: rgba($slate-500, 0.5);
       }
     }
   }
@@ -240,24 +240,24 @@
 
 .searchInput {
   width: 100%;
-  padding: 12px 20px;
+  padding: $spacing-md $spacing-xl;
   border: none;
-  border-bottom: 1px solid rgba(209, 217, 230, 0.3);
+  border-bottom: 1px solid rgba($zinc-300, 0.3);
   outline: none;
   background: transparent;
-  font-size: 14px;
-  color: #0f172a;
+  font-size: $text-sm;
+  color: $zinc-900;
 
   &::placeholder {
-    color: #64748b;
+    color: $color-text-secondary;
   }
 
-  :global(.dark) & {
-    color: #d1d1d1;
-    border-bottom-color: #3f3f46;
+  :global(body.dark) & {
+    color: $color-text-dark-primary;
+    border-bottom-color: $zinc-700;
 
     &::placeholder {
-      color: #a1a1aa;
+      color: $color-text-dark-secondary;
     }
   }
 }
@@ -269,55 +269,55 @@
 }
 
 .item {
-  padding: 12px 20px;
+  padding: $spacing-md $spacing-xl;
   border-radius: 0;
   background: transparent;
   cursor: pointer;
-  font-size: 14px;
-  font-weight: 400;
-  color: #0f172a;
-  transition: background-color 0.2s ease;
+  font-size: $text-sm;
+  font-weight: $font-weight-normal;
+  color: $zinc-900;
+  transition: $transition-fast;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: $spacing-sm;
 
   &:hover {
     background: rgba(255, 255, 255, 0.1);
   }
 
   &.selected {
-    background: rgba(59, 130, 246, 0.08);
-    font-weight: 500;
-    color: #1e40af;
+    background: rgba($color-border-focus, 0.08);
+    font-weight: $font-weight-medium;
+    color: $blue-500;
   }
 
   &.disabled {
     opacity: 0.5;
     cursor: not-allowed;
-    background: rgba(148, 163, 184, 0.1);
+    background: rgba($slate-500, 0.1);
 
     &:hover {
-      background: rgba(148, 163, 184, 0.1);
+      background: rgba($slate-500, 0.1);
     }
   }
 
-  :global(.dark) & {
-    color: #d1d1d1;
+  :global(body.dark) & {
+    color: $color-text-dark-primary;
 
     &:hover {
-      background: #3f3f46;
+      background: $zinc-700;
     }
 
     &.selected {
-      background: rgba(59, 130, 246, 0.12);
-      color: #60a5fa;
+      background: rgba($color-border-focus, 0.12);
+      color: $sky-500;
     }
 
     &.disabled {
-      background: rgba(148, 163, 184, 0.05);
+      background: rgba($slate-500, 0.05);
 
       &:hover {
-        background: rgba(148, 163, 184, 0.05);
+        background: rgba($slate-500, 0.05);
       }
     }
   }
@@ -326,7 +326,7 @@
 .itemContent {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: $spacing-sm;
   flex: 1;
 }
 
@@ -361,47 +361,47 @@
 }
 
 .itemName {
-  font-size: 14px;
-  font-weight: 400;
+  font-size: $text-sm;
+  font-weight: $font-weight-normal;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .itemSubtitle {
-  font-size: 12px;
-  color: #64748b;
+  font-size: $text-xs;
+  color: $color-text-secondary;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 
-  :global(.dark) & {
-    color: #a1a1aa;
+  :global(body.dark) & {
+    color: $color-text-dark-secondary;
   }
 }
 
 .emptyState {
-  padding: 24px 20px;
+  padding: $spacing-2xl $spacing-xl;
   text-align: center;
-  color: #64748b;
-  font-size: 12px;
+  color: $color-text-secondary;
+  font-size: $text-xs;
 
-  :global(.dark) & {
-    color: #a1a1aa;
+  :global(body.dark) & {
+    color: $color-text-dark-secondary;
   }
 }
 
 .maxItemsWarning {
-  padding: 8px 20px;
-  background: rgba(239, 68, 68, 0.1);
-  color: #dc2626;
-  font-size: 12px;
+  padding: $spacing-sm $spacing-xl;
+  background: rgba($red-500, 0.1);
+  color: $red-500;
+  font-size: $text-xs;
   text-align: center;
-  border-top: 1px solid rgba(239, 68, 68, 0.2);
+  border-top: 1px solid rgba($red-500, 0.2);
 
-  :global(.dark) & {
-    background: rgba(239, 68, 68, 0.2);
-    color: #f87171;
-    border-top-color: rgba(239, 68, 68, 0.3);
+  :global(body.dark) & {
+    background: rgba($red-500, 0.2);
+    color: $rose-500;
+    border-top-color: rgba($red-500, 0.3);
   }
-} 
+}

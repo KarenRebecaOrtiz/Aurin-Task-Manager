@@ -33,35 +33,35 @@
   width: 100%;
   min-width: 200px;
   height: 48px;
-  padding: 12px 16px;
-  background: rgba(241, 245, 249, 1);
-  border-radius: 10px;
+  padding: $spacing-md $spacing-lg;
+  background: $color-bg-glass;
+  border-radius: $radius-lg;
   border: 1px solid rgba(255, 255, 255, 0.2);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  font-size: 14px;
+  font-size: $text-sm;
   font-family: $font-family-primary;
-  font-weight: 500;
-  color: #1e293b;
+  font-weight: $font-weight-medium;
+  color: $color-text-light;
   box-shadow:
     -4px -4px 8px rgba(255, 255, 255, 0.8),
     4px 4px 8px rgba(0, 0, 0, 0.05),
     inset -2px -2px 4px rgba(255, 255, 255, 0.9),
     inset 2px 2px 6px rgba(0, 0, 0, 0.05);
   transition:
-    background 0.3s ease,
-    box-shadow 0.3s ease,
-    border-color 0.3s ease,
-    transform 0.3s ease;
+    background $transition-base,
+    box-shadow $transition-base,
+    border-color $transition-base,
+    transform $transition-base;
 }
 
 .searchInput::placeholder {
-  color: #64748b;
-  font-weight: 400;
+  color: $color-text-secondary;
+  font-weight: $font-weight-normal;
 }
 
 .searchInput:hover {
-  background: rgba(241, 245, 249, 0.85);
+  background: $color-bg-glass-hover;
   border-color: rgba(255, 255, 255, 0.4);
   transform: translateY(-1px) scale(1.01);
   box-shadow:
@@ -73,8 +73,8 @@
 
 .searchInput:focus {
   outline: none;
-  background: rgba(255, 255, 255, 0.9);
-  border-color: #3b82f6;
+  background: $color-bg-glass-focus;
+  border-color: $blue-500;
   box-shadow:
     inset -2px -2px 4px rgba(255, 255, 255, 0.9),
     inset 2px 2px 6px rgba(0, 0, 0, 0.08),
@@ -94,11 +94,11 @@
 
 :global(body.dark) .searchInput,
 :global([data-theme="dark"]) .searchInput {
-  background:  #27272a !important;
+  background: $zinc-800 !important;
   border-color: none !important;
   border: none !important;
   box-shadow: none !important;
-  color: white !important;
+  color: $white !important;
 }
 
 :global(body.dark) .searchInput::placeholder,
@@ -106,8 +106,8 @@
   color: #efefef !important;
 }
 
-.dark .searchInput:hover {
-  background: rgba(39, 39, 42, 0.85);
+:global(body.dark) .searchInput:hover {
+  background: $color-bg-glass-dark-hover;
   border-color: rgba(255, 255, 255, 0.2);
   box-shadow:
     -6px -6px 10px rgba(0, 0, 0, 0.7),
@@ -116,16 +116,16 @@
     inset 2px 2px 6px rgba(255, 255, 255, 0.05);
 }
 
-.dark .searchInput:focus {
+:global(body.dark) .searchInput:focus {
   background: rgba(39, 39, 42, 0.9);
-  border-color: #60a5fa;
+  border-color: $blue-400;
   box-shadow:
     inset -4px -4px 4px rgba(0, 0, 0, 0.7),
     inset 2px 2px 6px rgba(255, 255, 255, 0.08),
     0 0 0 4px rgba(59, 130, 246, 0.3);
 }
 
-.dark .searchInput:active {
+:global(body.dark) .searchInput:active {
   background: rgba(39, 39, 42, 0.6);
   border-color: rgba(255, 255, 255, 0.05);
   box-shadow:
@@ -148,15 +148,15 @@
     padding: 0 !important;
     box-shadow: none !important;
   }
-  
+
   .searchInput {
     max-width: 75% !important;
     height: 40px;
-    padding: 8px 12px;
-    font-size: 12px;
+    padding: $spacing-sm $spacing-md;
+    font-size: $text-xs;
     min-width: 150px;
   }
-  
+
   /* Center the selector */
   .selector {
     display: flex;
@@ -164,12 +164,12 @@
     align-items: center;
     width: 100%;
   }
-  
+
   /* Hide swiper on mobile */
   .hideOnMobile {
     display: none !important;
   }
-  
+
   /* Hide UserSwiper completely on mobile */
   .swiperContainer {
     display: none !important;
@@ -180,13 +180,13 @@
   @include flex-center;
   gap: $spacing-md;
   flex-wrap: wrap;
-  
+
   @include responsive(md) {
     justify-content: center;
     width: 100%;
     align-items: start;
     display: flex;
-    
+
     .viewButton,
     .filter,
     .createButton,
@@ -194,17 +194,17 @@
       width: 30%;
     }
   }
-  
+
   @media (max-width: 768px) {
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: $spacing-md;
     width: 100%;
-    padding: 0px 20px;
+    padding: 0px $spacing-xl;
     justify-content: center;
     align-items: center;
-    
+
     .viewButton,
     .filter,
     .createButton,
@@ -223,21 +223,21 @@
 .createButton,
 .viewButton {
   @include button-secondary;
-  
+
   @include responsive(lg) {
     height: 44px;
     padding: 7px $spacing-md;
     font-size: 13px;
     gap: $spacing-sm;
   }
-  
+
   @include responsive(sm) {
     height: 40px;
     padding: 6px $spacing-md;
-    font-size: 12px;
-    gap: 6px;
+    font-size: $text-xs;
+    gap: $spacing-sm;
   }
-  
+
   :global(body.dark) & {
     img[src*=".svg"] {
       filter: invert(1) grayscale(1) brightness(1.5) !important;
@@ -251,30 +251,30 @@
   margin-right: 10px;
 
   border: 1px solid rgba(59, 130, 246, 0.15);
-  
+
   &:hover {
     background: rgba(59, 130, 246, 0.12);
     border-color: rgba(59, 130, 246, 0.25);
   }
-  
+
   &:active {
     background: rgba(59, 130, 246, 0.15);
     border-color: rgba(59, 130, 246, 0.3);
   }
-  
+
   :global(body.dark) & {
     background: rgba(59, 130, 246, 0.12);
     border-color: rgba(59, 130, 246, 0.2);
     color: $white !important;
     box-shadow: none !important;
-    
+
     &:hover {
       background: rgba(59, 130, 246, 0.18);
       border-color: rgba(59, 130, 246, 0.3);
       box-shadow: none !important;
 
     }
-    
+
     &:active {
       background: rgba(59, 130, 246, 0.22);
       border-color: rgba(59, 130, 246, 0.35);
@@ -299,12 +299,12 @@
       filter: invert(1) grayscale(1) brightness(1.5) !important;
     }
   }
-  
+
   @media (max-width: 768px) {
     span {
       display: none;
     }
-    
+
     img {
       margin: 0;
     }
@@ -333,55 +333,55 @@
   @include typography($text-sm, $font-weight-medium, $color-text-primary);
   cursor: pointer;
   transition: $transition-base;
-  
+
   &:hover {
     transform: translateY(-2px) scale(1.02);
     @include glassmorphism-hover;
     @include neomorphic-shadow-hover(light);
   }
-  
+
   &:active {
     transform: scale(0.98);
     background: rgba(241, 245, 249, 0.6);
     border-color: rgba(255, 255, 255, 0.15);
     @include neomorphic-inset(light);
   }
-  
+
   img {
-    transition: filter 0.3s ease;
+    transition: filter $transition-base;
     filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.3));
     margin-right: 5px;
   }
-  
+
   :global(body.dark) & {
     background: $zinc-800;
     border: none;
     box-shadow: none;
     color: rgba(255, 255, 255, 0.532);
-    
+
     img[src*=".svg"] {
       filter: invert(1) grayscale(1) brightness(1.5) !important;
       margin-right: 5px;
     }
   }
-  
+
   @include responsive(lg) {
     height: 44px;
     padding: $spacing-md 18px;
     font-size: 13px;
   }
-  
+
   @include responsive(sm) {
     height: 40px;
     padding: $spacing-sm $spacing-lg;
-    font-size: 12px;
+    font-size: $text-xs;
     min-width: 80px;
   }
 }
 
 .dropdownItems {
   position: absolute;
-  top: calc(100% + 4px);
+  top: calc(100% + $spacing-xs);
   left: 0;
   right: 0;
   z-index: 10;
@@ -394,20 +394,20 @@
   @include neomorphic-shadow(light);
   transition: $transition-base;
   @include crystallized-scrollbar;
-  
+
   :global(body.dark) & {
     background: $zinc-800;
     border: none;
     box-shadow: none !important;
   }
-  
+
   @include responsive(lg) {
-    padding: 6px 0;
+    padding: $spacing-sm 0;
     border-radius: $radius-lg;
   }
-  
+
   @include responsive(sm) {
-    padding: 4px 0;
+    padding: $spacing-xs 0;
     border-radius: $radius-sm;
   }
 }
@@ -418,50 +418,50 @@
   cursor: pointer;
   @include glassmorphism($color-bg-glass);
   border-radius: $radius-sm;
-  margin: 2px 4px;
+  margin: 2px $spacing-xs;
   border: 1px solid $color-border-subtle;
   @include neomorphic-shadow(light);
   transition: $transition-base;
-  
+
   &:hover {
     transform: translateY(-1px) scale(1.01);
     @include glassmorphism-hover;
     @include neomorphic-shadow-hover(light);
   }
-  
+
   &:active {
     transform: scale(0.98);
     background: rgba(241, 245, 249, 0.6);
     border-color: rgba(255, 255, 255, 0.15);
     @include neomorphic-inset(light);
   }
-  
+
   :global(body.dark) & {
     background: transparent;
     color: rgba(255, 255, 255, 0.532);
     border: none;
     box-shadow: none !important;
-    transition: all 0.3s ease;
-    
+    transition: $transition-base;
+
     &:hover {
       background: $zinc-700;
       transform: translateY(-2px) scale(1.02);
       box-shadow: none;
     }
-    
+
     &:active {
       background: $zinc-600;
       box-shadow: none;
     }
   }
-  
+
   @include responsive(lg) {
     padding: $spacing-sm $spacing-md;
-    font-size: 12px;
+    font-size: $text-xs;
   }
-  
+
   @include responsive(sm) {
-    padding: 6px $spacing-md;
+    padding: $spacing-sm $spacing-md;
     font-size: 11px;
   }
 }
@@ -477,54 +477,54 @@
 .kanbanColumn {
   flex: 0 0 280px;
   background: $white;
-  border: 1px solid #e2e8f0;
+  border: 1px solid $slate-200;
   border-radius: $radius-sm;
   @include flex-column;
   @include neomorphic-shadow(light);
-  
+
   :global(body.dark) & {
     background: #1f2a44;
-    border-color: #4b5563;
+    border-color: $color-border-dark-secondary;
     @include neomorphic-shadow(dark);
   }
-  
+
   &[data-status="por-iniciar"] {
     background: #e0f7fa;
-    
+
     :global(body.dark) & {
       background: #164e63;
     }
   }
-  
+
   &[data-status="en-proceso"] {
     background: #e6fffa;
-    
+
     :global(body.dark) & {
       background: #134e4a;
     }
   }
-  
+
   &[data-status="backlog"] {
     background: #fef3f2;
-    
+
     :global(body.dark) & {
       background: #4c1d1d;
     }
   }
-  
+
   &[data-status="finalizado"] {
     background: #f0fdf4;
-    
+
     :global(body.dark) & {
       background: #1a4a2a;
     }
   }
-  
+
   &[data-status="cancelado"] {
     background: #f3f4f6;
-    
+
     :global(body.dark) & {
-      background: #3f3f46;
+      background: $zinc-700;
     }
   }
 }
@@ -532,35 +532,35 @@
 .columnHeader {
   @include flex-between;
   padding: $spacing-md $spacing-lg;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid $slate-200;
   background: #f8fafc;
   border-top-left-radius: $radius-sm;
   border-top-right-radius: $radius-sm;
-  
+
   :global(body.dark) & {
-    border-bottom-color: #4b5563;
-    background: #374151;
+    border-bottom-color: $color-border-dark-secondary;
+    background: $color-bg-dark-tertiary;
   }
 }
 
 .columnTitle {
-  @include typography($text-sm, $font-weight-semibold, #1e293b);
-  
+  @include typography($text-sm, $font-weight-semibold, $color-text-light);
+
   :global(body.dark) & {
     color: $color-text-dark-primary;
   }
 }
 
 .taskCount {
-  @include typography(12px, $font-weight-normal, #64748b);
-  background: #e2e8f0;
+  @include typography($text-xs, $font-weight-normal, $color-text-secondary);
+  background: $slate-200;
   padding: 2px $spacing-sm;
   border-radius: $radius-xl;
   line-height: $leading-normal;
-  
+
   :global(body.dark) & {
-    background: #4b5563;
-    color: #9ca3af;
+    background: $color-border-dark-secondary;
+    color: $color-text-dark-muted;
   }
 }
 
@@ -576,31 +576,31 @@
 
 .taskCard {
   background: $white;
-  border: 1px solid #e2e8f0;
+  border: 1px solid $slate-200;
   border-radius: $radius-sm;
   padding: $spacing-md;
   cursor: pointer;
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  transition: box-shadow $transition-fast, transform $transition-fast;
   @include neomorphic-shadow(light);
-  
+
   &:hover {
     @include neomorphic-shadow-hover(light);
     transform: translateY(-2px);
   }
-  
+
   &[data-rbd-draggable-context-id] {
     cursor: grab;
   }
-  
+
   &[data-rbd-draggable-context-id][data-rbd-drag-handle-context-id] {
     cursor: grabbing;
   }
-  
+
   @include dark-mode {
-    background: #374151;
-    border-color: #4b5563;
+    background: $color-bg-dark-tertiary;
+    border-color: $color-border-dark-secondary;
     @include neomorphic-shadow(dark);
-    
+
     &:hover {
       @include neomorphic-shadow-hover(dark);
     }
@@ -640,17 +640,17 @@
   width: 100%;
 }
 
-  
+
 .projectName {
   font-size: 13px;
   font-weight: $font-weight-medium;
-  color: #64748b;
+  color: $color-text-secondary;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  padding: 4px 8px;
+  padding: $spacing-xs $spacing-sm;
   background: rgba(100, 116, 139, 0.1);
-  border-radius: 100px;
+  border-radius: $radius-full;
   max-width: 160px;
   display: inline-flex;
   align-items: center;
@@ -669,21 +669,21 @@
   flex-shrink: 0;
   @include pulse;
   box-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
-  
+
   @include dark-mode {
     background: $color-success-light;
     box-shadow: 0 0 12px rgba(74, 222, 128, 0.6);
   }
 }
 
-// Nuevo dot rojo con número de actualizaciones
+// Nuevo dot rojo con numero de actualizaciones
 .updateDotRed {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: $spacing-xl;
+  height: $spacing-xl;
   z-index: 10;
 }
 
@@ -702,15 +702,15 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 16px;
-  width: 16px;
+  height: $spacing-lg;
+  width: $spacing-lg;
   border-radius: 50%;
-  background-color: #ef4444;
-  color: white;
+  background-color: $red-500;
+  color: $white;
   font-size: 10px;
-  font-weight: bold;
+  font-weight: $font-weight-bold;
   text-align: center;
-  line-height: 1;
+  line-height: $leading-none;
   z-index: 1;
 }
 
@@ -728,7 +728,7 @@
 
 .clientInfo {
   @include flex-center;
-  gap: 6px;
+  gap: $spacing-sm;
 }
 
 .clientImage {
@@ -736,25 +736,25 @@
 }
 
 .noClient {
-  @include typography(12px, $font-weight-normal, #64748b);
-  
+  @include typography($text-xs, $font-weight-normal, $color-text-secondary);
+
   @include dark-mode {
-    color: #9ca3af;
+    color: $color-text-dark-muted;
   }
 }
 
 .noAssigned {
-  @include typography(12px, $font-weight-normal, #64748b);
-  
+  @include typography($text-xs, $font-weight-normal, $color-text-secondary);
+
   @include dark-mode {
-    color: #9ca3af;
+    color: $color-text-dark-muted;
   }
 }
 
 .priorityWrapper {
   @include flex-center;
-  gap: 6px;
-  
+  gap: $spacing-sm;
+
   @include dark-mode {
     img[src*=".svg"] {
       @include image-filter-dark;
@@ -764,8 +764,8 @@
 
 .statusWrapper {
   @include flex-center;
-  gap: 6px;
-  
+  gap: $spacing-sm;
+
   @include dark-mode {
     img[src*=".svg"] {
       @include image-filter-dark;
@@ -776,11 +776,11 @@
 .priority-Alta,
 .priority-Media,
 .priority-Baja {
-  color: #1e293b; // negro/azul oscuro para light mode
-  font-weight: 600;
+  color: $color-text-light;
+  font-weight: $font-weight-semibold;
   letter-spacing: 0.02em;
   :global(body.dark) & {
-    color: #c3c3c3 !important; // blanco puro en dark mode
+    color: #c3c3c3 !important;
   }
 }
 
@@ -799,9 +799,9 @@
 }
 
 .deletePopup {
-  background: #ffffff;
-  border-radius: 8px;
-  padding: 24px;
+  background: $white;
+  border-radius: $radius-md;
+  padding: $spacing-2xl;
   max-width: 400px;
   width: 100%;
   box-shadow:
@@ -811,8 +811,8 @@
     inset 4px 4px 8px rgba(209, 217, 230, 0.3);
 }
 
-.dark .deletePopup {
-  background: #374151;
+:global(body.dark) .deletePopup {
+  background: $color-bg-dark-tertiary;
   box-shadow:
     inset -4px -4px 8px rgba(0, 0, 0, 0.7),
     inset 4px 4px 8px rgba(255, 255, 255, 0.03),
@@ -823,70 +823,70 @@
 .deletePopupContent {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: $spacing-lg;
 }
 
 .deletePopupText {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: $spacing-sm;
 }
 
 .deletePopupTitle {
-  font-size: 18px;
-  font-weight: 600;
-  color: #1e293b;
+  font-size: $text-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-light;
 }
 
-.dark .deletePopupTitle {
+:global(body.dark) .deletePopupTitle {
   color: #e5e7eb;
 }
 
 .deletePopupDescription {
-  font-size: 14px;
-  color: #64748b;
+  font-size: $text-sm;
+  color: $color-text-secondary;
 }
 
-.dark .deletePopupDescription {
-  color: #9ca3af;
+:global(body.dark) .deletePopupDescription {
+  color: $color-text-dark-muted;
 }
 
 .deleteConfirmInput {
-  padding: 8px 12px;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  font-size: 14px;
-  background: #ffffff;
-  color: #1e293b;
+  padding: $spacing-sm $spacing-md;
+  border: 1px solid $slate-200;
+  border-radius: $radius-sm;
+  font-size: $text-sm;
+  background: $white;
+  color: $color-text-light;
 }
 
 .deleteConfirmInput:focus {
   outline: none;
-  border-color: #3b82f6;
+  border-color: $blue-500;
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
 }
 
-.dark .deleteConfirmInput {
-  border-color: #4b5563;
-  background: #374151;
+:global(body.dark) .deleteConfirmInput {
+  border-color: $color-border-dark-secondary;
+  background: $color-bg-dark-tertiary;
   color: #e5e7eb;
 }
 
 .deletePopupActions {
   display: flex;
-  gap: 12px;
+  gap: $spacing-md;
   justify-content: flex-end;
 }
 
 .deleteConfirmButton {
-  padding: 8px 16px;
+  padding: $spacing-sm $spacing-lg;
   border: none;
-  border-radius: 6px;
-  background: #dc2626;
-  color: #ffffff;
+  border-radius: $radius-sm;
+  background: $red-600;
+  color: $white;
   cursor: pointer;
-  font-size: 14px;
-  transition: background 0.2s ease;
+  font-size: $text-sm;
+  transition: background $transition-fast;
 }
 
 .deleteConfirmButton:disabled {
@@ -895,36 +895,36 @@
 }
 
 .deleteConfirmButton:hover:not(:disabled) {
-  background: #b91c1c;
+  background: $color-btn-danger-hover;
 }
 
-.dark .deleteConfirmButton:disabled {
-  background: #6b7280;
+:global(body.dark) .deleteConfirmButton:disabled {
+  background: $gray-500;
 }
 
 .deleteCancelButton {
-  padding: 8px 16px;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  background: #ffffff;
-  color: #1e293b;
+  padding: $spacing-sm $spacing-lg;
+  border: 1px solid $slate-200;
+  border-radius: $radius-sm;
+  background: $white;
+  color: $color-text-light;
   cursor: pointer;
-  font-size: 14px;
-  transition: background 0.2s ease;
+  font-size: $text-sm;
+  transition: background $transition-fast;
 }
 
 .deleteCancelButton:hover {
-  background: #f1f5f9;
+  background: $slate-100;
 }
 
-.dark .deleteCancelButton {
-  border-color: #4b5563;
-  background: #374151;
+:global(body.dark) .deleteCancelButton {
+  border-color: $color-border-dark-secondary;
+  background: $color-bg-dark-tertiary;
   color: #e5e7eb;
 }
 
-.dark .deleteCancelButton:hover {
-  background: #4b5563;
+:global(body.dark) .deleteCancelButton:hover {
+  background: $color-border-dark-secondary;
 }
 
 /* Mobile responsive styles for filters */
@@ -935,11 +935,11 @@
     .createButton,
     .filterButton {
       width: 100% !important;
-      margin-bottom: 8px;
+      margin-bottom: $spacing-sm;
       height: 40px;
     }
   }
-  
+
   /* Show archive button on mobile */
   .hideOnMobile {
     display: inline-block !important;
@@ -949,29 +949,29 @@
 // Estilos para tareas con actualizaciones no vistas
 .taskRow {
   transition: $transition-base;
-  
+
   &.hasUpdates {
-    background: linear-gradient(135deg, 
-      rgba(34, 197, 94, 0.08) 0%, 
-      rgba(34, 197, 94, 0.04) 50%, 
+    background: linear-gradient(135deg,
+      rgba(34, 197, 94, 0.08) 0%,
+      rgba(34, 197, 94, 0.04) 50%,
       rgba(34, 197, 94, 0.08) 100%);
     border-left: 3px solid rgba(34, 197, 94, 0.6);
-    box-shadow: 
+    box-shadow:
       0 2px 8px rgba(34, 197, 94, 0.1),
       inset 0 1px 0 rgba(34, 197, 94, 0.1);
-    
+
     &:hover {
-      background: linear-gradient(135deg, 
-        rgba(34, 197, 94, 0.12) 0%, 
-        rgba(34, 197, 94, 0.06) 50%, 
+      background: linear-gradient(135deg,
+        rgba(34, 197, 94, 0.12) 0%,
+        rgba(34, 197, 94, 0.06) 50%,
         rgba(34, 197, 94, 0.12) 100%);
       transform: translateY(-1px);
-      box-shadow: 
+      box-shadow:
         0 4px 12px rgba(34, 197, 94, 0.15),
         inset 0 1px 0 rgba(34, 197, 94, 0.15);
     }
   }
-  
+
   &.hasUpdates::before {
     content: '';
     position: absolute;
@@ -979,30 +979,30 @@
     left: 0;
     right: 0;
     height: 2px;
-    background: linear-gradient(90deg, 
-      transparent 0%, 
-      rgba(34, 197, 94, 0.8) 50%, 
+    background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(34, 197, 94, 0.8) 50%,
       transparent 100%);
     animation: pulse 2s ease-in-out infinite;
   }
-  
+
   @include dark-mode {
     &.hasUpdates {
-      background: linear-gradient(135deg, 
-        rgba(34, 197, 94, 0.12) 0%, 
-        rgba(34, 197, 94, 0.06) 50%, 
+      background: linear-gradient(135deg,
+        rgba(34, 197, 94, 0.12) 0%,
+        rgba(34, 197, 94, 0.06) 50%,
         rgba(34, 197, 94, 0.12) 100%);
       border-left: 3px solid rgba(34, 197, 94, 0.7);
-      box-shadow: 
+      box-shadow:
         0 2px 8px rgba(34, 197, 94, 0.2),
         inset 0 1px 0 rgba(34, 197, 94, 0.15);
-      
+
       &:hover {
-        background: linear-gradient(135deg, 
-          rgba(34, 197, 94, 0.16) 0%, 
-          rgba(34, 197, 94, 0.08) 50%, 
+        background: linear-gradient(135deg,
+          rgba(34, 197, 94, 0.16) 0%,
+          rgba(34, 197, 94, 0.08) 50%,
           rgba(34, 197, 94, 0.16) 100%);
-        box-shadow: 
+        box-shadow:
           0 4px 12px rgba(34, 197, 94, 0.25),
           inset 0 1px 0 rgba(34, 197, 94, 0.2);
       }
@@ -1022,21 +1022,21 @@
 // Estilos para modo oscuro
 :global(body.dark) .taskRow {
   &.hasUpdates {
-    background: linear-gradient(135deg, 
-      rgba(34, 197, 94, 0.12) 0%, 
-      rgba(34, 197, 94, 0.06) 50%, 
+    background: linear-gradient(135deg,
+      rgba(34, 197, 94, 0.12) 0%,
+      rgba(34, 197, 94, 0.06) 50%,
       rgba(34, 197, 94, 0.12) 100%);
     border-left: 3px solid rgba(34, 197, 94, 0.7);
-    box-shadow: 
+    box-shadow:
       0 2px 8px rgba(34, 197, 94, 0.2),
       inset 0 1px 0 rgba(34, 197, 94, 0.15);
-    
+
     &:hover {
-      background: linear-gradient(135deg, 
-        rgba(34, 197, 94, 0.16) 0%, 
-        rgba(34, 197, 94, 0.08) 50%, 
+      background: linear-gradient(135deg,
+        rgba(34, 197, 94, 0.16) 0%,
+        rgba(34, 197, 94, 0.08) 50%,
         rgba(34, 197, 94, 0.16) 100%);
-      box-shadow: 
+      box-shadow:
         0 4px 12px rgba(34, 197, 94, 0.25),
         inset 0 1px 0 rgba(34, 197, 94, 0.2);
     }
@@ -1048,8 +1048,8 @@
   position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  
+  gap: $spacing-xs;
+
   // Sobrescribir el pseudo-elemento verde del archivo _components.scss
   &::before {
     display: none !important;
@@ -1058,21 +1058,21 @@
 
 .tooltip {
   position: absolute;
-  bottom: calc(100% + 8px);
+  bottom: calc(100% + $spacing-sm);
   left: 50%;
   transform: translateX(-50%);
   background: rgba(30, 41, 59, 0.95);
-  color: #fff;
-  padding: 6px 14px;
-  border-radius: 8px;
+  color: $white;
+  padding: $spacing-sm 14px;
+  border-radius: $radius-md;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: $font-weight-medium;
   white-space: nowrap;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   opacity: 0;
   pointer-events: none;
-  z-index: 100;
-  transition: opacity 0.18s cubic-bezier(.4,0,.2,1);
+  z-index: $z-tooltip;
+  transition: opacity 0.18s cubic-bezier(.4, 0, .2, 1);
 }
 
 .buttonWithTooltip {
@@ -1101,17 +1101,17 @@
     rgba(55, 56, 56, 0.06) 0%,
     rgba(41, 42, 45, 0.03) 50%,
     rgba(48, 53, 60, 0.06) 100%) !important;
-  border-left:rgb(208, 223, 0) !important;
+  border-left: $brand-primary !important;
 
   &::before {
     content: '';
     position: absolute;
     top: 50%;
-    left: 8px;
+    left: $spacing-sm;
     transform: translateY(-50%);
     width: 6px;
     height: 6px;
-    background: rgb(208, 223, 0);
+    background: $brand-primary;
     border-radius: 50%;
     opacity: 0.7;
   }
@@ -1131,7 +1131,7 @@
     border-left-color: rgba(96, 165, 250, 0.6) !important;
 
     &::before {
-      background: #60a5fa;
+      background: $blue-400;
     }
 
     &:hover {
@@ -1142,4 +1142,3 @@
     }
   }
 }
-

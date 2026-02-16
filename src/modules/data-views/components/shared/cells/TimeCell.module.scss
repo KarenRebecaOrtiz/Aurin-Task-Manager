@@ -4,53 +4,79 @@
 .timeWrapper {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  background: rgba(59, 130, 246, 0.08);
-  border-radius: 100px;
-  transition: all 0.2s ease;
+  gap: $spacing-sm;
+  padding: $spacing-xs $spacing-md;
+  background: rgba($blue-500, 0.08);
+  border-radius: $radius-full;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: default;
+
+  &:hover {
+    background: rgba($blue-500, 0.15);
+    transform: translateY(-1px) scale(1.03);
+    box-shadow: 0 2px 8px rgba($blue-500, 0.15);
+
+    .icon {
+      transform: scale(1.15);
+    }
+
+    .time {
+      color: $blue-600;
+    }
+  }
 
   :global(body.dark) & {
-    background: rgba(96, 165, 250, 0.12);
+    background: rgba($blue-400, 0.12);
+
+    &:hover {
+      background: rgba($blue-400, 0.2);
+      box-shadow: 0 2px 8px rgba($blue-400, 0.15);
+
+      .time {
+        color: $blue-300;
+      }
+    }
   }
 }
 
 .icon {
-  color: #3b82f6;
+  color: $blue-500;
   flex-shrink: 0;
+  transition: transform 0.2s ease;
 
   :global(body.dark) & {
-    color: #60a5fa;
+    color: $blue-400;
   }
 }
 
 .iconEmpty {
-  color: #94a3b8;
+  color: $slate-500;
   flex-shrink: 0;
 
   :global(body.dark) & {
-    color: #6b7280;
+    color: $color-text-muted;
   }
 }
 
 .time {
-  color: #3b82f6;
-  font-size: 13px;
-  font-weight: 600;
+  color: $blue-500;
+  font-size: $text-xs;
+  font-weight: $font-weight-semibold;
   white-space: nowrap;
+  transition: color 0.2s ease;
 
   :global(body.dark) & {
-    color: #60a5fa;
+    color: $blue-400;
   }
 }
 
 .emptyTime {
-  color: #94a3b8;
-  font-size: 13px;
-  font-weight: 500;
+  color: $slate-500;
+  font-size: $text-xs;
+  font-weight: $font-weight-medium;
   font-style: italic;
 
   :global(body.dark) & {
-    color: #6b7280;
+    color: $color-text-muted;
   }
 }

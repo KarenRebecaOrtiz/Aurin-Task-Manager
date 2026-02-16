@@ -1,3 +1,5 @@
+@use '@/app/styles/variables' as *;
+
 // Mobile View Switcher - Pill flotante en bottom
 .mobileNav {
   display: none; // Hidden by default, shown only in mobile viewport
@@ -5,7 +7,7 @@
   @media (max-width: 768px) {
     display: block;
     position: fixed;
-    bottom: 20px;
+    bottom: $spacing-xl;
     left: 50%;
     transform: translateX(-50%);
     z-index: 999;
@@ -18,12 +20,12 @@
   display: flex;
   align-items: center;
   justify-content: space-around;
-  gap: 4px;
-  padding: 8px 12px;
+  gap: $spacing-xs;
+  padding: $spacing-sm $spacing-md;
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border-radius: 16px;
+  border-radius: $radius-2xl;
   border: 1px solid rgba(229, 231, 235, 0.8);
   box-shadow:
     0 4px 12px rgba(0, 0, 0, 0.08),
@@ -45,18 +47,18 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 8px 12px;
+  gap: $spacing-xs;
+  padding: $spacing-sm $spacing-md;
   min-width: 64px;
   background: transparent;
   border: none;
-  border-radius: 100px;
+  border-radius: $radius-full;
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  color: #6b7280;
-  fill: #6b7280;
-  font-size: 11px;
-  font-weight: 500;
+  color: $zinc-500;
+  fill: $zinc-500;
+  font-size: $text-xs;
+  font-weight: $font-weight-medium;
   line-height: 1;
   position: relative;
   overflow: hidden;
@@ -67,8 +69,8 @@
   // Hover effect
   &:hover {
     background: rgba(0, 0, 0, 0.04);
-    color: #1f2937;
-    fill: #1f2937;
+    color: $zinc-800;
+    fill: $zinc-800;
 
     :global(body.dark) & {
       background: rgba(255, 255, 255, 0.08);
@@ -91,9 +93,9 @@
 
 .navButtonActive {
   background: rgba(0, 0, 0, 0.06);
-  color: #09090b;
-  fill: #09090b;
-  font-weight: 600;
+  color: $zinc-950;
+  fill: $zinc-950;
+  font-weight: $font-weight-semibold;
 
   &::before {
     content: '';
@@ -102,7 +104,7 @@
     left: 0;
     right: 0;
     height: 2px;
-    background: #d0df00;
+    background: $brand-primary;
     border-radius: 2px;
   }
 
@@ -113,7 +115,7 @@
     fill: rgba(255, 255, 255, 0.95);
 
     &::before {
-      background: #d0df00;
+      background: $brand-primary;
     }
   }
 
@@ -141,7 +143,7 @@
 
 .navLabel {
   font-size: 10px;
-  font-weight: 500;
+  font-weight: $font-weight-medium;
   white-space: nowrap;
   user-select: none;
   -webkit-user-select: none;
@@ -150,14 +152,14 @@
 
 // Create Task Button - Verde (Circular)
 .createTaskButton {
-  background: #d0df00 !important;
+  background: $brand-primary !important;
   color: rgb(29, 29, 29) !important;
   fill: rgb(29, 29, 29) !important;
   min-width: 48px !important;
   width: 48px !important;
   height: 48px !important;
-  border-radius: 8px !important;
-  padding: 12px !important;
+  border-radius: $radius-md !important;
+  padding: $spacing-md !important;
   flex-direction: row !important;
   box-shadow:
     0px 2px 4px rgba(0, 0, 0, 0.1),
@@ -189,7 +191,7 @@
   }
 
   :global(body.dark) & {
-    background: #d0df00 !important;
+    background: $brand-primary !important;
 
     &:hover {
       background: rgba(208, 223, 0, 0.85) !important;
@@ -201,7 +203,7 @@
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .mobileNav {
     @media (max-width: 768px) {
-      bottom: calc(20px + env(safe-area-inset-bottom));
+      bottom: calc($spacing-xl + env(safe-area-inset-bottom));
     }
   }
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useCallback } from "react"
 import { useUser } from "@clerk/nextjs"
-import { useSonnerToast } from "@/modules/sonner/hooks/useSonnerToast"
+import { useToast } from "@/modules/toast"
 import { CrudDialog, DialogActions } from "@/modules/dialogs"
 import { useConfigPageStore } from "../../stores"
 import { useProfileFormStore } from "../../stores"
@@ -27,14 +27,14 @@ export function ConfigDialog({
   userId,
 }: ConfigDialogProps) {
   const { user } = useUser()
-  const { success: showSuccess, error: showError } = useSonnerToast()
+  const { success: showSuccess, error: showError } = useToast()
   const { isLoading, isSaving } = useProfileFormStore()
   const { hasUnsavedChanges } = useConfigPageStore()
   const invalidateCache = useUserDataStore((state) => state.invalidateCache)
 
   // Callbacks para success/error que se pasan a useProfileForm
   const handleSuccess = useCallback((message: string) => {
-    showSuccess(message)
+    showSuccess(message, 'Los cambios se aplicaron correctamente.')
     
     // Limpiar localStorage para evitar datos stale
     try {

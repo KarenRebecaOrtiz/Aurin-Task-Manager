@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { validateTokenForTask } from '@/modules/shareTask/actions/tokenAuth.actions';
 import { useGuestAuth } from '@/contexts/GuestAuthContext';
-import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
+import { useToast } from '@/modules/toast';
 import { Lock, ArrowRight } from 'lucide-react';
 import styles from './TokenAuthForm.module.scss';
 
@@ -16,13 +16,13 @@ export function TokenAuthForm({ taskId, taskName }: TokenAuthFormProps) {
   const [token, setToken] = useState('');
   const [isPending, startTransition] = useTransition();
   const { setGuestSession } = useGuestAuth();
-  const { success, error: showError } = useSonnerToast();
+  const { success, error: showError } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!token.trim()) {
-      showError('Error', 'Por favor ingresa un token válido');
+      showError('Token requerido', 'Ingresa un token válido para continuar.');
       return;
     }
 
@@ -40,11 +40,11 @@ export function TokenAuthForm({ taskId, taskName }: TokenAuthFormProps) {
           commentsEnabled: result.tokenData.commentsEnabled ?? true,
         });
 
-        success('¡Autenticación exitosa! Cargando tarea...');
+        success('Autenticación exitosa', 'Ya puedes ver la tarea compartida.');
         // Force reload to show authenticated view
         window.location.reload();
       } else {
-        showError('Error de autenticación', result.error || 'Token inválido');
+        showError('Token inválido', result.error || 'Verifica el token e intenta de nuevo.');
       }
     });
   };

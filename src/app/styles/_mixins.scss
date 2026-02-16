@@ -1216,18 +1216,12 @@
 }
 
 @mixin profile-card-name {
-  @include typography($profile-card-name-size, $font-weight-semibold, $color-text-primary, left);
+  @include typography($profile-card-name-size, $font-weight-bold, $color-text-primary, left);
+  line-height: $leading-tight;
+  letter-spacing: -0.02em;
 
   @include dark-mode {
     color: $color-text-dark-primary;
-  }
-
-  @media (min-width: 768px) {
-    font-size: $profile-card-name-size-md;
-  }
-
-  @media (min-width: 1024px) {
-    font-size: $profile-card-name-size-lg;
   }
 }
 
@@ -1236,10 +1230,6 @@
 
   @include dark-mode {
     color: $color-text-dark-secondary;
-  }
-
-  @media (min-width: 768px) {
-    font-size: $profile-card-email-size-md;
   }
 }
 
@@ -1260,31 +1250,23 @@
   }
 
   @media (min-width: 768px) {
-    font-size: $profile-card-close-button-size-md;
     padding: $profile-card-close-button-padding-md;
   }
 
   @media (min-width: 1024px) {
-    font-size: $profile-card-close-button-size-lg;
     top: 10px;
     right: 10px;
   }
 }
 
 @mixin profile-card-section-title {
-  @include typography($profile-card-section-title-size, $font-weight-semibold, $color-text-primary, left);
-  margin-bottom: 5px;
+  @include typography($profile-card-section-title-size, $font-weight-semibold, $color-text-secondary, left);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: $spacing-md;
 
   @include dark-mode {
-    color: $color-text-dark-primary;
-  }
-
-  @media (min-width: 768px) {
-    font-size: $profile-card-section-title-size-md;
-  }
-
-  @media (min-width: 1024px) {
-    font-size: $profile-card-section-title-size-lg;
+    color: $color-text-dark-secondary;
   }
 }
 
@@ -1331,11 +1313,6 @@
 
   @media (min-width: 768px) {
     padding: $profile-card-input-padding-md;
-    font-size: $text-base;
-  }
-
-  @media (min-width: 1024px) {
-    font-size: $text-base;
   }
 }
 
@@ -1361,12 +1338,10 @@
   }
 
   @media (min-width: 768px) {
-    font-size: $profile-card-tag-size-md;
     padding: $profile-card-tag-padding-md;
   }
 
   @media (min-width: 1024px) {
-    font-size: $profile-card-tag-size-lg;
     padding: $profile-card-tag-padding-lg;
   }
 }
@@ -1394,14 +1369,6 @@
     &:hover {
       @include neomorphic-shadow-hover(dark);
     }
-  }
-
-  @media (min-width: 768px) {
-    font-size: $profile-card-button-size-md;
-  }
-
-  @media (min-width: 1024px) {
-    font-size: $profile-card-button-size-lg;
   }
 }
 
@@ -1507,12 +1474,10 @@
 
   @if not $fixed-size {
     @media (min-width: 768px) {
-      font-size: $profile-card-tag-size-md;
       padding: $profile-card-tag-padding-md;
     }
 
     @media (min-width: 1024px) {
-      font-size: $profile-card-tag-size-lg;
       padding: $profile-card-tag-padding-lg;
     }
   }
@@ -1588,14 +1553,6 @@
 
   @include dark-mode {
     color: $digital-clock-text-color-dark;
-  }
-
-  @media (min-width: 768px) {
-    font-size: $digital-clock-text-size-md;
-  }
-
-  @media (min-width: 1024px) {
-    font-size: $digital-clock-text-size-lg;
   }
 }
 

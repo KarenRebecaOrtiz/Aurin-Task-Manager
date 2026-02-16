@@ -1,44 +1,47 @@
 @use '@/app/styles/variables' as *;
 @use '@/app/styles/mixins' as *;
 
-/* Stack de Tecnologías */
 .stackSection {
-  margin: 16px 0;
+  margin: 0;
 }
 
 .stackTags {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  justify-content: center;
+  gap: $spacing-sm;
+  justify-content: flex-start;
 }
 
 .viewMoreButton {
   @include flex-center;
-  padding: 0.375rem 0.75rem;
+  @include typography($text-xs, $font-weight-semibold, $color-text-muted);
+  padding: $profile-card-tag-padding;
   border-radius: $radius-lg;
-  @include typography($text-sm, $font-weight-medium, #000000);
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
+  background: $zinc-100;
+  border: 1px solid $color-border-light;
   cursor: pointer;
   white-space: nowrap;
-  font-size: 12px;
-  font-weight: 600;
+  transition: background $transition-fast, border-color $transition-fast;
 
   &:hover {
-    background: #f3f4f6;
-    border-color: #d1d5db;
+    background: $zinc-200;
+    border-color: $zinc-300;
   }
 
   &:active {
-    background: #e5e7eb;
-    border-color: #9ca3af;
+    background: $zinc-200;
+    border-color: $zinc-400;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $color-border-focus;
+    outline-offset: 2px;
   }
 
   :global(.dark) & {
     background: $color-bg-dark-secondary;
     border: 1px solid $color-border-dark;
-    color: $color-text-dark-primary;
+    color: $color-text-dark-secondary;
 
     &:hover {
       background: $color-bg-dark-tertiary;

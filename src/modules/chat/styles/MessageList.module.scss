@@ -1,6 +1,6 @@
 /**
  * Message List - Component Styles
- * 
+ *
  * Estilos para la lista de mensajes con scroll infinito.
  */
 
@@ -11,9 +11,9 @@
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 16px;
+  padding: $spacing-lg;
   display: flex;
-  flex-direction: column; // ✅ NORMAL - no reverse (como el original)
+  flex-direction: column;
   min-height: 0;
   position: relative;
 
@@ -27,11 +27,11 @@
 .loadMoreButton {
   @include neumorphic-button(auto);
   width: 100%;
-  padding: 12px;
-  margin-bottom: 16px;
-  font-size: 14px;
-  font-weight: 500;
-  gap: 8px;
+  padding: $spacing-md;
+  margin-bottom: $spacing-lg;
+  font-size: $text-sm;
+  font-weight: $font-weight-medium;
+  gap: $spacing-sm;
 
   &:disabled {
     @include disabled-state;
@@ -41,7 +41,7 @@
 .loadMoreText {
   color: $chat-text-primary-light;
 
-  :global(.dark) & {
+  :global(body.dark) & {
     color: $chat-text-primary-dark;
   }
 }
@@ -54,7 +54,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 20px 0;
+  margin: $spacing-lg 0;
   position: relative;
 
   &::before,
@@ -64,44 +64,44 @@
     height: 1px;
     background: rgba(0, 0, 0, 0.1);
 
-    :global(.dark) & {
-      background: rgba(255, 255, 255, 0.1);
+    :global(body.dark) & {
+      background: rgba($white, 0.1);
     }
 
     @media (max-width: 767px) {
       content: '';
       flex: 1;
       height: 1px;
-      background: #ffffff;
+      background: $white;
 
-      :global(.dark) & {
-        background: #18181b;
+      :global(body.dark) & {
+        background: $zinc-900;
       }
     }
   }
 
   &::before {
-    margin-right: 12px;
+    margin-right: $spacing-md;
   }
 
   &::after {
-    margin-left: 12px;
+    margin-left: $spacing-md;
   }
 }
 
 .dateLabel {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: $text-xs;
+  font-weight: $font-weight-semibold;
   color: $chat-text-secondary-light;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  padding: 4px 12px;
+  padding: $spacing-xs $spacing-md;
   background: rgba(0, 0, 0, 0.05);
-  border-radius: 12px;
+  border-radius: $radius-lg;
 
-  :global(.dark) & {
+  :global(body.dark) & {
     color: $chat-text-secondary-dark;
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba($white, 0.05);
   }
 }
 
@@ -114,9 +114,9 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 40px 20px;
+  padding: $spacing-4xl $spacing-lg;
   text-align: center;
-  gap: 12px;
+  gap: $spacing-md;
 }
 
 .emptyIcon {
@@ -126,21 +126,21 @@
 }
 
 .emptyText {
-  font-size: 16px;
-  font-weight: 500;
+  font-size: $text-base;
+  font-weight: $font-weight-medium;
   color: $chat-text-secondary-light;
 
-  :global(.dark) & {
+  :global(body.dark) & {
     color: $chat-text-secondary-dark;
   }
 }
 
 .emptySubtext {
-  font-size: 14px;
+  font-size: $text-sm;
   color: $chat-text-secondary-light;
   opacity: 0.7;
 
-  :global(.dark) & {
+  :global(body.dark) & {
     color: $chat-text-secondary-dark;
   }
 }
@@ -153,7 +153,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: $spacing-lg;
 }
 
 .spinner {
@@ -173,8 +173,8 @@
 .messageGroup {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-bottom: 16px;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-lg;
 }
 
 // ============================================================================
@@ -183,8 +183,8 @@
 
 .scrollToBottom {
   position: absolute;
-  bottom: 20px;
-  right: 20px;
+  bottom: $spacing-lg;
+  right: $spacing-lg;
   @include neumorphic-button(40px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   z-index: 10;

@@ -4,17 +4,17 @@
   display: flex;
   align-items: center;
   gap: 2px;
-  font-size: 12px;
-  font-weight: 700;
+  font-size: $text-xs;
+  font-weight: $font-weight-bold;
   font-family: 'Inconsolata', monospace;
   letter-spacing: 0.5px;
-  padding: 4px 6px;
-  border-radius: 4px;
-  transition: all 0.2s ease;
+  padding: $spacing-xs $spacing-sm;
+  border-radius: $radius-xs;
+  transition: $transition-fast;
 
   &.running {
     .light & {
-      color: #22c55e;
+      color: $green-500;
     }
 
     .dark & {
@@ -24,7 +24,7 @@
 
   &.paused {
     .light & {
-      color: #a855f7;
+      color: $purple-500;
     }
 
     .dark & {
@@ -34,7 +34,7 @@
 }
 
 .separator {
-  font-size: 10px;
+  font-size: $text-xs;
   opacity: 0.7;
   margin: 0 1px;
 }

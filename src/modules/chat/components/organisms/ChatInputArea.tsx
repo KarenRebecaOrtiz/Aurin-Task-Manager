@@ -18,7 +18,7 @@ import { EditorContent, Editor } from '@tiptap/react'
 import { useAudioRecorder } from '@/modules/chat/hooks/useAudioRecorder'
 import { useMediaQuery } from '@/modules/dialogs/hooks/useMediaQuery'
 import { TimerDropdown } from '@/modules/chat/timer/components/molecules/TimerDropdown'
-import { toast } from '@/components/ui/use-toast'
+import { sileo } from 'sileo'
 import styles from '@/modules/n8n-chatbot/styles/components/input-area.module.scss'
 
 interface ChatInputAreaProps {
@@ -78,11 +78,7 @@ export function ChatInputArea({
       }
     },
     onError: (error) => {
-      toast({
-        title: 'Error de audio',
-        description: error,
-        variant: 'error',
-      })
+      sileo.error({ title: 'Audio no disponible', description: error })
     },
   })
 

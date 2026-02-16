@@ -15,7 +15,7 @@ import { VirtualizedMessageList } from "./organisms/VirtualizedMessageList";
 import { InputChat } from "./organisms/InputChat";
 import { MessageItem } from "./molecules/MessageItem";
 import { ManualTimeDialog } from "@/modules/dialogs";
-import { toast } from "@/components/ui/use-toast";
+
 import { teamNotificationService } from "@/modules/teams/services";
 import type { ChatSidebarProps } from "../types";
 import { useUserDataStore } from "@/stores/userDataStore";

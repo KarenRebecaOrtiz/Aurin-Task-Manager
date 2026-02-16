@@ -1,17 +1,14 @@
-// DialogHeader.module.scss
-// Estilos para el header de diálogos - Hardcoded values
+@use '@/app/styles/variables' as *;
 
 .header {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 16px 20px 20px 0;
+  gap: $spacing-xs;
+  padding: $spacing-lg $spacing-xl $spacing-xl 0;
 
-  // Alineación
   &.alignLeft {
     text-align: left;
 
-    // En mobile (drawers), centrar siempre
     @media (max-width: 767px) {
       text-align: center;
     }
@@ -23,27 +20,27 @@
 }
 
 .title {
-  font-size: 16px;
-  font-weight: 600;
-  line-height: 1.4;
-  color: #0f172a;
+  font-size: $text-2xl;
+  font-weight: $font-weight-semibold;
+  line-height: $leading-tight;
+  letter-spacing: -0.025em;
+  color: $zinc-900;
 
   :global(.dark) & {
-    color: rgba(255, 255, 255, 0.7);
+    color: $zinc-50;
   }
 }
 
 .description {
-  font-size: 12px;
-  font-weight: 400;
-  color: #64748b;
-  line-height: 1.5;
+  font-size: $text-sm;
+  font-weight: $font-weight-normal;
+  color: $color-text-secondary;
+  line-height: $leading-normal;
 
   :global(.dark) & {
-    color: #a1a1aa;
+    color: $color-text-dark-secondary;
   }
 
-  // En mobile (drawers), ocultar descripción
   @media (max-width: 767px) {
     display: none;
   }
@@ -53,7 +50,7 @@
 :global(.dark) {
   .header {
     &.bordered {
-      border-bottom-color: #3f3f46;
+      border-bottom-color: $zinc-700;
     }
   }
 }

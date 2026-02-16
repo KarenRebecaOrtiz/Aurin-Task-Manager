@@ -1,11 +1,7 @@
-/**
- * useToast Hook - API principal para mostrar toasts
- * Hook personalizado para usar en cualquier componente
- */
+'use client';
 
+import { sileo } from 'sileo';
 import { useCallback } from 'react';
-import { useToastStore } from '../store/toastStore';
-import { ToastVariant } from '../types';
 
 interface UseToastOptions {
   duration?: number;
@@ -15,72 +11,151 @@ interface UseToastOptions {
   playSound?: boolean;
 }
 
+const AUDIO_FILES: Record<string, string> = {
+  success: '/NotificationSound.mp3',
+  error: '/Error.mp3',
+  warning: '/Warning.mp3',
+  info: '/Info.mp3',
+};
+
+function playAudio(variant: string) {
+  const path = AUDIO_FILES[variant];
+  if (!path) return;
+  try {
+    const audio = new Audio(path);
+    audio.preload = 'auto';
+    audio.play().catch(() => {});
+  } catch {
+    // Browser may block autoplay
+  }
+}
+
 export const useToast = () => {
-  const { addToast, removeToast, clearAll } = useToastStore();
-
-  const showToast = useCallback(
-    (
-      message: string,
-      variant: ToastVariant = 'info',
-      options?: UseToastOptions
-    ) => {
-      return addToast({
-        message,
-        variant,
-        duration: options?.duration ?? 5000,
-        onClose: options?.onClose,
-        onAction: options?.onAction,
-        actionLabel: options?.actionLabel,
-        playSound: options?.playSound ?? true,
-      });
-    },
-    [addToast]
-  );
-
   const success = useCallback(
-    (message: string, options?: UseToastOptions) => {
-      return showToast(message, 'success', options);
+    (message: string, descriptionOrOptions?: string | UseToastOptions, options?: UseToastOptions) => {
+      let description: string | undefined;
+      let opts: UseToastOptions;
+
+      if (typeof descriptionOrOptions === 'string') {
+        description = descriptionOrOptions;
+        opts = options || {};
+      } else {
+        opts = descriptionOrOptions || {};
+      }
+
+      const { duration = 5000, onAction, actionLabel, playSound = true } = opts;
+
+      if (playSound) playAudio('success');
+
+      if (actionLabel && onAction) {
+        return sileo.action({
+          title: message,
+          description,
+          duration,
+          button: { title: actionLabel, onClick: onAction },
+        });
+      }
+
+      return sileo.success({ title: message, description, duration });
     },
-    [showToast]
+    []
   );
 
   const error = useCallback(
-    (message: string, errorDetails?: string, options?: UseToastOptions) => {
-      return addToast({
-        message,
-        variant: 'error',
-        error: errorDetails,
-        duration: options?.duration ?? 5000,
-        onClose: options?.onClose,
-        onAction: options?.onAction,
-        actionLabel: options?.actionLabel,
-        playSound: options?.playSound ?? true,
-      });
+    (message: string, descriptionOrOptions?: string | UseToastOptions, options?: UseToastOptions) => {
+      let description: string | undefined;
+      let opts: UseToastOptions;
+
+      if (typeof descriptionOrOptions === 'string') {
+        description = descriptionOrOptions;
+        opts = options || {};
+      } else {
+        opts = descriptionOrOptions || {};
+      }
+
+      const { duration = 5000, onAction, actionLabel, playSound = true } = opts;
+
+      if (playSound) playAudio('error');
+
+      if (actionLabel && onAction) {
+        return sileo.action({
+          title: message,
+          description,
+          duration,
+          button: { title: actionLabel, onClick: onAction },
+        });
+      }
+
+      return sileo.error({ title: message, description, duration });
     },
-    [addToast]
+    []
   );
 
   const warning = useCallback(
-    (message: string, options?: UseToastOptions) => {
-      return showToast(message, 'warning', options);
+    (message: string, descriptionOrOptions?: string | UseToastOptions, options?: UseToastOptions) => {
+      let description: string | undefined;
+      let opts: UseToastOptions;
+
+      if (typeof descriptionOrOptions === 'string') {
+        description = descriptionOrOptions;
+        opts = options || {};
+      } else {
+        opts = descriptionOrOptions || {};
+      }
+
+      const { duration = 5000, onAction, actionLabel, playSound = true } = opts;
+
+      if (playSound) playAudio('warning');
+
+      if (actionLabel && onAction) {
+        return sileo.action({
+          title: message,
+          description,
+          duration,
+          button: { title: actionLabel, onClick: onAction },
+        });
+      }
+
+      return sileo.warning({ title: message, description, duration });
     },
-    [showToast]
+    []
   );
 
   const info = useCallback(
-    (message: string, options?: UseToastOptions) => {
-      return showToast(message, 'info', options);
+    (message: string, descriptionOrOptions?: string | UseToastOptions, options?: UseToastOptions) => {
+      let description: string | undefined;
+      let opts: UseToastOptions;
+
+      if (typeof descriptionOrOptions === 'string') {
+        description = descriptionOrOptions;
+        opts = options || {};
+      } else {
+        opts = descriptionOrOptions || {};
+      }
+
+      const { duration = 5000, onAction, actionLabel, playSound = true } = opts;
+
+      if (playSound) playAudio('info');
+
+      if (actionLabel && onAction) {
+        return sileo.action({
+          title: message,
+          description,
+          duration,
+          button: { title: actionLabel, onClick: onAction },
+        });
+      }
+
+      return sileo.info({ title: message, description, duration });
     },
-    [showToast]
+    []
   );
 
   return {
-    showToast,
     success,
     error,
     warning,
     info,
-    removeToast,
-    clearAll,
+    sileo,
   };
 };

@@ -1,6 +1,6 @@
 /**
  * StatusDropdown Styles
- * 
+ *
  * Dropdown for changing task status in ChatHeader
  */
 
@@ -15,16 +15,16 @@
 .trigger {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border-radius: 10px;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  border-radius: $radius-md;
   border: none;
-  font-size: 13px;
-  font-weight: 500;
+  font-size: $text-xs;
+  font-weight: $font-weight-medium;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: $transition-fast;
   background: rgba(var(--status-color-rgb, 156, 163, 175), 0.12);
-  color: var(--status-color, #4b5563);
+  color: var(--status-color, $zinc-600);
 
   &:hover:not(.disabled) {
     background: rgba(var(--status-color-rgb, 156, 163, 175), 0.2);
@@ -35,9 +35,9 @@
     opacity: 0.9;
   }
 
-  :global(.dark) & {
+  :global(body.dark) & {
     background: rgba(var(--status-color-rgb, 156, 163, 175), 0.2);
-    
+
     &:hover:not(.disabled) {
       background: rgba(var(--status-color-rgb, 156, 163, 175), 0.3);
     }
@@ -85,21 +85,21 @@
   top: calc(100% + 4px);
   left: 0;
   min-width: 160px;
-  padding: 6px;
-  border-radius: 12px;
-  background: white;
-  box-shadow: 
+  padding: $spacing-xs;
+  border-radius: $radius-lg;
+  background: $white;
+  box-shadow:
     0 4px 6px -1px rgba(0, 0, 0, 0.1),
     0 2px 4px -2px rgba(0, 0, 0, 0.1),
     0 0 0 1px rgba(0, 0, 0, 0.05);
-  z-index: 100!important;
+  z-index: 100 !important;
 
-  :global(.dark) & {
-    background: #1a1a1e;
-    box-shadow: 
+  :global(body.dark) & {
+    background: $zinc-900;
+    box-shadow:
       0 4px 6px -1px rgba(0, 0, 0, 0.3),
       0 2px 4px -2px rgba(0, 0, 0, 0.2),
-      0 0 0 1px rgba(255, 255, 255, 0.1);
+      0 0 0 1px rgba($white, 0.1);
   }
 }
 
@@ -107,34 +107,34 @@
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  border-radius: 8px;
+  gap: $spacing-sm;
+  padding: $spacing-sm;
+  border-radius: $radius-md;
   border: none;
   background: transparent;
-  font-size: 13px;
-  font-weight: 500;
-  color: #374151;
+  font-size: $text-xs;
+  font-weight: $font-weight-medium;
+  color: $zinc-700;
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition: $transition-fast;
 
   &:hover {
     background: rgba(0, 0, 0, 0.05);
   }
 
   &.selected {
-    background: rgba(59, 130, 246, 0.1);
+    background: rgba($blue-500, 0.1);
   }
 
-  :global(.dark) & {
-    color: #e5e7eb;
+  :global(body.dark) & {
+    color: $zinc-200;
 
     &:hover {
-      background: rgba(255, 255, 255, 0.08);
+      background: rgba($white, 0.08);
     }
 
     &.selected {
-      background: rgba(59, 130, 246, 0.2);
+      background: rgba($blue-500, 0.2);
     }
   }
 }
@@ -152,6 +152,6 @@
 }
 
 .checkIcon {
-  color: #3b82f6;
+  color: $blue-500;
   flex-shrink: 0;
 }

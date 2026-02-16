@@ -1,36 +1,27 @@
 @use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
 
-/* Información de Contacto */
 .contactInfo {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-sm;
-  margin: $spacing-lg 0;
+  @include flex-column;
+  gap: $spacing-xs;
+  margin: 0;
   padding: $spacing-lg 0;
-  border-radius: $radius-xl;
-  background: $white;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid $color-border-light;
-
-  :global(body.dark) & {
-    background: $color-bg-dark;
-    border-color: $color-border-dark;
-  }
 }
 
 .contactItem {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  font-size: 14px;
+  @include flex-between;
+  gap: $spacing-md;
+  @include typography($text-xs, $font-weight-normal, $color-text-primary);
+  padding: $spacing-xs 0;
 }
 
 .contactLabel {
-  font-weight: 600;
-  color: $color-text-secondary;
+  font-weight: $font-weight-medium;
+  color: $color-text-muted;
   min-width: 120px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: $text-xs;
 
   :global(body.dark) & {
     color: $color-text-dark-secondary;
@@ -39,7 +30,8 @@
 
 .contactValue {
   color: $color-text-primary;
-  font-weight: 500;
+  font-weight: $font-weight-medium;
+  font-size: $text-sm;
 
   :global(body.dark) & {
     color: $color-text-dark-primary;

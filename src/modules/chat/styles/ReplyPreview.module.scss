@@ -1,6 +1,6 @@
 /**
  * Reply Preview - Component Styles
- * 
+ *
  * Vista previa del mensaje al que se está respondiendo.
  */
 
@@ -9,15 +9,15 @@
 .container {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background: rgba(59, 130, 246, 0.1);
-  border-left: 3px solid #3b82f6;
-  border-radius: 8px;
-  margin-bottom: 8px;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  background: rgba($blue-500, 0.1);
+  border-left: 3px solid $blue-500;
+  border-radius: $radius-md;
+  margin-bottom: $spacing-sm;
 
-  :global(.dark) & {
-    background: rgba(59, 130, 246, 0.15);
+  :global(body.dark) & {
+    background: rgba($blue-500, 0.15);
   }
 }
 
@@ -27,24 +27,24 @@
 }
 
 .author {
-  font-size: 12px;
-  font-weight: 600;
-  color: #3b82f6;
+  font-size: $text-xs;
+  font-weight: $font-weight-semibold;
+  color: $blue-500;
   margin-bottom: 2px;
 
-  :global(.dark) & {
-    color: #60a5fa;
+  :global(body.dark) & {
+    color: $sky-500;
   }
 }
 
 .text {
-  font-size: 13px;
+  font-size: $text-xs;
   color: $chat-text-secondary-light;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 
-  :global(.dark) & {
+  :global(body.dark) & {
     color: $chat-text-secondary-dark;
   }
 }
@@ -58,17 +58,17 @@
   justify-content: center;
   background: none;
   border: none;
-  border-radius: 4px;
+  border-radius: $radius-xs;
   cursor: pointer;
   opacity: 0.6;
-  transition: all 0.2s ease;
+  transition: $transition-fast;
 
   &:hover {
     opacity: 1;
     background: rgba(0, 0, 0, 0.05);
   }
 
-  :global(.dark) &:hover {
-    background: rgba(255, 255, 255, 0.05);
+  :global(body.dark) &:hover {
+    background: rgba($white, 0.05);
   }
 }

@@ -9,7 +9,7 @@ import { useState, useCallback, useEffect, useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useTaskFormData } from "../../hooks/data/useTaskData"
 import { useUserDataStore } from "@/stores/userDataStore"
-import { useSonnerToast } from "@/modules/sonner/hooks/useSonnerToast"
+import { useToast } from "@/modules/toast"
 import { taskService } from "../../services/taskService"
 import { validateTaskDates } from "../../utils/validation"
 import { FormFooter } from "./FormFooter"
@@ -46,7 +46,7 @@ export function TaskDialog({
   const [isClientDialogOpen, setIsClientDialogOpen] = useState(false)
   const [isProjectsDialogOpen, setIsProjectsDialogOpen] = useState(false)
   const [selectedClientForProject, setSelectedClientForProject] = useState<Client | null>(null)
-  const { success: showSuccess, error: showError } = useSonnerToast()
+  const { success: showSuccess, error: showError } = useToast()
   const { isAdmin } = useAuth()
 
   const isEditMode = !!taskId
@@ -60,7 +60,7 @@ export function TaskDialog({
   // Show error if task not found
   useEffect(() => {
     if (taskError && isOpen && isEditMode) {
-      showError('Tarea no encontrada', 'No se pudo cargar la información de la tarea.')
+      showError('Tarea no encontrada', 'Fue eliminada o ya no existe.')
     }
   }, [taskError, isOpen, isEditMode, showError])
 
@@ -95,14 +95,14 @@ export function TaskDialog({
 
     if (!userId) {
       console.error('[TaskDialog] No user found')
-      showError('Sesión expirada', 'Por favor, inicia sesión nuevamente.')
+      showError('Sesión expirada', 'Inicia sesión para continuar.')
       return
     }
 
     // Validate dates
     if (!validateTaskDates(formData.startDate, formData.endDate)) {
       console.error('[TaskDialog] Date validation failed')
-      showError('Fechas inválidas', 'La fecha de inicio debe ser anterior a la fecha de finalización.')
+      showError('Fechas inválidas', 'La fecha de inicio debe ser anterior a la de fin.')
       return
     }
 
@@ -137,7 +137,7 @@ export function TaskDialog({
 
         // Cerrar dialog inmediatamente para UX fluida
         onOpenChange(false)
-        showSuccess(`La tarea "${formData.name}" se ha actualizado exitosamente.`)
+        showSuccess('Tarea actualizada', `Los cambios en "${formData.name}" se guardaron.`)
 
         // Persistir en backend (en background)
         const response = await taskService.updateTask(taskId, apiFormData)
@@ -177,7 +177,7 @@ export function TaskDialog({
           })
         }
 
-        showSuccess(`La tarea "${formData.name}" se ha creado exitosamente.`)
+        showSuccess('Tarea creada', `"${formData.name}" ya está disponible en tu tablero.`)
       }
 
       onTaskCreated()

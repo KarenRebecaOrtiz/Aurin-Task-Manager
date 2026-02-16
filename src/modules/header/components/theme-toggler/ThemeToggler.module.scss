@@ -1,4 +1,4 @@
-@import '../../../../styles/variables';
+@use '@/app/styles/variables' as *;
 
 .sunMoon {
   width: 32px;
@@ -7,7 +7,7 @@
   overflow: visible;
   transform-origin: center;
 
-  :global(.dark) & {
+  :global(body.dark) & {
     filter: invert(100%) brightness(100%);
   }
 
@@ -24,19 +24,19 @@
   margin-left: auto;
   transform: scale(0.5);
   transform-origin: center;
-  
+
   // Ajustar el tamaño del ThemeToggler para el dropdown
   :global(.sunMoon) {
     transform: scale(0.8);
-    
+
     .toggle {
       height: 24px !important;
       width: 48px !important;
-      border-radius: 12px !important;
+      border-radius: $radius-xl !important;
     }
-    
+
     .indicator {
-      border-radius: 12px !important;
+      border-radius: $radius-xl !important;
     }
   }
 }

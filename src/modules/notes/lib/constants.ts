@@ -26,6 +26,6 @@ export const VALIDATION_MESSAGES = {
 
 /** Mensajes de éxito */
 export const SUCCESS_MESSAGES = {
-  NOTE_CREATED: 'Nota creada exitosamente',
+  NOTE_CREATED: 'Nota publicada',
   NOTE_DELETED: 'Nota eliminada',
 } as const;

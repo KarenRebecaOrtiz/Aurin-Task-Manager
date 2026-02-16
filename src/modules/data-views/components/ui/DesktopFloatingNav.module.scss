@@ -1,4 +1,4 @@
-@import 'src/app/styles/variables.scss';
+@use '@/app/styles/variables' as *;
 
 // Desktop Floating Nav - Dock style fixed at bottom
 .floatingNav {
@@ -8,7 +8,7 @@
     display: flex;
     justify-content: center;
     position: fixed;
-    bottom: 24px;
+    bottom: $spacing-2xl;
     left: 0;
     right: 0;
     z-index: 40; // Below chatbot floatingBtn (50)
@@ -20,10 +20,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 8px 12px;
-  background: #ffffff;
-  border-radius: 16px;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  background: $white;
+  border-radius: $radius-2xl;
   border: 1px solid rgba(0, 0, 0, 0.08);
   box-shadow:
     0 4px 24px rgba(0, 0, 0, 0.12),
@@ -33,7 +33,7 @@
 
   // Dark mode
   :global(body.dark) & {
-    background: #171717;
+    background: $zinc-900;
     border-color: rgba(255, 255, 255, 0.08);
     box-shadow:
       0 4px 24px rgba(0, 0, 0, 0.4),
@@ -57,7 +57,7 @@
 .navIcon {
   width: 18px;
   height: 18px;
-  transition: all 0.2s ease;
+  transition: $transition-fast;
 }
 
 .primaryIcon {
@@ -70,15 +70,25 @@
 // Ghost button styling (non-active nav buttons)
 .ghostButton {
   background: transparent !important;
-  color: #6b7280 !important;
+  color: $zinc-500 !important;
   border: none !important;
-  border-radius: 8px !important;
+  border-radius: $radius-md !important;
   width: 36px !important;
   height: 36px !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
 
   &:hover {
     background: rgba(0, 0, 0, 0.06) !important;
-    color: #1f2937 !important;
+    color: $zinc-800 !important;
+    transform: translateY(-2px) scale(1.1);
+
+    .navIcon {
+      transform: scale(1.1);
+    }
+  }
+
+  &:active {
+    transform: scale(0.95);
   }
 
   // Dark mode
@@ -95,8 +105,8 @@
 // Active button styling
 .activeButton {
   background: rgba(0, 0, 0, 0.08) !important;
-  color: #09090b !important;
-  border-radius: 8px !important;
+  color: $zinc-950 !important;
+  border-radius: $radius-md !important;
   width: 36px !important;
   height: 36px !important;
 
@@ -117,7 +127,7 @@
 
 // Primary button (Create Task) - Circular with more padding
 .primaryButton {
-  background: #d0df00 !important;
+  background: $brand-primary !important;
   color: rgb(29, 29, 29) !important;
   border: none !important;
   border-radius: 50% !important;
@@ -126,10 +136,10 @@
   box-shadow:
     0 2px 8px rgba(208, 223, 0, 0.4),
     inset 0 -2px 0 rgba(0, 0, 0, 0.1) !important;
-  transition: all 0.2s ease !important;
+  transition: $transition-fast !important;
 
   &:hover {
-    background: #c4d200 !important;
+    background: $brand-primary-hover !important;
     box-shadow:
       0 4px 12px rgba(208, 223, 0, 0.5),
       inset 0 -2px 0 rgba(0, 0, 0, 0.15) !important;
@@ -153,11 +163,11 @@
 
   // Dark mode - same styling
   :global(body.dark) & {
-    background: #d0df00 !important;
+    background: $brand-primary !important;
     color: rgb(29, 29, 29) !important;
 
     &:hover {
-      background: #c4d200 !important;
+      background: $brand-primary-hover !important;
     }
   }
 }
@@ -172,18 +182,18 @@
 
 .tooltipContent {
   z-index: 9999;
-  padding: 8px 12px;
-  border-radius: 10px;
+  padding: $spacing-sm $spacing-md;
+  border-radius: $radius-lg;
   font-family: $font-family-primary;
-  font-size: 12px;
-  font-weight: 500;
+  font-size: $text-xs;
+  font-weight: $font-weight-medium;
   line-height: 1;
   white-space: nowrap;
   pointer-events: none;
 
   // Light mode
   background: rgba(255, 255, 255, 0.95);
-  color: #1f2937;
+  color: $zinc-800;
   border: 1px solid rgba(0, 0, 0, 0.08);
   backdrop-filter: blur(12px);
   box-shadow:

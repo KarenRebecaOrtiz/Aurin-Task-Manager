@@ -1,3 +1,5 @@
+@use '@/app/styles/variables' as *;
+
 .container {
   display: flex;
   align-items: center;
@@ -10,7 +12,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 20px;
+  gap: $spacing-xl;
   max-width: 360px;
   text-align: center;
 }
@@ -19,41 +21,42 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: $spacing-sm;
 }
 
 .heading {
-  font-size: 1.125rem; // 18px
-  font-weight: 600;
-  color: #1f2937;
-  letter-spacing: -0.01em;
+  font-size: $text-2xl;
+  font-weight: $font-weight-semibold;
+  color: $zinc-900;
+  letter-spacing: -0.02em;
+  line-height: $leading-tight;
 
   :global(body.dark) & {
-    color: #f3f4f6;
+    color: $zinc-50;
   }
 }
 
 .subheading {
-  font-size: 1rem; // 16px
-  font-weight: 500;
+  font-size: $text-base;
+  font-weight: $font-weight-medium;
 }
 
 .note {
-  font-size: 0.8125rem; // 13px
-  color: #9ca3af;
-  line-height: 1.5;
+  font-size: $text-xs;
+  color: $color-text-muted;
+  line-height: $leading-normal;
   max-width: 280px;
 
   :global(body.dark) & {
-    color: #6b7280;
+    color: $zinc-500;
   }
 }
 
 .legacyMessage {
-  font-size: 0.875rem;
-  color: #6b7280;
+  font-size: $text-sm;
+  color: $zinc-500;
 
   :global(body.dark) & {
-    color: #9ca3af;
+    color: $zinc-400;
   }
 }

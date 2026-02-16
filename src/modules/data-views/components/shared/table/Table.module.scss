@@ -1,11 +1,11 @@
-// Table - Hardcoded values
+@use '@/app/styles/variables' as *;
 
 .tableContainer {
   width: 100%;
   display: block;
-  border-radius: 25px;
+  border-radius: $radius-2xl;
   flex-direction: column;
-  gap: 16px;
+  gap: $spacing-lg;
 
   @media (min-width: 1024px) {
     overflow-x: auto;
@@ -16,14 +16,14 @@
   }
 }
 
-/* ESTADOS VACÍOS */
+/* ESTADOS VACIOS */
 .emptyStateTitle {
-  font-size: 20px;
-  font-weight: 600;
-  color: #0f172a;
+  font-size: $text-xl;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
   text-align: center;
-  padding-top: 24px;
-  margin-bottom: 8px;
+  padding-top: $spacing-2xl;
+  margin-bottom: $spacing-sm;
 
   :global(body.dark) & {
     color: rgba(255, 255, 255, 0.73);
@@ -31,9 +31,9 @@
 }
 
 .emptyStateSubtitle {
-  font-size: 16px;
-  font-weight: 400;
-  color: #64748b;
+  font-size: $text-base;
+  font-weight: $font-weight-normal;
+  color: $color-text-secondary;
   text-align: center;
 
   :global(body.dark) & {
@@ -46,29 +46,29 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 48px 0;
-  gap: 24px;
+  padding: ($spacing-4xl + $spacing-sm) 0;
+  gap: $spacing-2xl;
   min-height: calc(56px + (60px * 10));
 }
 
 /* TABLA */
 .table {
-  background: #ffffff;
-  border-radius: 16px;
-  padding: 16px;
+  background: $white;
+  border-radius: $radius-2xl;
+  padding: $spacing-lg;
   min-height: calc(56px + (60px * 10));
   display: flex;
   flex-direction: column;
 
   :global(body.dark) & {
-    background: #171717;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: $zinc-900;
+    border: 1px solid rgba($white, 0.05);
   }
 
   @media (max-width: 768px) {
     :global(body.dark) & {
       background: rgba(16, 15, 15, 0.36);
-      border: 1px solid rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba($white, 0.05);
     }
   }
 }
@@ -80,31 +80,43 @@
   border-bottom: 1px solid rgba(209, 217, 230, 0.3);
 
   :global(body.dark) & {
-    border-bottom: 1px solid #3f3f46;
+    border-bottom: 1px solid $zinc-700;
   }
 }
 
 .headerCell {
-  padding: 12px 20px;
-  font-size: 12px;
-  font-weight: 500;
-  color: #64748b;
+  padding: $spacing-md 20px;
+  font-size: $text-xs;
+  font-weight: $font-weight-medium;
+  color: $color-text-secondary;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 8px;
+  gap: $spacing-sm;
   user-select: none;
-  line-height: 1.5;
+  line-height: $leading-normal;
   max-width: 250px !important;
+  transition: color 0.2s ease, background 0.2s ease;
 
   &.sortable {
     cursor: pointer;
+    border-radius: $radius-md;
+
+    &:hover {
+      color: $blue-600;
+      background: rgba($blue-500, 0.06);
+    }
   }
 
   :global(body.dark) & {
-    color: #a1a1aa;
+    color: $color-text-dark-secondary;
+
+    &.sortable:hover {
+      color: $blue-400;
+      background: rgba($blue-400, 0.08);
+    }
   }
 
   @media (max-width: 768px) {
@@ -117,57 +129,73 @@
   display: flex;
   align-items: stretch;
   gap: 0;
-  border-radius: 16px;
+  border-radius: $radius-2xl;
   position: relative;
   z-index: 0;
   cursor: pointer;
   margin: 10px 10px 0 0;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border-left: 3px solid transparent;
 
   &:hover {
     transform: translateY(-3px);
+    background: rgba($slate-100, 0.6);
+    border-left-color: $blue-500;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  }
+
+  &:active {
+    transform: translateY(-1px);
+    background: rgba($slate-200, 0.5);
   }
 
   :global(body.dark) & {
     background: rgb(18, 17, 17);
     border: none;
+    border-left: 3px solid transparent;
 
     &:hover {
-      background: #3f3f46;
+      background: $zinc-700;
       transform: translateY(-3px);
+      border-left-color: $blue-400;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    &:active {
+      background: $zinc-600;
     }
   }
 
   @media (max-width: 768px) {
-    padding: 8px 0;
-    background: #fffafa;
+    padding: $spacing-sm 0;
+    background: $white;
     margin: 15px 10px 0 0;
 
     :global(body.dark) & {
-      background: #0e0e0f;
+      background: $zinc-950;
     }
   }
 
   @media (max-width: 480px) {
-    padding: 24px 0;
+    padding: $spacing-2xl 0;
     margin: 20px 10px 0 0;
   }
 }
 
 /* CELDAS */
 .cell {
-  padding: 12px 20px;
-  font-size: 14px;
-  font-weight: 400;
-  color: #0f172a;
-  line-height: 1.5;
+  padding: $spacing-md 20px;
+  font-size: $text-sm;
+  font-weight: $font-weight-normal;
+  color: $color-text-primary;
+  line-height: $leading-normal;
   display: flex;
   align-items: center;
   max-width: 250px !important;
   justify-content: flex-start;
 
   :global(body.dark) & {
-    color: #d1d1d1;
+    color: $color-text-dark-primary;
 
     img[src*=".svg"] {
       filter: invert(1) grayscale(1) brightness(1.5);
@@ -186,26 +214,31 @@
 
 .actionButton {
   height: auto;
-  padding: 8px;
-  border-radius: 4px;
+  padding: $spacing-sm;
+  border-radius: $radius-md;
   border: none;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  transition: all 0.15s ease;
-  font-size: 14px;
-  font-weight: 500;
+  gap: $spacing-xs;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: $text-sm;
+  font-weight: $font-weight-medium;
   background: none;
 
   &:hover {
-    background-color: #f1f5f9;
+    background-color: $slate-100;
+    transform: scale(1.1);
+  }
+
+  &:active {
+    transform: scale(0.95);
   }
 
   :global(body.dark) & {
     &:hover {
-      background-color: #3f3f46;
+      background-color: $zinc-700;
     }
 
     img {
@@ -227,8 +260,8 @@
     width: 100%;
 
     .headerCell {
-      padding: 8px 12px;
-      font-size: 12px;
+      padding: $spacing-sm $spacing-md;
+      font-size: $text-xs;
       flex-shrink: 0;
 
       &:first-child {
@@ -249,7 +282,7 @@
     width: 100%;
 
     .cell {
-      padding: 8px 12px;
+      padding: $spacing-sm $spacing-md;
       flex-shrink: 0;
 
       &:first-child {
@@ -273,32 +306,32 @@
   }
 }
 
-/* PAGINACIÓN */
+/* PAGINACION */
 .pagination {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
-  padding: 16px 8px;
+  gap: $spacing-sm;
+  padding: $spacing-lg $spacing-sm;
 
   @media (max-width: 768px) {
     justify-content: center;
-    gap: 4px;
+    gap: $spacing-xs;
   }
 }
 
 .paginationButton {
   width: 32px;
   height: 32px;
-  padding: 8px;
-  background: #ffffff;
-  border-radius: 8px;
+  padding: $spacing-sm;
+  background: $white;
+  border-radius: $radius-md;
   border: none;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 
   &:disabled {
     opacity: 0.5;
@@ -306,14 +339,21 @@
   }
 
   &:not(:disabled):hover {
-    background: #e6e8ea;
+    background: $zinc-200;
+    transform: translateY(-1px) scale(1.05);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  }
+
+  &:not(:disabled):active {
+    transform: scale(0.95);
   }
 
   :global(body.dark) & {
-    background: #212125;
+    background: $zinc-800;
 
     &:not(:disabled):hover {
-      background: #18181b;
+      background: $zinc-700;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
     }
 
     img {
@@ -323,13 +363,13 @@
 }
 
 .pageInfo {
-  font-size: 14px;
-  font-weight: 500;
-  color: #0f172a;
-  margin: 0 8px;
+  font-size: $text-sm;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+  margin: 0 $spacing-sm;
 
   :global(body.dark) & {
-    color: #a1a1aa;
+    color: $color-text-dark-secondary;
   }
 }
 
@@ -344,7 +384,7 @@
       align-items: center;
       justify-content: flex-start;
       max-width: 250px !important;
-      line-height: 1.5;
+      line-height: $leading-normal;
 
       &:nth-child(1) {
         justify-content: center;
@@ -372,7 +412,7 @@
       align-items: center;
       justify-content: flex-start;
       max-width: 250px !important;
-      line-height: 1.5;
+      line-height: $leading-normal;
 
       &:nth-child(1) {
         justify-content: center;

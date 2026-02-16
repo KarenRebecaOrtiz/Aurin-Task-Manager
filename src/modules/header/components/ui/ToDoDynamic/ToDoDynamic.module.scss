@@ -2,7 +2,7 @@
 @use '@/app/styles/mixins' as *;
 
 // ==============================================================
-// 🔮 DYNAMIC ISLAND TODO - STANDARDIZED STYLES
+// DYNAMIC ISLAND TODO - STANDARDIZED STYLES
 // =================================================================
 
 .todoButton {
@@ -12,39 +12,39 @@
   position: relative;
   width: 50px;
   height: 50px;
-  border-radius: 16px !important;
+  border-radius: $radius-2xl !important;
   opacity: 0.9;
   z-index: 50;
-  padding: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: $spacing-sm;
+  border: 1px solid rgba($white, 0.2);
   cursor: pointer;
-  background: rgba(241, 245, 249, 0.7);
+  background: rgba($slate-100, 0.7);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  box-shadow: 
-    -6px -6px 12px rgba(255, 255, 255, 0.9),
-    6px 6px 12px rgba(0, 0, 0, 0.08),
-    inset -4px -4px 8px rgba(255, 255, 255, 0.5),
+  box-shadow:
+    -6px -6px 12px rgba($white, 0.9),
+    6px 6px 12px rgba($black, 0.08),
+    inset -4px -4px 8px rgba($white, 0.5),
     inset 4px 4px 8px rgba(209, 217, 230, 0.3);
-  transition: all 0.3s ease;
+  transition: $transition-base;
 
   &:hover {
     transform: translateY(-2px) scale(1.05);
-    background: rgba(241, 245, 249, 0.9);
-    border-color: rgba(255, 255, 255, 0.4);
-    box-shadow: 
-      -8px -8px 16px rgba(255, 255, 255, 0.95),
-      8px 8px 16px rgba(0, 0, 0, 0.1),
-      inset -4px -4px 8px rgba(255, 255, 255, 0.6),
+    background: rgba($slate-100, 0.9);
+    border-color: rgba($white, 0.4);
+    box-shadow:
+      -8px -8px 16px rgba($white, 0.95),
+      8px 8px 16px rgba($black, 0.1),
+      inset -4px -4px 8px rgba($white, 0.6),
       inset 4px 4px 8px rgba(209, 217, 230, 0.4);
   }
 
   &:active {
     transform: translateY(0) scale(0.98);
-    background: rgba(241, 245, 249, 0.6);
-    border-color: rgba(255, 255, 255, 0.15);
-    box-shadow: 
-      inset -4px -4px 8px rgba(255, 255, 255, 0.5),
+    background: rgba($slate-100, 0.6);
+    border-color: rgba($white, 0.15);
+    box-shadow:
+      inset -4px -4px 8px rgba($white, 0.5),
       inset 4px 4px 8px rgba(209, 217, 230, 0.3);
   }
 
@@ -54,30 +54,30 @@
     stroke: currentColor;
     stroke-width: 2;
     fill: none;
-    color: #0f172a;
+    color: $color-text-primary;
   }
 
-  :global(.dark) & {
-    background: #171717;
-    border-color: rgba(255, 255, 255, 0.05);
+  :global(body.dark) & {
+    background: $zinc-900;
+    border-color: rgba($white, 0.05);
     box-shadow: none;
 
     &:hover {
       transform: translateY(-2px) scale(1.05);
-      background: #27272a;
-      border-color: #52525b;
+      background: $zinc-800;
+      border-color: $zinc-600;
       box-shadow: none;
     }
 
     &:active {
       transform: translateY(0) scale(0.98);
-      background: #27272a;
-      border-color: #3f3f46;
+      background: $zinc-800;
+      border-color: $zinc-700;
       box-shadow: none;
     }
 
     svg {
-      color: #ffffff;
+      color: $white;
     }
   }
 
@@ -92,13 +92,13 @@
   justify-content: center;
   width: 20px;
   height: 20px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #0f172a;
+  font-size: $text-xs;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
   line-height: 1;
-  transition: color 0.2s;
+  transition: $transition-fast;
 
-  :global(.dark) & {
-    color: #fff;
+  :global(body.dark) & {
+    color: $white;
   }
 }
