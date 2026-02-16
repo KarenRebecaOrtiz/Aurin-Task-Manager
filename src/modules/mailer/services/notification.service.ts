@@ -495,6 +495,27 @@ public static async sendTaskNotification(
       return { success: true, sent: 0, failed: 0 };
     }
 
+    // Chat notifications exclude the actor (you don't need an email about your own message/timelog).
+    // CRUD notifications (create, update, archive, delete) send to ALL members, including the actor.
+    const chatTypes: NotificationType[] = ['task_new_message', 'task_time_logged'];
+    const excludeActor = chatTypes.includes(data.type);
+
+    const uniqueRecipients = [...new Set(data.recipientIds)].filter(
+      (id) => !excludeActor || id !== data.actorId
+    );
+
+    console.log(`[Mailer] ${data.type} notification for task ${data.taskId}:`, {
+      actorId: data.actorId,
+      originalRecipients: data.recipientIds,
+      uniqueRecipients,
+      excludeActor,
+    });
+
+    if (uniqueRecipients.length === 0) {
+      console.log('[Mailer] No recipients after filtering. Skipping.');
+      return { success: true, sent: 0, failed: 0 };
+    }
+
     try {
       // Fetch required data
       const [actorInfo, taskInfo] = await Promise.all([
@@ -514,14 +535,9 @@ public static async sendTaskNotification(
       const actorImageUrl = actorInfo?.imageUrl || '';
       const taskUrl = getTaskUrl(data.taskId);
 
-      // Send emails to all recipients
+      // Send emails to all recipients (already deduplicated and actor-filtered)
       const results = await Promise.allSettled(
-        data.recipientIds.map(async (recipientId) => {
-          // Skip sending to the actor
-          if (recipientId === data.actorId) {
-            return { success: true, skipped: true };
-          }
-
+        uniqueRecipients.map(async (recipientId) => {
           // Check user's notification preferences for this task
           const shouldSend = await shouldSendTaskNotification(data.taskId, recipientId, data.type);
           if (!shouldSend) {
@@ -606,6 +622,25 @@ public static async sendTaskNotification(
       return { success: true, sent: 0, failed: 0 };
     }
 
+    // Only exclude actor for chat-type notifications (you don't need email about your own message)
+    const excludeActor = data.type === 'team_new_message';
+
+    const uniqueRecipients = [...new Set(data.recipientIds)].filter(
+      (id) => !excludeActor || id !== data.actorId
+    );
+
+    console.log(`[Mailer] ${data.type} notification for team ${data.teamId}:`, {
+      actorId: data.actorId,
+      originalRecipients: data.recipientIds,
+      uniqueRecipients,
+      excludeActor,
+    });
+
+    if (uniqueRecipients.length === 0) {
+      console.log('[Mailer] No recipients after filtering. Skipping.');
+      return { success: true, sent: 0, failed: 0 };
+    }
+
     try {
       // Fetch required data
       const [actorInfo, teamInfo] = await Promise.all([
@@ -629,13 +664,9 @@ public static async sendTaskNotification(
         newMemberImageUrl = newMemberInfo?.imageUrl || '';
       }
 
-      // Send emails to all recipients
+      // Send emails to all recipients (already deduplicated and actor-filtered)
       const results = await Promise.allSettled(
-        data.recipientIds.map(async (recipientId) => {
-          // Skip sending to the actor (except for team_member_added_you)
-          if (recipientId === data.actorId && data.type !== 'team_member_added_you') {
-            return { success: true, skipped: true };
-          }
+        uniqueRecipients.map(async (recipientId) => {
 
           // Check user's notification preferences for this team
           const shouldSend = await shouldSendTeamNotification(data.teamId, recipientId, data.type);

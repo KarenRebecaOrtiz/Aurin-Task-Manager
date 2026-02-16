@@ -364,30 +364,85 @@ const CrystalSearchableDropdown = React.forwardRef<HTMLDivElement, CrystalSearch
           </label>
         )}
 
-        <div className={styles.dropdownWrapper} ref={wrapperRef}>
-          {renderTrigger()}
-          {renderSelectedTags()}
+        <div ref={wrapperRef}>
+          <div className={styles.dropdownWrapper}>
+            {renderTrigger()}
 
-          {/* Desktop: Dropdown con animaciones y búsqueda */}
-          {!isMobile && (
-            <AnimatePresence>
-              {isOpen && (
-                <motion.div {...dropdownAnimations.menu} className={styles.menu} role="listbox">
-                  <div className={styles.searchContainer}>
-                    <input
-                      ref={searchInputRef}
-                      type="text"
-                      placeholder={searchPlaceholder}
-                      className={styles.searchInput}
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      onKeyDown={handleSearchKeyDown}
-                    />
-                  </div>
+            {/* Desktop: Dropdown con animaciones y búsqueda */}
+            {!isMobile && (
+              <AnimatePresence>
+                {isOpen && (
+                  <motion.div {...dropdownAnimations.menu} className={styles.menu} role="listbox">
+                    <div className={styles.searchContainer}>
+                      <input
+                        ref={searchInputRef}
+                        type="text"
+                        placeholder={searchPlaceholder}
+                        className={styles.searchInput}
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onKeyDown={handleSearchKeyDown}
+                      />
+                    </div>
 
-                  <div className={styles.itemsContainer}>
-                    {filteredItems.length > 0 ? (
-                      filteredItems.map((item, idx) => renderItem(item, idx, false))
+                    <div className={styles.itemsContainer}>
+                      {filteredItems.length > 0 ? (
+                        filteredItems.map((item, idx) => renderItem(item, idx, false))
+                      ) : (
+                        <div className={styles.emptyState}>
+                          <span>{emptyMessage}</span>
+                        </div>
+                      )}
+
+                      {/* Create New Button - For client or project fieldType */}
+                      {onCreateNew && (fieldType === 'client' || fieldType === 'project') && (
+                        <motion.div
+                          {...dropdownAnimations.item(filteredItems.length)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onCreateNew();
+                            setIsOpen(false);
+                            setSearchTerm("");
+                          }}
+                          className={styles.createNewButton}
+                          role="button"
+                        >
+                          <div className={styles.itemContent}>
+                            <div className={styles.createNewIcon}>
+                              <Plus size={20} />
+                            </div>
+                            <div className={styles.itemText}>
+                              <span className={styles.createNewText}>
+                                {searchTerm && filteredItems.length === 0
+                                  ? `${createNewLabel} "${searchTerm}"`
+                                  : createNewLabel}
+                              </span>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </div>
+
+                    {maxItems && selectedItems.length >= maxItems && (
+                      <div className={styles.maxItemsWarning}>
+                        Máximo {maxItems} elementos permitidos
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            )}
+
+            {/* Mobile: Drawer sin búsqueda */}
+            {isMobile && (
+              <Drawer open={isOpen} onOpenChange={setIsOpen}>
+                <DrawerContent>
+                  <DrawerHeader>
+                    <DrawerTitle>{getDrawerTitle()}</DrawerTitle>
+                  </DrawerHeader>
+                  <div className={styles.drawerItemsContainer}>
+                    {mobileItems.length > 0 ? (
+                      mobileItems.map((item, idx) => renderItem(item, idx, true))
                     ) : (
                       <div className={styles.emptyState}>
                         <span>{emptyMessage}</span>
@@ -396,13 +451,11 @@ const CrystalSearchableDropdown = React.forwardRef<HTMLDivElement, CrystalSearch
 
                     {/* Create New Button - For client or project fieldType */}
                     {onCreateNew && (fieldType === 'client' || fieldType === 'project') && (
-                      <motion.div
-                        {...dropdownAnimations.item(filteredItems.length)}
+                      <div
                         onClick={(e) => {
                           e.stopPropagation();
                           onCreateNew();
                           setIsOpen(false);
-                          setSearchTerm("");
                         }}
                         className={styles.createNewButton}
                         role="button"
@@ -413,13 +466,11 @@ const CrystalSearchableDropdown = React.forwardRef<HTMLDivElement, CrystalSearch
                           </div>
                           <div className={styles.itemText}>
                             <span className={styles.createNewText}>
-                              {searchTerm && filteredItems.length === 0
-                                ? `${createNewLabel} "${searchTerm}"`
-                                : createNewLabel}
+                              {createNewLabel}
                             </span>
                           </div>
                         </div>
-                      </motion.div>
+                      </div>
                     )}
                   </div>
 
@@ -428,60 +479,12 @@ const CrystalSearchableDropdown = React.forwardRef<HTMLDivElement, CrystalSearch
                       Máximo {maxItems} elementos permitidos
                     </div>
                   )}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          )}
+                </DrawerContent>
+              </Drawer>
+            )}
+          </div>
 
-          {/* Mobile: Drawer sin búsqueda */}
-          {isMobile && (
-            <Drawer open={isOpen} onOpenChange={setIsOpen}>
-              <DrawerContent>
-                <DrawerHeader>
-                  <DrawerTitle>{getDrawerTitle()}</DrawerTitle>
-                </DrawerHeader>
-                <div className={styles.drawerItemsContainer}>
-                  {mobileItems.length > 0 ? (
-                    mobileItems.map((item, idx) => renderItem(item, idx, true))
-                  ) : (
-                    <div className={styles.emptyState}>
-                      <span>{emptyMessage}</span>
-                    </div>
-                  )}
-
-                  {/* Create New Button - For client or project fieldType */}
-                  {onCreateNew && (fieldType === 'client' || fieldType === 'project') && (
-                    <div
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onCreateNew();
-                        setIsOpen(false);
-                      }}
-                      className={styles.createNewButton}
-                      role="button"
-                    >
-                      <div className={styles.itemContent}>
-                        <div className={styles.createNewIcon}>
-                          <Plus size={20} />
-                        </div>
-                        <div className={styles.itemText}>
-                          <span className={styles.createNewText}>
-                            {createNewLabel}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {maxItems && selectedItems.length >= maxItems && (
-                  <div className={styles.maxItemsWarning}>
-                    Máximo {maxItems} elementos permitidos
-                  </div>
-                )}
-              </DrawerContent>
-            </Drawer>
-          )}
+          {renderSelectedTags()}
         </div>
 
         {error && (

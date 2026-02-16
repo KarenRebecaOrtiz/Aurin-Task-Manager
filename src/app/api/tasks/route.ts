@@ -95,7 +95,7 @@ export const POST = withAuth(async (userId, request: NextRequest) => {
 
     if (recipients.length > 0) {
       try {
-        console.log('[API] Sending email notifications to:', recipients);
+        console.log('[API] POST - Notification recipients:', { LeadedBy: taskData.LeadedBy, AssignedTo: taskData.AssignedTo, actorId: userId, total: recipients.length });
         const result = await mailer.notifyTaskCreated({
           recipientIds: recipients,
           taskId,

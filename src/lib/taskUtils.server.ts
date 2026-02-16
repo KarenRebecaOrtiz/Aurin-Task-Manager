@@ -200,9 +200,8 @@ export async function deleteTask(taskId: string, userId: string, isAdmin: boolea
       debugLog('[taskUtils] Deleted notification:', notifDoc.id);
     }
 
-    // Send email notifications to involved users (using new mailer module)
+    // Send email notifications to involved users (Leaders + Collaborators only)
     const recipients = [...task.AssignedTo, ...task.LeadedBy];
-    if (task.CreatedBy) recipients.push(task.CreatedBy);
 
     if (recipients.length > 0) {
       try {
@@ -250,9 +249,8 @@ export async function archiveTask(taskId: string, userId: string, isAdmin: boole
       archivedBy: userId,
     });
 
-    // Send email notifications to involved users (using new mailer module)
+    // Send email notifications to involved users (Leaders + Collaborators only)
     const recipients = [...task.AssignedTo, ...task.LeadedBy];
-    if (task.CreatedBy) recipients.push(task.CreatedBy);
 
     if (recipients.length > 0) {
       try {
@@ -297,9 +295,8 @@ export async function unarchiveTask(taskId: string, userId: string, isAdmin: boo
       archivedBy: null,
     });
 
-    // Send email notifications to involved users (using new mailer module)
+    // Send email notifications to involved users (Leaders + Collaborators only)
     const recipients = [...task.AssignedTo, ...task.LeadedBy];
-    if (task.CreatedBy) recipients.push(task.CreatedBy);
 
     if (recipients.length > 0) {
       try {

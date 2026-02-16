@@ -169,6 +169,7 @@ export const PUT = withAuth(async (userId, request: NextRequest, context: { para
 
     if (recipients.length > 0) {
       try {
+        console.log('[API] PUT - Notification recipients:', { LeadedBy: updatedTask.LeadedBy, AssignedTo: updatedTask.AssignedTo, actorId: userId, total: recipients.length });
         // Determine notification type based on changes
         let result;
 
@@ -383,6 +384,7 @@ export const PATCH = withAuth(async (userId, request: NextRequest, context: { pa
 
     if (recipients.length > 0) {
       try {
+        console.log('[API] PATCH - Notification recipients:', { LeadedBy: updatedTask.LeadedBy, AssignedTo: updatedTask.AssignedTo, actorId: userId, total: recipients.length });
         // Determine notification type based on changes
         let result;
 

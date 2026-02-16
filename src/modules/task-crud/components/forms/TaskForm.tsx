@@ -272,12 +272,14 @@ export function TaskForm({
           <motion.div className="flex-1" variants={fadeInUp}>
             <CrystalSearchableDropdown
               label="Líder(es) *"
-              items={users.map(user => ({
-                id: user.id,
-                name: user.fullName,
-                imageUrl: user.imageUrl,
-                subtitle: user.role || ''
-              }))}
+              items={users
+                .filter(user => !formData.AssignedTo.includes(user.id))
+                .map(user => ({
+                  id: user.id,
+                  name: user.fullName,
+                  imageUrl: user.imageUrl,
+                  subtitle: user.role || ''
+                }))}
               selectedItems={formData.LeadedBy}
               onSelectionChange={handleLeadersChange}
               placeholder="Selecciona líderes"
@@ -293,12 +295,14 @@ export function TaskForm({
           <motion.div className="flex-1" variants={fadeInUp}>
             <CrystalSearchableDropdown
               label="Colaboradores"
-              items={users.map(user => ({
-                id: user.id,
-                name: user.fullName,
-                imageUrl: user.imageUrl,
-                subtitle: user.role || ''
-              }))}
+              items={users
+                .filter(user => !formData.LeadedBy.includes(user.id))
+                .map(user => ({
+                  id: user.id,
+                  name: user.fullName,
+                  imageUrl: user.imageUrl,
+                  subtitle: user.role || ''
+                }))}
               selectedItems={formData.AssignedTo}
               onSelectionChange={handleCollaboratorsChange}
               placeholder="Selecciona colaboradores"
