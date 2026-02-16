@@ -4,11 +4,14 @@
  * Template for notifying users when a new task is created and assigned to them.
  */
 
-import { baseEmailLayout, getPriorityBadge, getStatusBadge } from './layout';
+import { baseEmailLayout, getPriorityBadge, getStatusBadge, getClientBlock, getPersonBadge } from './layout';
 
 export interface TaskCreatedTemplateData {
   recipientName: string;
   creatorName: string;
+  actorImageUrl?: string;
+  clientName?: string;
+  clientImageUrl?: string;
   taskName: string;
   taskDescription?: string;
   taskObjectives?: string;
@@ -26,14 +29,15 @@ export interface TaskCreatedTemplateData {
  */
 export const getTaskCreatedTemplate = (data: TaskCreatedTemplateData): string => {
   const body = `
-    <h2>Hola, ${data.recipientName} 👋</h2>
+    <h2>Hola, ${data.recipientName}</h2>
     <p>
-      <strong>${data.creatorName}</strong> te ha asignado una nueva tarea en el sistema.
+      ${getPersonBadge(data.creatorName, data.actorImageUrl)} te ha asignado una nueva tarea.
     </p>
 
     <div class="info-box">
-      <strong>📋 Tarea:</strong>
-      <span style="font-size: 18px; font-weight: 600; color: #1f2937; display: block; margin-top: 8px;">
+      ${getClientBlock(data.clientName, data.clientImageUrl)}
+      <strong>Tarea:</strong>
+      <span style="font-size: 17px; font-weight: 600; color: #1a1a1a; display: block; margin-top: 6px;">
         ${data.taskName}
       </span>
     </div>
@@ -41,7 +45,7 @@ export const getTaskCreatedTemplate = (data: TaskCreatedTemplateData): string =>
     ${
       data.taskDescription
         ? `
-      <h3>Descripción</h3>
+      <h3>Descripcion</h3>
       <p>${data.taskDescription}</p>
     `
         : ''
@@ -58,7 +62,7 @@ export const getTaskCreatedTemplate = (data: TaskCreatedTemplateData): string =>
 
     <div class="divider"></div>
 
-    <h3>Detalles de la Tarea</h3>
+    <h3>Detalles</h3>
 
     ${
       data.priority
@@ -104,7 +108,7 @@ export const getTaskCreatedTemplate = (data: TaskCreatedTemplateData): string =>
       data.leadersList
         ? `
       <p>
-        <strong>Líderes:</strong> ${data.leadersList}
+        <strong>Lideres:</strong> ${data.leadersList}
       </p>
     `
         : ''
@@ -122,12 +126,10 @@ export const getTaskCreatedTemplate = (data: TaskCreatedTemplateData): string =>
 
     <div class="divider"></div>
 
-    <p>Puedes ver todos los detalles y comenzar a trabajar en esta tarea haciendo clic en el botón:</p>
+    <a href="${data.taskUrl}" class="btn">Ir a la Tarea</a>
 
-    <a href="${data.taskUrl}" class="btn">Ver Tarea Completa</a>
-
-    <p style="margin-top: 24px; font-size: 14px; color: #9ca3af;">
-      💡 <strong>Tip:</strong> Puedes comunicarte con tu equipo directamente desde el chat de la tarea.
+    <p style="margin-top: 24px; font-size: 13px; color: #9ca3af; text-align: center;">
+      Puedes comunicarte con tu equipo desde el chat de la tarea.
     </p>
   `;
 

@@ -5,11 +5,14 @@
  * Covers: status changes, priority changes, date changes, and assignment changes.
  */
 
-import { baseEmailLayout, getPriorityBadge, getStatusBadge } from './layout';
+import { baseEmailLayout, getPriorityBadge, getStatusBadge, getClientBlock, getPersonBadge } from './layout';
 
 export interface TaskUpdatedTemplateData {
   recipientName: string;
   updaterName: string;
+  actorImageUrl?: string;
+  clientName?: string;
+  clientImageUrl?: string;
   taskName: string;
   taskUrl: string;
   updateType: 'status' | 'priority' | 'dates' | 'assignment' | 'general';
@@ -28,22 +31,22 @@ export interface TaskUpdatedTemplateData {
  * Generate HTML email for task update notification
  */
 export const getTaskUpdatedTemplate = (data: TaskUpdatedTemplateData): string => {
-  // Dynamic intro based on update type
   let introMessage = '';
   let changeDetails = '';
 
   switch (data.updateType) {
     case 'status':
-      introMessage = `ha cambiado el status de la tarea <strong>"${data.taskName}"</strong> a ${getStatusBadge(data.newValue || '')}`;
+      introMessage = `ha cambiado el estado de la tarea <strong>"${data.taskName}"</strong>`;
       if (data.oldValue && data.newValue) {
         changeDetails = `
           <div class="info-box">
+            ${getClientBlock(data.clientName, data.clientImageUrl)}
             <p style="margin-bottom: 8px;">
-              <strong>📊 Cambio de Estado:</strong>
+              <strong>Cambio de Estado:</strong>
             </p>
             <p>
               ${getStatusBadge(data.oldValue)}
-              <span style="margin: 0 12px; font-size: 18px;">→</span>
+              <span style="margin: 0 10px; font-size: 16px;">&#8594;</span>
               ${getStatusBadge(data.newValue)}
             </p>
           </div>
@@ -52,16 +55,17 @@ export const getTaskUpdatedTemplate = (data: TaskUpdatedTemplateData): string =>
       break;
 
     case 'priority':
-      introMessage = `ha cambiado la prioridad de la tarea <strong>"${data.taskName}"</strong> a ${getPriorityBadge(data.newValue || '')}`;
+      introMessage = `ha cambiado la prioridad de la tarea <strong>"${data.taskName}"</strong>`;
       if (data.oldValue && data.newValue) {
         changeDetails = `
           <div class="info-box">
+            ${getClientBlock(data.clientName, data.clientImageUrl)}
             <p style="margin-bottom: 8px;">
-              <strong>⚡ Cambio de Prioridad:</strong>
+              <strong>Cambio de Prioridad:</strong>
             </p>
             <p>
               ${getPriorityBadge(data.oldValue)}
-              <span style="margin: 0 12px; font-size: 18px;">→</span>
+              <span style="margin: 0 10px; font-size: 16px;">&#8594;</span>
               ${getPriorityBadge(data.newValue)}
             </p>
           </div>
@@ -70,32 +74,34 @@ export const getTaskUpdatedTemplate = (data: TaskUpdatedTemplateData): string =>
       break;
 
     case 'dates':
-      introMessage = `ha cambiado las fechas de la tarea <strong>"${data.taskName}"</strong>`;
+      introMessage = `ha actualizado las fechas de la tarea <strong>"${data.taskName}"</strong>`;
       changeDetails = `
         <div class="info-box">
+          ${getClientBlock(data.clientName, data.clientImageUrl)}
           <p style="margin-bottom: 8px;">
-            <strong>📅 Fechas Actualizadas:</strong>
+            <strong>Fechas Actualizadas:</strong>
           </p>
           ${
             data.startDate
-              ? `<p><strong>Fecha de inicio:</strong> ${data.startDate}</p>`
+              ? `<p><strong>Inicio:</strong> ${data.startDate}</p>`
               : ''
           }
-          ${data.endDate ? `<p><strong>Fecha de vencimiento:</strong> ${data.endDate}</p>` : ''}
+          ${data.endDate ? `<p><strong>Vencimiento:</strong> ${data.endDate}</p>` : ''}
         </div>
       `;
       break;
 
     case 'assignment':
-      introMessage = `ha modificado los miembros asignados a la tarea <strong>"${data.taskName}"</strong>`;
+      introMessage = `ha modificado el equipo de la tarea <strong>"${data.taskName}"</strong>`;
       changeDetails = `
         <div class="info-box">
+          ${getClientBlock(data.clientName, data.clientImageUrl)}
           <p style="margin-bottom: 8px;">
-            <strong>👥 Equipo Actualizado:</strong>
+            <strong>Equipo Actualizado:</strong>
           </p>
           ${
             data.leadersList
-              ? `<p><strong>Líderes:</strong> ${data.leadersList}</p>`
+              ? `<p><strong>Lideres:</strong> ${data.leadersList}</p>`
               : ''
           }
           ${
@@ -109,13 +115,17 @@ export const getTaskUpdatedTemplate = (data: TaskUpdatedTemplateData): string =>
 
     default:
       introMessage = `ha realizado cambios en la tarea <strong>"${data.taskName}"</strong>`;
-      changeDetails = '';
+      changeDetails = data.clientName ? `
+        <div class="info-box">
+          ${getClientBlock(data.clientName, data.clientImageUrl)}
+        </div>
+      ` : '';
   }
 
   const body = `
-    <h2>Hola, ${data.recipientName} 👋</h2>
+    <h2>Hola, ${data.recipientName}</h2>
     <p>
-      <strong>${data.updaterName}</strong> ${introMessage}.
+      ${getPersonBadge(data.updaterName, data.actorImageUrl)} ${introMessage}.
     </p>
 
     ${changeDetails}
@@ -124,7 +134,7 @@ export const getTaskUpdatedTemplate = (data: TaskUpdatedTemplateData): string =>
       data.taskDescription
         ? `
       <div class="divider"></div>
-      <h3>Descripción de la Tarea</h3>
+      <h3>Descripcion de la Tarea</h3>
       <p>${data.taskDescription}</p>
     `
         : ''
@@ -132,7 +142,7 @@ export const getTaskUpdatedTemplate = (data: TaskUpdatedTemplateData): string =>
 
     <div class="divider"></div>
 
-    <h3>Estado Actual de la Tarea</h3>
+    <h3>Estado Actual</h3>
 
     ${
       data.priority
@@ -158,7 +168,7 @@ export const getTaskUpdatedTemplate = (data: TaskUpdatedTemplateData): string =>
       data.startDate
         ? `
       <p>
-        <strong>Fecha de inicio:</strong> ${data.startDate}
+        <strong>Inicio:</strong> ${data.startDate}
       </p>
     `
         : ''
@@ -168,7 +178,7 @@ export const getTaskUpdatedTemplate = (data: TaskUpdatedTemplateData): string =>
       data.endDate
         ? `
       <p>
-        <strong>Fecha de vencimiento:</strong> ${data.endDate}
+        <strong>Vencimiento:</strong> ${data.endDate}
       </p>
     `
         : ''
@@ -176,12 +186,10 @@ export const getTaskUpdatedTemplate = (data: TaskUpdatedTemplateData): string =>
 
     <div class="divider"></div>
 
-    <p>Revisa los cambios completos y mantente al día con el progreso:</p>
+    <a href="${data.taskUrl}" class="btn">Ir a la Tarea</a>
 
-    <a href="${data.taskUrl}" class="btn">Ver Tarea Actualizada</a>
-
-    <p style="margin-top: 24px; font-size: 14px; color: #9ca3af;">
-      💬 ¿Tienes preguntas? Usa el chat de la tarea para comunicarte con tu equipo.
+    <p style="margin-top: 24px; font-size: 13px; color: #9ca3af; text-align: center;">
+      Usa el chat de la tarea para coordinar con tu equipo.
     </p>
   `;
 

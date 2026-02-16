@@ -105,6 +105,7 @@ interface UserBasicInfo {
   emailAddress?: string;
   fullName?: string;
   firstName?: string;
+  imageUrl?: string;
 }
 
 /**
@@ -193,6 +194,25 @@ async function getUserInfo(userId: string): Promise<UserBasicInfo | null> {
   } catch (error) {
     console.error(`[Mailer] Error fetching user ${userId}:`, error);
     return null;
+  }
+}
+
+/**
+ * Fetch client info from Firestore using Admin SDK
+ */
+async function getClientInfo(clientId: string): Promise<{ name: string; imageUrl: string }> {
+  if (!clientId) return { name: '', imageUrl: '' };
+  try {
+    const adminDb = getAdminDb();
+    const clientDoc = await adminDb.collection('clients').doc(clientId).get();
+    if (clientDoc.exists) {
+      const data = clientDoc.data();
+      return { name: data?.name || '', imageUrl: data?.imageUrl || '' };
+    }
+    return { name: '', imageUrl: '' };
+  } catch (error) {
+    console.error(`[Mailer] Error fetching client ${clientId}:`, error);
+    return { name: '', imageUrl: '' };
   }
 }
 
@@ -471,7 +491,11 @@ public static async sendTaskNotification(
         return { success: false, sent: 0, failed: 0 };
       }
 
+      // Fetch client info for context
+      const clientInfo = await getClientInfo(taskInfo.clientId);
+
       const actorName = getUserDisplayName(actorInfo);
+      const actorImageUrl = actorInfo?.imageUrl || '';
       const taskUrl = getTaskUrl(data.taskId);
 
       // Send emails to all recipients
@@ -505,6 +529,9 @@ public static async sendTaskNotification(
             {
               recipientName,
               actorName,
+              actorImageUrl,
+              clientName: clientInfo.name,
+              clientImageUrl: clientInfo.imageUrl,
               taskInfo,
               taskUrl,
               oldValue: data.oldValue,
@@ -573,7 +600,15 @@ public static async sendTaskNotification(
       }
 
       const actorName = getUserDisplayName(actorInfo);
+      const actorImageUrl = actorInfo?.imageUrl || '';
       const teamUrl = getTeamUrl(data.teamId);
+
+      // Fetch new member image URL if available
+      let newMemberImageUrl = '';
+      if (data.newMemberId) {
+        const newMemberInfo = await getUserInfo(data.newMemberId);
+        newMemberImageUrl = newMemberInfo?.imageUrl || '';
+      }
 
       // Send emails to all recipients
       const results = await Promise.allSettled(
@@ -606,10 +641,12 @@ public static async sendTaskNotification(
             {
               recipientName,
               actorName,
+              actorImageUrl,
               teamInfo,
               teamUrl,
               newMemberName: data.newMemberName,
               newMemberId: data.newMemberId,
+              newMemberImageUrl,
               messageSummary: data.messageSummary,
             },
             recipientEmail
@@ -645,6 +682,9 @@ public static async sendTaskNotification(
     data: {
       recipientName: string;
       actorName: string;
+      actorImageUrl?: string;
+      clientName: string;
+      clientImageUrl?: string;
       taskInfo: any;
       taskUrl: string;
       oldValue?: string;
@@ -656,9 +696,14 @@ public static async sendTaskNotification(
       let subject: string;
       let html: string;
 
+      const clientPrefix = data.clientName ? `[${data.clientName}] ` : '';
+
       // Common template data
       const commonData = {
         recipientName: data.recipientName,
+        clientName: data.clientName,
+        clientImageUrl: data.clientImageUrl,
+        actorImageUrl: data.actorImageUrl,
         taskName: data.taskInfo.name || 'Tarea',
         taskUrl: data.taskUrl,
         taskDescription: data.taskInfo.description || '',
@@ -674,7 +719,7 @@ public static async sendTaskNotification(
       // Select template based on notification type
       switch (type) {
         case 'task_created':
-          subject = `Nueva tarea asignada: ${data.taskInfo.name}`;
+          subject = `${clientPrefix}Nueva tarea: ${data.taskInfo.name}`;
           html = getTaskCreatedTemplate({
             ...commonData,
             creatorName: data.actorName,
@@ -682,7 +727,7 @@ public static async sendTaskNotification(
           break;
 
         case 'task_status_changed':
-          subject = `Actualización de tarea: ${data.taskInfo.name}`;
+          subject = `${clientPrefix}Cambio de estado: ${data.taskInfo.name}`;
           html = getTaskUpdatedTemplate({
             ...commonData,
             updaterName: data.actorName,
@@ -693,7 +738,7 @@ public static async sendTaskNotification(
           break;
 
         case 'task_priority_changed':
-          subject = `Cambio de prioridad: ${data.taskInfo.name}`;
+          subject = `${clientPrefix}Cambio de prioridad: ${data.taskInfo.name}`;
           html = getTaskUpdatedTemplate({
             ...commonData,
             updaterName: data.actorName,
@@ -704,7 +749,7 @@ public static async sendTaskNotification(
           break;
 
         case 'task_dates_changed':
-          subject = `Fechas actualizadas: ${data.taskInfo.name}`;
+          subject = `${clientPrefix}Fechas actualizadas: ${data.taskInfo.name}`;
           html = getTaskUpdatedTemplate({
             ...commonData,
             updaterName: data.actorName,
@@ -713,7 +758,7 @@ public static async sendTaskNotification(
           break;
 
         case 'task_assignment_changed':
-          subject = `Asignación modificada: ${data.taskInfo.name}`;
+          subject = `${clientPrefix}Equipo modificado: ${data.taskInfo.name}`;
           html = getTaskUpdatedTemplate({
             ...commonData,
             updaterName: data.actorName,
@@ -722,7 +767,7 @@ public static async sendTaskNotification(
           break;
 
         case 'task_updated':
-          subject = `Tarea actualizada: ${data.taskInfo.name}`;
+          subject = `${clientPrefix}Tarea actualizada: ${data.taskInfo.name}`;
           html = getTaskUpdatedTemplate({
             ...commonData,
             updaterName: data.actorName,
@@ -731,34 +776,28 @@ public static async sendTaskNotification(
           break;
 
         case 'task_archived':
-          subject = `Tarea archivada: ${data.taskInfo.name}`;
+          subject = `${clientPrefix}Tarea archivada: ${data.taskInfo.name}`;
           html = getTaskArchivedTemplate({
-            recipientName: data.recipientName,
+            ...commonData,
             archiverName: data.actorName,
-            taskName: data.taskInfo.name,
-            taskUrl: data.taskUrl,
             archiveDate: formatDate(new Date()),
           } as TaskArchivedTemplateData);
           break;
 
         case 'task_unarchived':
-          subject = `Tarea reactivada: ${data.taskInfo.name}`;
+          subject = `${clientPrefix}Tarea reactivada: ${data.taskInfo.name}`;
           html = getTaskUnarchivedTemplate({
-            recipientName: data.recipientName,
+            ...commonData,
             unarchiverName: data.actorName,
-            taskName: data.taskInfo.name,
-            taskUrl: data.taskUrl,
           } as TaskUnarchivedTemplateData);
           break;
 
         case 'task_deleted':
-          subject = `Tarea eliminada: ${data.taskInfo.name}`;
+          subject = `${clientPrefix}Tarea eliminada: ${data.taskInfo.name}`;
           html = getTaskDeletedTemplate({
-            recipientName: data.recipientName,
+            ...commonData,
             deleterName: data.actorName,
-            taskName: data.taskInfo.name,
             deletionDate: formatDate(new Date()),
-            taskDescription: data.taskInfo.description,
           } as TaskDeletedTemplateData);
           break;
 
@@ -790,10 +829,12 @@ public static async sendTaskNotification(
     data: {
       recipientName: string;
       actorName: string;
+      actorImageUrl?: string;
       teamInfo: any;
       teamUrl: string;
       newMemberName?: string;
       newMemberId?: string;
+      newMemberImageUrl?: string;
       messageSummary?: string;
     },
     recipientEmail: string
@@ -812,6 +853,7 @@ public static async sendTaskNotification(
           html = getTeamMemberAddedYouTemplate({
             recipientName: data.recipientName,
             adderName: data.actorName,
+            adderImageUrl: data.actorImageUrl,
             teamName: data.teamInfo.name,
             teamDescription: data.teamInfo.description,
             teamUrl: data.teamUrl,
@@ -825,7 +867,9 @@ public static async sendTaskNotification(
           html = getTeamMemberAddedOtherTemplate({
             recipientName: data.recipientName,
             adderName: data.actorName,
+            adderImageUrl: data.actorImageUrl,
             newMemberName: data.newMemberName || 'Un nuevo miembro',
+            newMemberImageUrl: data.newMemberImageUrl,
             teamName: data.teamInfo.name,
             teamUrl: data.teamUrl,
           } as TeamMemberAddedOtherTemplateData);
@@ -836,6 +880,7 @@ public static async sendTaskNotification(
           html = getTeamNewMessageTemplate({
             recipientName: data.recipientName,
             senderName: data.actorName,
+            senderImageUrl: data.actorImageUrl,
             teamName: data.teamInfo.name,
             teamUrl: data.teamUrl,
             messageSummary: data.messageSummary,

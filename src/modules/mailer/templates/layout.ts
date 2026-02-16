@@ -3,19 +3,10 @@
  *
  * DRY Principle: All emails share this base structure.
  * Change styles/header/footer once, affects all emails.
- *
- * Using ES6 Template Literals for:
- * - Zero dependencies
- * - Native performance
- * - Type safety
- * - Serverless-friendly (no compilation needed)
  */
 
 /**
- * Base email layout with consistent styling
- * @param content - HTML content to inject into the body
- * @param title - Email title for the header
- * @returns Complete HTML email string
+ * Base email layout with consistent Aurin branding
  */
 export const baseEmailLayout = (content: string, title: string): string => `
 <!DOCTYPE html>
@@ -24,16 +15,19 @@ export const baseEmailLayout = (content: string, title: string): string => `
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${title}</title>
+  <!--[if mso]>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    .email-container { width: 600px !important; }
+    .email-header { background-color: #D3DE48 !important; }
+    .btn { background-color: #D3DE48 !important; color: #0C0C0C !important; }
+  </style>
+  <![endif]-->
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
-      color: #333333;
+      color: #1a1a1a;
       line-height: 1.6;
       background-color: #f4f4f5;
       padding: 20px;
@@ -45,82 +39,127 @@ export const baseEmailLayout = (content: string, title: string): string => `
       background-color: #ffffff;
       border-radius: 12px;
       overflow: hidden;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
 
     .email-header {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: #ffffff;
-      padding: 30px 20px;
+      background-color: #D3DE48;
+      color: #0C0C0C;
+      padding: 24px 20px;
       text-align: center;
     }
 
     .email-header h1 {
-      font-size: 24px;
+      font-size: 20px;
       font-weight: 600;
       margin: 0;
-      letter-spacing: -0.5px;
+      color: #0C0C0C;
+      letter-spacing: -0.3px;
     }
 
     .email-body {
-      padding: 40px 30px;
+      padding: 36px 30px;
     }
 
     .email-body h2 {
       font-size: 20px;
       font-weight: 600;
-      color: #1f2937;
+      color: #1a1a1a;
       margin-bottom: 16px;
     }
 
     .email-body h3 {
-      font-size: 18px;
+      font-size: 16px;
       font-weight: 600;
       color: #374151;
-      margin-bottom: 12px;
-      margin-top: 24px;
+      margin-bottom: 10px;
+      margin-top: 20px;
     }
 
     .email-body p {
-      font-size: 16px;
+      font-size: 15px;
       color: #4b5563;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
     }
 
     .info-box {
       background-color: #f9fafb;
-      border-left: 4px solid #667eea;
+      border-left: 4px solid #D3DE48;
       padding: 16px 20px;
       margin: 20px 0;
-      border-radius: 4px;
+      border-radius: 0 4px 4px 0;
     }
 
     .info-box strong {
-      color: #1f2937;
+      color: #1a1a1a;
       display: block;
       margin-bottom: 4px;
     }
 
     .info-box span {
-      color: #6b7280;
+      color: #4b5563;
       font-size: 15px;
     }
 
-    .btn {
-      display: inline-block;
-      padding: 12px 28px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: #ffffff !important;
-      text-decoration: none;
-      border-radius: 6px;
+    .client-label {
+      font-size: 13px;
       font-weight: 500;
-      font-size: 16px;
-      margin-top: 20px;
-      transition: transform 0.2s;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 2px;
     }
 
-    .btn:hover {
-      transform: translateY(-2px);
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      object-fit: cover;
+      vertical-align: middle;
+      margin-right: 8px;
+      border: 2px solid #ffffff;
+    }
+
+    .avatar-sm {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      object-fit: cover;
+      vertical-align: middle;
+      margin-right: 4px;
+      border: 1px solid #e5e7eb;
+    }
+
+    .avatar-stack {
+      display: inline-block;
+    }
+
+    .avatar-stack .avatar-sm {
+      margin-right: -6px;
+    }
+
+    .person-inline {
+      display: inline;
+      white-space: nowrap;
+    }
+
+    .person-inline img {
+      vertical-align: middle;
+      position: relative;
+      top: -1px;
+    }
+
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 14px 28px;
+      background-color: #D3DE48;
+      color: #0C0C0C !important;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 15px;
+      margin-top: 24px;
+      text-align: center;
     }
 
     .email-footer {
@@ -130,21 +169,35 @@ export const baseEmailLayout = (content: string, title: string): string => `
       border-top: 1px solid #e5e7eb;
     }
 
+    .email-footer img {
+      height: 28px;
+      width: auto;
+      margin-bottom: 14px;
+    }
+
     .email-footer p {
       font-size: 13px;
       color: #9ca3af;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
     }
 
     .email-footer a {
-      color: #667eea;
-      text-decoration: none;
+      color: #6b7280;
+      text-decoration: underline;
+    }
+
+    .email-footer .bell-icon {
+      display: inline-block;
+      vertical-align: middle;
+      width: 14px;
+      height: 14px;
+      margin-right: 2px;
     }
 
     .divider {
       height: 1px;
       background-color: #e5e7eb;
-      margin: 24px 0;
+      margin: 20px 0;
     }
 
     .badge {
@@ -179,36 +232,24 @@ export const baseEmailLayout = (content: string, title: string): string => `
     }
 
     @media only screen and (max-width: 600px) {
-      .email-body {
-        padding: 30px 20px;
-      }
-
-      .email-header h1 {
-        font-size: 20px;
-      }
-
-      .btn {
-        display: block;
-        text-align: center;
-      }
+      .email-body { padding: 24px 20px; }
+      .email-header h1 { font-size: 18px; }
     }
   </style>
 </head>
 <body>
   <div class="email-container">
     <div class="email-header">
-      <h1>📋 ${title}</h1>
+      <h1>${title}</h1>
     </div>
     <div class="email-body">
       ${content}
     </div>
     <div class="email-footer">
-      <p><strong>Aurin Task Manager</strong></p>
-      <p>Sistema de Gestión de Tareas y Proyectos</p>
-      <div class="divider" style="margin: 16px auto; max-width: 200px;"></div>
+      <img src="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/logoLight.svg" alt="Aurin" />
       <p>
-        Este es un correo automático. Para gestionar tus notificaciones,
-        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard/config">visita tu configuración</a>.
+        Puedes gestionar las notificaciones de cada tarea o equipo
+        desde el icono de campana en su chat.
       </p>
     </div>
   </div>
@@ -239,4 +280,25 @@ export const getPriorityBadge = (priority: string): string => {
  */
 export const getStatusBadge = (status: string): string => {
   return `<span class="badge status">${status}</span>`;
+};
+
+/**
+ * Helper to generate client context block with optional avatar
+ */
+export const getClientBlock = (clientName?: string, clientImageUrl?: string): string => {
+  if (!clientName) return '';
+  const avatar = clientImageUrl
+    ? `<img src="${clientImageUrl}" alt="${clientName}" class="avatar-sm" /> `
+    : '';
+  return `<p class="client-label">${avatar}Cliente: ${clientName}</p>`;
+};
+
+/**
+ * Helper to generate a person reference with avatar bubble
+ */
+export const getPersonBadge = (name: string, imageUrl?: string): string => {
+  const avatar = imageUrl
+    ? `<img src="${imageUrl}" alt="${name}" class="avatar-sm" />`
+    : '';
+  return `<span class="person-inline">${avatar}<strong>${name}</strong></span>`;
 };

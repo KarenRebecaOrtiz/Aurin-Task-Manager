@@ -5,12 +5,13 @@
  * This notification IS configurable via team preferences.
  */
 
-import { baseEmailLayout } from './layout';
+import { baseEmailLayout, getPersonBadge } from './layout';
 
 export interface TeamNewMessageTemplateData {
   recipientName: string;
   /** Who sent the message */
   senderName: string;
+  senderImageUrl?: string;
   teamName: string;
   teamUrl: string;
   /** Preview/summary of the message (truncated) */
@@ -24,14 +25,14 @@ export interface TeamNewMessageTemplateData {
  */
 export const getTeamNewMessageTemplate = (data: TeamNewMessageTemplateData): string => {
   const body = `
-    <h2>Hola, ${data.recipientName} 👋</h2>
+    <h2>Hola, ${data.recipientName}</h2>
     <p>
-      Tienes un nuevo mensaje de <strong>${data.senderName}</strong> en tu equipo.
+      ${getPersonBadge(data.senderName, data.senderImageUrl)} ha enviado un mensaje en tu equipo.
     </p>
 
     <div class="info-box">
-      <strong>👥 Equipo:</strong>
-      <span style="font-size: 18px; font-weight: 600; color: #1f2937; display: block; margin-top: 8px;">
+      <strong>Equipo:</strong>
+      <span style="font-size: 17px; font-weight: 600; color: #1a1a1a; display: block; margin-top: 6px;">
         ${data.teamName}
       </span>
     </div>
@@ -39,7 +40,7 @@ export const getTeamNewMessageTemplate = (data: TeamNewMessageTemplateData): str
     ${
       data.messageSummary
         ? `
-      <div style="background-color: #f9fafb; border-left: 4px solid #667eea; padding: 16px; margin: 16px 0; border-radius: 0 8px 8px 0;">
+      <div style="background-color: #f9fafb; border-left: 4px solid #D3DE48; padding: 16px; margin: 16px 0; border-radius: 0 4px 4px 0;">
         <p style="margin: 0; color: #4b5563; font-style: italic;">
           "${data.messageSummary}"
         </p>
@@ -53,12 +54,10 @@ export const getTeamNewMessageTemplate = (data: TeamNewMessageTemplateData): str
         : ''
     }
 
-    <p>Responde a tu equipo haciendo clic en el botón:</p>
+    <a href="${data.teamUrl}" class="btn">Ver Conversacion</a>
 
-    <a href="${data.teamUrl}" class="btn">Ver Conversación</a>
-
-    <p style="margin-top: 24px; font-size: 14px; color: #9ca3af;">
-      💡 Puedes desactivar estas notificaciones desde las preferencias del equipo.
+    <p style="margin-top: 24px; font-size: 13px; color: #9ca3af; text-align: center;">
+      Puedes desactivar estas notificaciones desde las preferencias del equipo.
     </p>
   `;
 
