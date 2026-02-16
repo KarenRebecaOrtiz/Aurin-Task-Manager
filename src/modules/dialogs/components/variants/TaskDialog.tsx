@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useMemo } from "react"
 import { useUser } from "@clerk/nextjs"
 import { CrudDialog } from "../organisms/CrudDialog"
+import { DialogLoadingState } from "../atoms/DialogLoadingState"
 import { useSonnerToast } from "@/modules/sonner/hooks/useSonnerToast"
 import { TaskForm, type TaskFormData } from "@/modules/task-crud/components/forms/TaskForm"
 import { useTaskFormData } from "@/modules/task-crud/hooks/data/useTaskData"
@@ -13,6 +14,7 @@ import { ClientDialog } from "@/modules/client-crud"
 import { ManageProjectsDialog } from "./ManageProjectsDialog"
 import { useTaskState } from "@/hooks/useTaskData"
 import { useAuth } from "@/contexts/AuthContext"
+import { useDataStore } from "@/stores/dataStore"
 import { Client } from "@/types"
 
 interface TaskDialogProps {
@@ -98,71 +100,75 @@ export function TaskDialog({
     console.log('[TaskDialog] Starting task submission...')
     setIsSubmitting(true)
 
+    // Flatten the form data for API (API expects flat structure)
+    const apiFormData = {
+      clientId: formData.clientId,
+      project: formData.project,
+      name: formData.name,
+      description: formData.description,
+      startDate: formData.startDate?.toISOString() || null,
+      endDate: formData.endDate?.toISOString() || null,
+      status: formData.status,
+      priority: formData.priority,
+      LeadedBy: formData.LeadedBy,
+      AssignedTo: formData.AssignedTo || [],
+      objectives: '',
+    }
+
+    // Save previous state for rollback on error (edit mode only)
+    const previousTaskData = isEditMode && taskId ? useDataStore.getState().getTaskById(taskId) : null
+
     try {
       if (isEditMode && taskId) {
-        console.log('[TaskDialog] Updating task via API...')
-
-        // Flatten the form data for API (API expects flat structure)
-        const apiFormData = {
-          clientId: formData.clientId,
-          project: formData.project,
-          name: formData.name,
-          description: formData.description,
-          startDate: formData.startDate?.toISOString() || null,
-          endDate: formData.endDate?.toISOString() || null,
-          status: formData.status,
-          priority: formData.priority,
-          LeadedBy: formData.LeadedBy,
-          AssignedTo: formData.AssignedTo || [],
-          objectives: '',
-        }
-
-        console.log('[TaskDialog] API form data prepared for update:', apiFormData);
+        // Persist to backend (dialog stays open with loader)
         const response = await taskService.updateTask(taskId, apiFormData)
 
         if (!response.success) {
           throw new Error(response.error || 'Error al actualizar la tarea')
         }
 
-        console.log('[TaskDialog] Task updated successfully')
+        // Update store and close dialog on success
+        useDataStore.getState().updateTask(taskId, {
+          ...apiFormData,
+          lastActivity: new Date().toISOString(),
+        })
+
+        onOpenChange(false)
         showSuccess(`La tarea "${formData.name}" se ha actualizado exitosamente.`)
       } else {
-        // CREATE MODE - Use API
-        console.log('[TaskDialog] Creating task via API...')
-
-        // Flatten the form data for API (API expects flat structure)
-        const apiFormData = {
-          clientId: formData.clientId,
-          project: formData.project,
-          name: formData.name,
-          description: formData.description,
-          startDate: formData.startDate?.toISOString() || null,
-          endDate: formData.endDate?.toISOString() || null,
-          status: formData.status,
-          priority: formData.priority,
-          objectives: '',
-          LeadedBy: formData.LeadedBy,
-          AssignedTo: formData.AssignedTo || [],
-        }
-
-        console.log('[TaskDialog] API form data prepared:', apiFormData);
+        // Create via API (dialog stays open with loader)
         const response = await taskService.createTask(apiFormData, user.id)
 
         if (!response.success) {
           throw new Error(response.error || 'Error al crear la tarea')
         }
 
-        console.log('[TaskDialog] Task created successfully')
+        // Add task to store with the real server ID
+        if (response.data) {
+          const taskResponseData = response.data;
+          useDataStore.getState().addTask({
+            id: taskResponseData.id,
+            clientId: taskResponseData.clientId,
+            project: taskResponseData.project,
+            name: taskResponseData.name,
+            description: taskResponseData.description,
+            status: taskResponseData.status,
+            priority: taskResponseData.priority,
+            startDate: apiFormData.startDate,
+            endDate: apiFormData.endDate,
+            LeadedBy: taskResponseData.LeadedBy || [],
+            AssignedTo: taskResponseData.AssignedTo || [],
+            createdAt: new Date().toISOString(),
+            CreatedBy: user.id,
+            lastActivity: new Date().toISOString(),
+          })
+        }
+
+        onOpenChange(false)
         showSuccess(`La tarea "${formData.name}" se ha creado exitosamente.`)
       }
 
       onTaskCreated()
-      onOpenChange(false)
-
-      // Reload the page after a short delay to show the toast notification
-      setTimeout(() => {
-        window.location.reload()
-      }, 1500)
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
       console.error('[TaskDialog] Error:', errorMessage, error)
@@ -206,6 +212,32 @@ export function TaskDialog({
     // Projects updated, will refresh via store
   }, [])
 
+  // Rich loading state content
+  const loadingStateContent = useMemo(() => {
+    if (isSubmitting) {
+      return isEditMode ? (
+        <DialogLoadingState
+          heading="Guardando cambios"
+          subheading="Actualizando tarea..."
+          note="Los miembros del equipo recibirán una notificación con los cambios."
+        />
+      ) : (
+        <DialogLoadingState
+          heading="Creando tarea"
+          subheading="Preparando todo para tu equipo..."
+          note="Se notificará a los líderes y colaboradores asignados."
+        />
+      )
+    }
+
+    return (
+      <DialogLoadingState
+        heading="Cargando tarea"
+        subheading="Obteniendo la información..."
+      />
+    )
+  }, [isSubmitting, isEditMode])
+
   // Footer personalizado con FormFooter
   const customFooter = (
     <FormFooter
@@ -225,9 +257,9 @@ export function TaskDialog({
         description={isEditMode
           ? "Modifica la información de la tarea existente."
           : "Completa el formulario para crear una nueva tarea en el sistema."}
-        isLoading={isLoadingTask}
+        isLoading={isLoadingTask || isSubmitting}
         isSubmitting={isSubmitting}
-        loadingMessage="Cargando información de la tarea..."
+        loadingState={loadingStateContent}
         onCancel={handleCancel}
         footer={customFooter}
         size="xl"

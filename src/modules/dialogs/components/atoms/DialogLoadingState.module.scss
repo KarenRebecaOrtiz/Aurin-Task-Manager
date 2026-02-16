@@ -1,0 +1,59 @@
+.container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 300px;
+}
+
+.inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  max-width: 360px;
+  text-align: center;
+}
+
+.textGroup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.heading {
+  font-size: 1.125rem; // 18px
+  font-weight: 600;
+  color: #1f2937;
+  letter-spacing: -0.01em;
+
+  :global(body.dark) & {
+    color: #f3f4f6;
+  }
+}
+
+.subheading {
+  font-size: 1rem; // 16px
+  font-weight: 500;
+}
+
+.note {
+  font-size: 0.8125rem; // 13px
+  color: #9ca3af;
+  line-height: 1.5;
+  max-width: 280px;
+
+  :global(body.dark) & {
+    color: #6b7280;
+  }
+}
+
+.legacyMessage {
+  font-size: 0.875rem;
+  color: #6b7280;
+
+  :global(body.dark) & {
+    color: #9ca3af;
+  }
+}
