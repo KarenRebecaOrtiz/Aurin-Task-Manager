@@ -696,7 +696,7 @@ public static async sendTaskNotification(
       let subject: string;
       let html: string;
 
-      const clientPrefix = data.clientName ? `[${data.clientName}] ` : '';
+      const clientSuffix = data.clientName ? ` · ${data.clientName}` : '';
 
       // Common template data
       const commonData = {
@@ -719,7 +719,7 @@ public static async sendTaskNotification(
       // Select template based on notification type
       switch (type) {
         case 'task_created':
-          subject = `${clientPrefix}Nueva tarea: ${data.taskInfo.name}`;
+          subject = `${data.actorName} te asigno una tarea${clientSuffix}`;
           html = getTaskCreatedTemplate({
             ...commonData,
             creatorName: data.actorName,
@@ -727,7 +727,7 @@ public static async sendTaskNotification(
           break;
 
         case 'task_status_changed':
-          subject = `${clientPrefix}Cambio de estado: ${data.taskInfo.name}`;
+          subject = `${data.taskInfo.name} cambio a ${data.newValue || 'nuevo estado'}${clientSuffix}`;
           html = getTaskUpdatedTemplate({
             ...commonData,
             updaterName: data.actorName,
@@ -738,7 +738,7 @@ public static async sendTaskNotification(
           break;
 
         case 'task_priority_changed':
-          subject = `${clientPrefix}Cambio de prioridad: ${data.taskInfo.name}`;
+          subject = `${data.taskInfo.name} ahora es prioridad ${data.newValue || 'actualizada'}${clientSuffix}`;
           html = getTaskUpdatedTemplate({
             ...commonData,
             updaterName: data.actorName,
@@ -749,7 +749,7 @@ public static async sendTaskNotification(
           break;
 
         case 'task_dates_changed':
-          subject = `${clientPrefix}Fechas actualizadas: ${data.taskInfo.name}`;
+          subject = `Nuevas fechas en ${data.taskInfo.name}${clientSuffix}`;
           html = getTaskUpdatedTemplate({
             ...commonData,
             updaterName: data.actorName,
@@ -758,7 +758,7 @@ public static async sendTaskNotification(
           break;
 
         case 'task_assignment_changed':
-          subject = `${clientPrefix}Equipo modificado: ${data.taskInfo.name}`;
+          subject = `Cambio de equipo en ${data.taskInfo.name}${clientSuffix}`;
           html = getTaskUpdatedTemplate({
             ...commonData,
             updaterName: data.actorName,
@@ -767,7 +767,7 @@ public static async sendTaskNotification(
           break;
 
         case 'task_updated':
-          subject = `${clientPrefix}Tarea actualizada: ${data.taskInfo.name}`;
+          subject = `${data.actorName} actualizo ${data.taskInfo.name}${clientSuffix}`;
           html = getTaskUpdatedTemplate({
             ...commonData,
             updaterName: data.actorName,
@@ -776,7 +776,7 @@ public static async sendTaskNotification(
           break;
 
         case 'task_archived':
-          subject = `${clientPrefix}Tarea archivada: ${data.taskInfo.name}`;
+          subject = `${data.taskInfo.name} fue archivada${clientSuffix}`;
           html = getTaskArchivedTemplate({
             ...commonData,
             archiverName: data.actorName,
@@ -785,7 +785,7 @@ public static async sendTaskNotification(
           break;
 
         case 'task_unarchived':
-          subject = `${clientPrefix}Tarea reactivada: ${data.taskInfo.name}`;
+          subject = `${data.taskInfo.name} fue reactivada${clientSuffix}`;
           html = getTaskUnarchivedTemplate({
             ...commonData,
             unarchiverName: data.actorName,
@@ -793,7 +793,7 @@ public static async sendTaskNotification(
           break;
 
         case 'task_deleted':
-          subject = `${clientPrefix}Tarea eliminada: ${data.taskInfo.name}`;
+          subject = `${data.actorName} elimino ${data.taskInfo.name}${clientSuffix}`;
           html = getTaskDeletedTemplate({
             ...commonData,
             deleterName: data.actorName,
