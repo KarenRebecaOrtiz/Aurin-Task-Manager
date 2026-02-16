@@ -41,6 +41,8 @@ import {
   getTeamNewMessageTemplate,
   type TeamNewMessageTemplateData,
 } from '../templates/team-new-message';
+import { getTaskNewMessageTemplate } from '../templates/task-new-message';
+import { getTaskTimeLoggedTemplate } from '../templates/task-time-logged';
 
 // --- Type Definitions ---
 
@@ -55,6 +57,8 @@ export type NotificationType =
   | 'task_archived'
   | 'task_unarchived'
   | 'task_deleted'
+  | 'task_new_message'
+  | 'task_time_logged'
   // Team notifications
   | 'team_member_added_you'   // Cuando te agregan a un equipo (siempre se envía)
   | 'team_new_message'        // Nuevo mensaje en equipo (configurable)
@@ -70,6 +74,9 @@ export interface TaskNotificationData {
   type: Extract<NotificationType, `task_${string}`>;
   oldValue?: string;
   newValue?: string;
+  messageSummary?: string;
+  timeEntry?: string;
+  comment?: string;
 }
 
 /**
@@ -98,6 +105,9 @@ export interface NotificationData {
   type: NotificationType;
   oldValue?: string;
   newValue?: string;
+  messageSummary?: string;
+  timeEntry?: string;
+  comment?: string;
 }
 
 interface UserBasicInfo {
@@ -121,6 +131,8 @@ interface TaskNotificationPreferences {
   archived: boolean;
   unarchived: boolean;
   deleted: boolean;
+  newMessage: boolean;
+  timeLogged: boolean;
 }
 
 /**
@@ -144,6 +156,8 @@ const DEFAULT_TASK_PREFERENCES: TaskNotificationPreferences = {
   archived: true,
   unarchived: true,
   deleted: true,
+  newMessage: true,
+  timeLogged: true,
 };
 
 /**
@@ -167,6 +181,8 @@ const TASK_NOTIFICATION_TYPE_TO_PREF_KEY: Partial<Record<NotificationType, keyof
   task_archived: 'archived',
   task_unarchived: 'unarchived',
   task_deleted: 'deleted',
+  task_new_message: 'newMessage',
+  task_time_logged: 'timeLogged',
 };
 
 /**
@@ -536,6 +552,9 @@ public static async sendTaskNotification(
               taskUrl,
               oldValue: data.oldValue,
               newValue: data.newValue,
+              messageSummary: data.messageSummary,
+              timeEntry: data.timeEntry,
+              comment: data.comment,
             },
             recipientEmail
           );
@@ -689,6 +708,9 @@ public static async sendTaskNotification(
       taskUrl: string;
       oldValue?: string;
       newValue?: string;
+      messageSummary?: string;
+      timeEntry?: string;
+      comment?: string;
     },
     recipientEmail: string
   ): Promise<{ success: boolean; error?: unknown }> {
@@ -799,6 +821,36 @@ public static async sendTaskNotification(
             deleterName: data.actorName,
             deletionDate: formatDate(new Date()),
           } as TaskDeletedTemplateData);
+          break;
+
+        case 'task_new_message':
+          subject = `Nuevo mensaje en ${data.taskInfo.name}${clientSuffix}`;
+          html = getTaskNewMessageTemplate({
+            recipientName: data.recipientName,
+            senderName: data.actorName,
+            actorImageUrl: data.actorImageUrl,
+            clientName: data.clientName,
+            clientImageUrl: data.clientImageUrl,
+            taskName: data.taskInfo.name || 'Tarea',
+            taskUrl: data.taskUrl,
+            messageSummary: data.messageSummary,
+          });
+          break;
+
+        case 'task_time_logged':
+          subject = `${data.actorName} registro tiempo en ${data.taskInfo.name}${clientSuffix}`;
+          html = getTaskTimeLoggedTemplate({
+            recipientName: data.recipientName,
+            loggerName: data.actorName,
+            actorImageUrl: data.actorImageUrl,
+            clientName: data.clientName,
+            clientImageUrl: data.clientImageUrl,
+            taskName: data.taskInfo.name || 'Tarea',
+            taskUrl: data.taskUrl,
+            timeEntry: data.timeEntry || '',
+            logDate: formatDate(new Date()),
+            comment: data.comment,
+          });
           break;
 
         default:

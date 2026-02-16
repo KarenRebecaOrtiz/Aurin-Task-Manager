@@ -90,6 +90,8 @@ const createAllTaskPreferences = (value: boolean): TaskNotificationPreferences =
   archived: value,
   unarchived: value,
   deleted: value,
+  newMessage: value,
+  timeLogged: value,
 });
 
 /**

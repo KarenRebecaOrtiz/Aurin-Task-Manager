@@ -18,6 +18,8 @@ import {
   getTeamMemberAddedOtherTemplate,
 } from '@/modules/mailer/templates/team-member-added';
 import { getTeamNewMessageTemplate } from '@/modules/mailer/templates/team-new-message';
+import { getTaskNewMessageTemplate } from '@/modules/mailer/templates/task-new-message';
+import { getTaskTimeLoggedTemplate } from '@/modules/mailer/templates/task-time-logged';
 
 // Block in production
 const isDev = process.env.NODE_ENV === 'development';
@@ -190,6 +192,32 @@ const TEMPLATES: Record<string, () => string> = {
       clientImageUrl: MOCK_DATA.clientImageUrl,
       taskName: MOCK_DATA.taskName,
       taskUrl: MOCK_DATA.taskUrl,
+    }),
+
+  'task-new-message': () =>
+    getTaskNewMessageTemplate({
+      recipientName: MOCK_DATA.recipientName,
+      senderName: MOCK_DATA.creatorName,
+      actorImageUrl: MOCK_DATA.actorImageUrl,
+      clientName: MOCK_DATA.clientName,
+      clientImageUrl: MOCK_DATA.clientImageUrl,
+      taskName: MOCK_DATA.taskName,
+      taskUrl: MOCK_DATA.taskUrl,
+      messageSummary: MOCK_DATA.messageSummary,
+    }),
+
+  'task-time-logged': () =>
+    getTaskTimeLoggedTemplate({
+      recipientName: MOCK_DATA.recipientName,
+      loggerName: MOCK_DATA.creatorName,
+      actorImageUrl: MOCK_DATA.actorImageUrl,
+      clientName: MOCK_DATA.clientName,
+      clientImageUrl: MOCK_DATA.clientImageUrl,
+      taskName: MOCK_DATA.taskName,
+      taskUrl: MOCK_DATA.taskUrl,
+      timeEntry: '2h 30m',
+      logDate: '16 de febrero de 2026',
+      comment: 'Avancé con las revisiones del diseño y ajustes al layout responsive.',
     }),
 
   'team-member-added-you': () =>

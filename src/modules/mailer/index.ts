@@ -180,6 +180,37 @@ export const mailer = {
     });
   },
 
+  /**
+   * Send task new message notification (CONFIGURABLE)
+   */
+  notifyTaskNewMessage: async (params: {
+    recipientIds: string[];
+    taskId: string;
+    actorId: string;
+    messageSummary?: string;
+  }) => {
+    return NotificationService.sendTaskNotification({
+      ...params,
+      type: 'task_new_message',
+    });
+  },
+
+  /**
+   * Send task time logged notification (CONFIGURABLE)
+   */
+  notifyTaskTimeLogged: async (params: {
+    recipientIds: string[];
+    taskId: string;
+    actorId: string;
+    timeEntry?: string;
+    comment?: string;
+  }) => {
+    return NotificationService.sendTaskNotification({
+      ...params,
+      type: 'task_time_logged',
+    });
+  },
+
   // =========================================================================
   // TEAM NOTIFICATIONS
   // =========================================================================

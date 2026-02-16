@@ -30,6 +30,9 @@ import {
 import { db } from "@/lib/firebase";
 import { updateTaskActivity } from "@/lib/taskUtils";
 import { chatCache } from "./simpleChatCache";
+import { taskNotificationService } from "./taskNotificationService";
+import { formatDecimalHoursToReadable } from "../timer/utils/timerFormatters";
+import { useDataStore } from "@/stores/dataStore";
 import type { Message } from "../types";
 
 // Re-export para mantener compatibilidad
@@ -160,6 +163,20 @@ export class FirebaseService {
 
     await updateTaskActivity(taskId, 'message');
     chatCache.invalidate(taskId);
+
+    // Notify task members of time log
+    try {
+      const task = useDataStore.getState().tasks.find((t) => t.id === taskId);
+      if (task) {
+        const memberIds = [...(task.LeadedBy || []), ...(task.AssignedTo || [])];
+        const formattedTime = formatDecimalHoursToReadable(hours);
+        taskNotificationService.notifyTaskOfTimeLog(
+          taskId, memberIds, userId, formattedTime, comment
+        ).catch(() => {});
+      }
+    } catch {
+      // Non-blocking: notification failure shouldn't break time logging
+    }
 
     return docRef.id;
   }

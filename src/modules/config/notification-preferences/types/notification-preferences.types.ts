@@ -43,6 +43,10 @@ export interface TaskNotificationPreferences {
   unarchived: boolean;
   /** Notificación cuando se elimina */
   deleted: boolean;
+  /** Notificación de nuevos mensajes en el chat */
+  newMessage: boolean;
+  /** Notificación de registro de tiempo */
+  timeLogged: boolean;
 }
 
 // ============================================================================
@@ -117,6 +121,8 @@ export const DEFAULT_TASK_NOTIFICATION_PREFERENCES: TaskNotificationPreferences 
   archived: true,
   unarchived: true,
   deleted: true,
+  newMessage: true,
+  timeLogged: true,
 };
 
 /**
@@ -149,6 +155,8 @@ export const TASK_NOTIFICATION_TYPE_TO_PREF_KEY: Partial<Record<NotificationType
   task_archived: 'archived',
   task_unarchived: 'unarchived',
   task_deleted: 'deleted',
+  task_new_message: 'newMessage',
+  task_time_logged: 'timeLogged',
 };
 
 /**
@@ -176,7 +184,7 @@ export interface TaskNotificationPreferenceConfig {
   key: keyof TaskNotificationPreferences;
   label: string;
   description: string;
-  category: 'changes' | 'lifecycle';
+  category: 'changes' | 'lifecycle' | 'activity';
 }
 
 /**
@@ -233,6 +241,19 @@ export const TASK_NOTIFICATION_PREFERENCES_CONFIG: TaskNotificationPreferenceCon
     description: 'Cuando se elimina esta tarea',
     category: 'lifecycle',
   },
+  // Actividad
+  {
+    key: 'newMessage',
+    label: 'Mensajes nuevos',
+    description: 'Cuando alguien envia un mensaje en el chat',
+    category: 'activity',
+  },
+  {
+    key: 'timeLogged',
+    label: 'Registro de tiempo',
+    description: 'Cuando alguien registra tiempo en esta tarea',
+    category: 'activity',
+  },
 ];
 
 // ============================================================================
@@ -282,6 +303,10 @@ export const TASK_PREFERENCE_CATEGORIES = {
   lifecycle: {
     title: 'Ciclo de Vida',
     description: 'Archivado, reactivación y eliminación',
+  },
+  activity: {
+    title: 'Actividad',
+    description: 'Mensajes y registro de tiempo',
   },
 } as const;
 

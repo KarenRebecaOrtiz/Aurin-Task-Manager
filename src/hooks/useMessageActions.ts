@@ -3,6 +3,7 @@ import { useState, useCallback } from 'react';
 import { collection, addDoc, updateDoc, deleteDoc, doc, getDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { updateTaskActivity } from '@/lib/taskUtils';
+import { taskNotificationService } from '@/modules/chat/services/taskNotificationService';
 import { v4 as uuidv4 } from 'uuid';
 import type { Message, Task } from '@/types';
 
@@ -88,6 +89,13 @@ export const useMessageActions = ({
       // Solo actualizar actividad para tareas, no para equipos
       if (collectionType === 'tasks') {
         await updateTaskActivity(task.id, 'message');
+
+        // Notify task members of new message
+        const memberIds = [...(task.LeadedBy || []), ...(task.AssignedTo || [])];
+        const textPreview = messageData.text?.substring(0, 100);
+        taskNotificationService.notifyTaskOfNewMessage(
+          task.id, memberIds, messageData.senderId!, textPreview
+        ).catch((err) => console.error('[useMessageActions] Message notification error:', err));
       }
     } catch (error) {
       updateOptimisticMessage(clientId, {
@@ -418,13 +426,15 @@ export const useMessageActions = ({
       // Solo actualizar actividad para tareas, no para equipos
       if (collectionType === 'tasks') {
         await updateTaskActivity(task.id, 'time_entry');
+
+        // Notify task members of time log
+        const memberIds = [...(task.LeadedBy || []), ...(task.AssignedTo || [])];
+        taskNotificationService.notifyTaskOfTimeLog(
+          task.id, memberIds, senderId, timeEntry
+        ).catch((err) => console.error('[useMessageActions] Time log notification error:', err));
       }
 
-      // Debug logging removed for production
-
     } catch (error) {
-      // Error logging removed for production
-      
       updateOptimisticMessage(timeMessageClientId, {
         hasError: true,
         isPending: false,
