@@ -23,14 +23,26 @@ import {
  */
 type AnyNotificationPreferences = TaskNotificationPreferences | TeamNotificationPreferences;
 
+/**
+ * Active channel for the preferences dialog
+ */
+export type NotificationChannel = 'email' | 'push';
+
 interface NotificationPreferencesState {
   isOpen: boolean;
   entityType: NotificationEntityType | null;
   entityId: string | null;
   entityName: string | null;
+  /** Active channel tab */
+  activeChannel: NotificationChannel;
+  /** Email preferences */
   preferences: AnyNotificationPreferences;
   originalPreferences: AnyNotificationPreferences;
   hasChanges: boolean;
+  /** Push preferences */
+  pushPreferences: AnyNotificationPreferences;
+  originalPushPreferences: AnyNotificationPreferences;
+  hasPushChanges: boolean;
   isSaving: boolean;
   isLoading: boolean;
   error: string | null;
@@ -39,16 +51,24 @@ interface NotificationPreferencesState {
 interface NotificationPreferencesActions {
   open: (entityType: NotificationEntityType, entityId: string, entityName?: string) => void;
   close: () => void;
+  setActiveChannel: (channel: NotificationChannel) => void;
   setPreferences: (prefs: AnyNotificationPreferences) => void;
   setOriginalPreferences: (prefs: AnyNotificationPreferences) => void;
   updatePreference: (key: string, value: boolean) => void;
   enableAll: () => void;
   disableAll: () => void;
+  /** Push preference actions */
+  setPushPreferences: (prefs: AnyNotificationPreferences) => void;
+  setOriginalPushPreferences: (prefs: AnyNotificationPreferences) => void;
+  updatePushPreference: (key: string, value: boolean) => void;
+  enableAllPush: () => void;
+  disableAllPush: () => void;
   resetToOriginal: () => void;
   setIsSaving: (value: boolean) => void;
   setIsLoading: (value: boolean) => void;
   setError: (error: string | null) => void;
   markAsSaved: () => void;
+  markPushAsSaved: () => void;
 }
 
 type NotificationPreferencesStore = NotificationPreferencesState & NotificationPreferencesActions;
@@ -112,9 +132,13 @@ export const useNotificationPreferencesStore = create<NotificationPreferencesSto
   entityType: null,
   entityId: null,
   entityName: null,
+  activeChannel: 'email' as NotificationChannel,
   preferences: { ...DEFAULT_TASK_NOTIFICATION_PREFERENCES },
   originalPreferences: { ...DEFAULT_TASK_NOTIFICATION_PREFERENCES },
   hasChanges: false,
+  pushPreferences: { ...DEFAULT_TASK_NOTIFICATION_PREFERENCES },
+  originalPushPreferences: { ...DEFAULT_TASK_NOTIFICATION_PREFERENCES },
+  hasPushChanges: false,
   isSaving: false,
   isLoading: false,
   error: null,
@@ -127,11 +151,15 @@ export const useNotificationPreferencesStore = create<NotificationPreferencesSto
       entityType,
       entityId,
       entityName: entityName || null,
+      activeChannel: 'email',
       error: null,
       // Reset to defaults for this entity type until loaded from Firestore
       preferences: defaults,
       originalPreferences: defaults,
       hasChanges: false,
+      pushPreferences: { ...defaults },
+      originalPushPreferences: { ...defaults },
+      hasPushChanges: false,
     });
   },
 
@@ -141,12 +169,18 @@ export const useNotificationPreferencesStore = create<NotificationPreferencesSto
       entityType: null,
       entityId: null,
       entityName: null,
+      activeChannel: 'email',
       preferences: { ...DEFAULT_TASK_NOTIFICATION_PREFERENCES },
       originalPreferences: { ...DEFAULT_TASK_NOTIFICATION_PREFERENCES },
       hasChanges: false,
+      pushPreferences: { ...DEFAULT_TASK_NOTIFICATION_PREFERENCES },
+      originalPushPreferences: { ...DEFAULT_TASK_NOTIFICATION_PREFERENCES },
+      hasPushChanges: false,
       error: null,
     });
   },
+
+  setActiveChannel: (channel) => set({ activeChannel: channel }),
 
   setPreferences: (prefs) => {
     const { originalPreferences } = get();
@@ -194,11 +228,59 @@ export const useNotificationPreferencesStore = create<NotificationPreferencesSto
     });
   },
 
+  // Push preference actions
+  setPushPreferences: (prefs) => {
+    const { originalPushPreferences } = get();
+    set({
+      pushPreferences: prefs,
+      hasPushChanges: calculateHasChanges(prefs, originalPushPreferences),
+    });
+  },
+
+  setOriginalPushPreferences: (prefs) => set({
+    originalPushPreferences: prefs,
+    pushPreferences: prefs,
+    hasPushChanges: false,
+  }),
+
+  updatePushPreference: (key, value) => {
+    const { pushPreferences, originalPushPreferences } = get();
+    const newPreferences = { ...pushPreferences, [key]: value } as AnyNotificationPreferences;
+    set({
+      pushPreferences: newPreferences,
+      hasPushChanges: calculateHasChanges(newPreferences, originalPushPreferences),
+    });
+  },
+
+  enableAllPush: () => {
+    const { entityType, originalPushPreferences } = get();
+    const allEnabled = entityType === 'team'
+      ? createAllTeamPreferences(true)
+      : createAllTaskPreferences(true);
+    set({
+      pushPreferences: allEnabled,
+      hasPushChanges: calculateHasChanges(allEnabled, originalPushPreferences),
+    });
+  },
+
+  disableAllPush: () => {
+    const { entityType, originalPushPreferences } = get();
+    const allDisabled = entityType === 'team'
+      ? createAllTeamPreferences(false)
+      : createAllTaskPreferences(false);
+    set({
+      pushPreferences: allDisabled,
+      hasPushChanges: calculateHasChanges(allDisabled, originalPushPreferences),
+    });
+  },
+
   resetToOriginal: () => {
-    const { originalPreferences } = get();
+    const { originalPreferences, originalPushPreferences } = get();
     set({
       preferences: { ...originalPreferences },
       hasChanges: false,
+      pushPreferences: { ...originalPushPreferences },
+      hasPushChanges: false,
       error: null,
     });
   },
@@ -212,6 +294,15 @@ export const useNotificationPreferencesStore = create<NotificationPreferencesSto
     set({
       originalPreferences: { ...preferences },
       hasChanges: false,
+      isSaving: false,
+    });
+  },
+
+  markPushAsSaved: () => {
+    const { pushPreferences } = get();
+    set({
+      originalPushPreferences: { ...pushPreferences },
+      hasPushChanges: false,
       isSaving: false,
     });
   },
