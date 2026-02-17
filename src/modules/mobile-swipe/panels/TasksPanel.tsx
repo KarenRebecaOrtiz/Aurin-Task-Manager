@@ -6,6 +6,8 @@ import gsap from 'gsap'
 import { ClipboardList, Archive, Clock, ChevronDown, Building2, Check, Search } from 'lucide-react'
 import { useDataStore } from '@/stores/dataStore'
 import { useShallow } from 'zustand/react/shallow'
+import { useAuth } from '@/contexts/AuthContext'
+import { useUserDataStore } from '@/stores/userDataStore'
 import { GradientAvatar } from '@/components/ui/gradient-avatar'
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer'
 import { VisuallyHidden } from '@/components/ui'
@@ -111,8 +113,22 @@ function TaskCard({ task, clientName, clientImage, onTap }: TaskCardProps) {
 }
 
 export function TasksPanel() {
-  const tasks = useDataStore(useShallow((s) => s.tasks))
+  const allTasks = useDataStore(useShallow((s) => s.tasks))
   const clients = useDataStore(useShallow((s) => s.clients))
+  const { isAdmin } = useAuth()
+  const currentUserId = useUserDataStore((state) => state.userData?.userId || '')
+
+  // Permission filter: only tasks the user can see (same as data-views)
+  const tasks = useMemo(() => {
+    if (isAdmin) return allTasks
+    return allTasks.filter((task) => {
+      const isCreator = task.CreatedBy === currentUserId
+      const isAssigned = (task.AssignedTo || []).includes(currentUserId)
+      const isLeader = (task.LeadedBy || []).includes(currentUserId)
+      return isCreator || isAssigned || isLeader
+    })
+  }, [allTasks, isAdmin, currentUserId])
+
   const activePanel = useMobilePanel((s) => s.activePanel)
   const transitionPhase = useMobilePanel((s) => s.transitionPhase)
   const taskSubView = useMobilePanel((s) => s.taskSubView)
