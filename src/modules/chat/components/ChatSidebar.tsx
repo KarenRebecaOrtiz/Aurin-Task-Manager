@@ -234,6 +234,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(({
           <ChatHeader
             task={task}
             clientName={clientName}
+            clientImageUrl={clientData?.imageUrl}
             users={users}
             messages={messages}
             userId={userId}

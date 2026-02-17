@@ -9,6 +9,13 @@ import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { updateTaskActivity } from "@/lib/taskUtils";
 import { useDataStore } from "@/stores/dataStore";
+import { useMediaQuery } from "@/modules/dialogs/hooks/useMediaQuery";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import styles from "../../styles/StatusDropdown.module.scss";
 
 // Status configuration
@@ -43,8 +50,10 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
   const { isAdmin } = useAuth();
 
   const [isOpen, setIsOpen] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const isMobile = useMediaQuery("(max-width: 767px)");
 
   // Check if user can edit - Only admins or the task creator can edit
   const isTaskCreator = createdBy ? (userId || currentUserId) === createdBy : false;
@@ -107,13 +116,20 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
   // Toggle handler
   const handleToggle = useCallback(() => {
     if (canEdit && !isUpdating) {
-      setIsOpen(!isOpen);
+      if (isMobile) {
+        setIsDrawerOpen(true);
+      } else {
+        setIsOpen(!isOpen);
+      }
     }
-  }, [canEdit, isUpdating, isOpen]);
+  }, [canEdit, isUpdating, isOpen, isMobile]);
 
   // Option click handler factory
   const createOptionHandler = useCallback((value: StatusValue) => {
-    return () => handleStatusChange(value);
+    return () => {
+      handleStatusChange(value);
+      setIsDrawerOpen(false);
+    };
   }, [handleStatusChange]);
 
   // Dropdown animations
@@ -148,8 +164,9 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
         {isUpdating && <span className={styles.spinner} />}
       </button>
 
+      {/* Desktop: Floating dropdown */}
       <AnimatePresence>
-        {isOpen && (
+        {isOpen && !isMobile && (
           <motion.div
             className={styles.dropdown}
             variants={dropdownVariants}
@@ -178,6 +195,34 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Mobile: Drawer */}
+      <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
+        <DrawerContent compact>
+          <DrawerHeader className={styles.drawerHeader}>
+            <DrawerTitle className={styles.drawerTitle}>Cambiar Estado</DrawerTitle>
+          </DrawerHeader>
+          <div className={styles.drawerBody}>
+            {STATUS_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                className={`${styles.drawerOption} ${option.value === currentStatus ? styles.drawerOptionSelected : ""}`}
+                onClick={createOptionHandler(option.value)}
+              >
+                <span
+                  className={styles.drawerOptionDot}
+                  style={{ backgroundColor: option.color }}
+                />
+                <span className={styles.drawerOptionLabel}>{option.label}</span>
+                {option.value === currentStatus && (
+                  <Check size={16} className={styles.drawerCheckIcon} />
+                )}
+              </button>
+            ))}
+          </div>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 };

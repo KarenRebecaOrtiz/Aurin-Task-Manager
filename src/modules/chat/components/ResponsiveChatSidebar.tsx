@@ -230,6 +230,7 @@ const MobileChatDrawer: React.FC<ChatSidebarProps> = memo(({
             <ChatHeader
               task={task}
               clientName={clientName || clientData?.name || 'Cliente'}
+              clientImageUrl={clientData?.imageUrl}
               userId={userId}
               userName={userName}
               onOpenManualTimeEntry={isTeamChat ? undefined : handleOpenManualTimeEntry}

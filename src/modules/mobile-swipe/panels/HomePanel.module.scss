@@ -1,0 +1,93 @@
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 0 $spacing-lg;
+  padding-top: 80px; // Space for MobileHeader
+  overflow: hidden;
+}
+
+// ==============================================================
+// GREETING
+// ==============================================================
+
+.greeting {
+  padding-top: $spacing-xl;
+}
+
+.greetingText {
+  @include typography($text-2xl, $font-weight-light, $color-text-primary);
+  margin: 0;
+  line-height: $leading-tight;
+
+  :global(body.dark) & {
+    color: rgba(255, 255, 255, 0.9);
+  }
+}
+
+.greetingName {
+  font-weight: $font-weight-semibold;
+}
+
+// ==============================================================
+// RECENT SECTION
+// ==============================================================
+
+.recentSection {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  margin-top: $spacing-2xl;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  @include typography(11px, $font-weight-semibold, $color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+
+  :global(body.dark) & {
+    color: $color-text-dark-muted;
+  }
+}
+
+.recentItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-sm $spacing-md;
+  border-radius: $radius-md;
+  background: rgba(0, 0, 0, 0.02);
+
+  :global(body.dark) & {
+    background: rgba(255, 255, 255, 0.03);
+  }
+}
+
+.recentName {
+  @include typography($text-sm, $font-weight-medium, $color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+
+  :global(body.dark) & {
+    color: rgba(255, 255, 255, 0.85);
+  }
+}
+
+.recentStatus {
+  @include typography(10px, $font-weight-semibold, $color-text-muted);
+  flex-shrink: 0;
+  margin-left: $spacing-sm;
+
+  :global(body.dark) & {
+    color: $color-text-dark-muted;
+  }
+}

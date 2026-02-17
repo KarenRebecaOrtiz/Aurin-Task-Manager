@@ -155,3 +155,100 @@
   color: $blue-500;
   flex-shrink: 0;
 }
+
+// ============================================================================
+// MOBILE DRAWER
+// ============================================================================
+
+.drawerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-lg $spacing-xl;
+  border-bottom: 1px solid rgba(209, 217, 230, 0.3);
+
+  :global(body.dark) & {
+    border-bottom-color: $zinc-700;
+  }
+}
+
+.drawerTitle {
+  font-size: $text-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin: 0;
+  text-align: center;
+
+  :global(body.dark) & {
+    color: rgba(255, 255, 255, 0.9);
+  }
+}
+
+.drawerBody {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  padding: $spacing-md 0;
+}
+
+.drawerOption {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  width: 100%;
+  min-height: 52px;
+  padding: $spacing-md $spacing-xl;
+  background: transparent;
+  border: none;
+  border-left: 3px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: left;
+
+  &:active {
+    background: rgba(209, 217, 230, 0.5);
+  }
+
+  :global(body.dark) & {
+    &:active {
+      background: rgba($white, 0.08);
+    }
+  }
+}
+
+.drawerOptionSelected {
+  background: rgba($blue-500, 0.08);
+  border-left-color: $blue-500;
+
+  :global(body.dark) & {
+    background: rgba($blue-500, 0.15);
+    border-left-color: $blue-400;
+  }
+}
+
+.drawerOptionDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.drawerOptionLabel {
+  flex: 1;
+  font-size: $text-base;
+  font-weight: $font-weight-medium;
+  color: $zinc-700;
+
+  :global(body.dark) & {
+    color: $zinc-200;
+  }
+}
+
+.drawerCheckIcon {
+  color: $blue-500;
+  flex-shrink: 0;
+
+  :global(body.dark) & {
+    color: $blue-400;
+  }
+}

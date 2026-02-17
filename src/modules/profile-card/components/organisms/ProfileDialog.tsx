@@ -38,7 +38,7 @@ export function ProfileDialog({
       return {
         id: currentUserData.userId,
         ...currentUserData,
-      } as UserProfile;
+      } as unknown as UserProfile;
     }
     return otherUserProfile;
   }, [isOwnProfile, currentUserData, otherUserProfile]);

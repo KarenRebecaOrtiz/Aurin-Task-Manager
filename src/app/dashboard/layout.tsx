@@ -23,6 +23,7 @@ import { usePinnedTasksSubscription } from '@/modules/data-views/tasks/hooks/use
 import { useVisibilityRefresh } from '@/hooks/useVisibilityRefresh';
 import tasksStyles from './tasks/styles/TasksPage.module.scss';
 import { ChatbotWidget } from '@/modules/n8n-chatbot';
+import { MobileApp } from '@/modules/mobile-swipe';
 import { useAuth as useAuthContext } from '@/contexts/AuthContext';
 
 function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
@@ -141,6 +142,9 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
       <IndependentChatSidebarRenderer />
       <ProfileCardRenderer />
       <PlatformCompatibility />
+
+      {/* Mobile Swipe Navigation - Full mobile experience */}
+      {isMobile && <MobileApp />}
 
       {/* AI Chatbot - Only visible for admins */}
       {isAdmin && <ChatbotWidget controlled={isMobile} />}

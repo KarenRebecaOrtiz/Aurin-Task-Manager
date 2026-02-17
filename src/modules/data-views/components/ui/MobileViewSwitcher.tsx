@@ -3,13 +3,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter, usePathname } from 'next/navigation';
+import { useUser } from '@clerk/nextjs';
 import clsx from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { CirclePlus, Bot, ClipboardList, Users } from 'lucide-react';
+import { CirclePlus, Bot, ClipboardList, Users, CircleUserRound } from 'lucide-react';
 import { Unplug } from '@/components/animate-ui/icons/unplug';
 import { useTasksPageStore } from '@/stores/tasksPageStore';
 import { useChatbotControl } from '@/modules/n8n-chatbot';
 import { useAuth } from '@/contexts/AuthContext';
+import { ConfigDialog } from '@/modules/config';
 import styles from './MobileViewSwitcher.module.scss';
 
 // Route mapping for prefetch
@@ -55,10 +57,12 @@ const MobileControl: React.FC<MobileControlProps> = ({ icon, label, isActive, on
 export const MobileViewSwitcher: React.FC<MobileViewSwitcherProps> = ({ currentView, onViewChange }) => {
   const router = useRouter();
   const pathname = usePathname();
+  const { user } = useUser();
   const openCreateTask = useTasksPageStore((state) => state.openCreateTask);
   const { openChat } = useChatbotControl();
   const { isAdmin } = useAuth();
   const [mounted, setMounted] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   // Mount portal
   useEffect(() => {
@@ -154,6 +158,13 @@ export const MobileViewSwitcher: React.FC<MobileViewSwitcherProps> = ({ currentV
             isActive={activeView === 'archive'}
             onClick={handleArchiveClick}
           />
+          <MobileControl
+            icon={<CircleUserRound />}
+            label="Mi Perfil"
+            isActive={false}
+            onClick={() => setIsProfileOpen(true)}
+            className={styles.profileButton}
+          />
           {isAdmin && (
             <MobileControl
               icon={<Bot />}
@@ -175,7 +186,18 @@ export const MobileViewSwitcher: React.FC<MobileViewSwitcherProps> = ({ currentV
   );
 
   // Render as portal to body
-  return createPortal(mobileNav, document.body);
+  return (
+    <>
+      {createPortal(mobileNav, document.body)}
+      {user?.id && (
+        <ConfigDialog
+          isOpen={isProfileOpen}
+          onOpenChange={setIsProfileOpen}
+          userId={user.id}
+        />
+      )}
+    </>
+  );
 };
 
 export default MobileViewSwitcher;

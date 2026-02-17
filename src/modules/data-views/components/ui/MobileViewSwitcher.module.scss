@@ -150,6 +150,15 @@
   letter-spacing: 0.01em;
 }
 
+// Profile Button
+.profileButton {
+  color: $zinc-600;
+
+  :global(body.dark) & {
+    color: rgba(255, 255, 255, 0.6);
+  }
+}
+
 // Create Task Button - Verde (Circular)
 .createTaskButton {
   background: $brand-primary !important;

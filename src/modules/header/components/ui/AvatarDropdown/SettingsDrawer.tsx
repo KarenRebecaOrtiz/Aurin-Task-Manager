@@ -9,8 +9,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { LogOut } from '@/components/animate-ui/icons';
 import { Sun } from '@/components/animate-ui/icons/sun';
 import { Moon } from '@/components/animate-ui/icons/moon';
-import { Settings } from 'lucide-react';
-import { ConfigDialog } from '@/modules/config';
 import {
   Drawer,
   DrawerContent,
@@ -60,12 +58,6 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
   const { signOut } = useClerk();
   const { isDarkMode, toggleTheme } = useTheme();
   const { isAdmin } = useAuth();
-  const [isConfigModalOpen, setIsConfigModalOpen] = React.useState(false);
-
-  const handleConfig = useCallback(() => {
-    setIsConfigModalOpen(true);
-    onClose();
-  }, [onClose]);
 
   const handleLogout = useCallback(() => {
     signOut();
@@ -101,7 +93,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
       <Drawer open={isOpen} onOpenChange={handleOpenChange}>
         <DrawerContent compact className={styles.drawerContent}>
           <DrawerHeader className={styles.drawerHeader}>
-            <DrawerTitle className={styles.drawerTitle}>Configuración</DrawerTitle>
+            <DrawerTitle className={styles.drawerTitle}>Ajustes</DrawerTitle>
           </DrawerHeader>
 
           <div className={styles.drawerBody}>
@@ -145,18 +137,6 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
             <div className={styles.menuSection}>
               <div className={styles.sectionLabel}>Preferencias</div>
               <motion.button
-                onClick={handleConfig}
-                className={styles.menuItem}
-                custom={itemIndex++}
-                initial="hidden"
-                animate="visible"
-                variants={itemVariants}
-              >
-                <Settings size={20} className={styles.menuIcon} />
-                <span className={styles.menuText}>Configuración</span>
-              </motion.button>
-
-              <motion.button
                 onClick={handleToggleTheme}
                 className={styles.menuItem}
                 custom={itemIndex++}
@@ -195,14 +175,6 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
         </DrawerContent>
       </Drawer>
 
-      {/* Config Dialog Modal */}
-      {userId && (
-        <ConfigDialog
-          isOpen={isConfigModalOpen}
-          onOpenChange={setIsConfigModalOpen}
-          userId={userId}
-        />
-      )}
     </>
   );
 };

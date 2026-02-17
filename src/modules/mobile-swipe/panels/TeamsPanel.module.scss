@@ -1,0 +1,177 @@
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: $spacing-lg $spacing-lg 0;
+}
+
+.sectionTitle {
+  @include typography($text-2xl, $font-weight-bold, $color-text-primary);
+  padding: calc(env(safe-area-inset-top, 12px) + 12px) 0 0;
+  margin: 0;
+  letter-spacing: -0.02em;
+
+  :global(body.dark) & {
+    color: rgba(255, 255, 255, 0.95);
+  }
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-lg 0 $spacing-md;
+}
+
+.panelTitle {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  @include typography($text-lg, $font-weight-semibold, $color-text-primary);
+
+  :global(body.dark) & {
+    color: rgba(255, 255, 255, 0.95);
+  }
+}
+
+.teamCount {
+  @include typography($text-sm, $font-weight-medium, $color-text-muted);
+  background: rgba(0, 0, 0, 0.05);
+  padding: 2px $spacing-sm;
+  border-radius: $radius-full;
+
+  :global(body.dark) & {
+    background: rgba(255, 255, 255, 0.08);
+    color: $color-text-dark-secondary;
+  }
+}
+
+// ==============================================================
+// TEAM GRID
+// ==============================================================
+
+.teamGrid {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
+}
+
+// ==============================================================
+// TEAM CARD
+// ==============================================================
+
+.teamCard {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  min-height: 72px;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(229, 231, 235, 0.6);
+  border-radius: $radius-xl;
+  overflow: hidden;
+  cursor: pointer;
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s ease;
+
+  &:active {
+    background: rgba(241, 245, 249, 1);
+  }
+
+  :global(body.dark) & {
+    background: rgba(39, 39, 42, 0.6);
+    border-color: rgba(63, 63, 70, 0.5);
+
+    &:active {
+      background: rgba(39, 39, 42, 0.9);
+    }
+  }
+}
+
+.teamGradient {
+  width: 6px;
+  flex-shrink: 0;
+}
+
+.teamInfo {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  padding: $spacing-md $spacing-lg;
+  flex: 1;
+  min-width: 0;
+}
+
+.teamNameRow {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+}
+
+.teamName {
+  @include typography($text-sm, $font-weight-semibold, $color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  :global(body.dark) & {
+    color: rgba(255, 255, 255, 0.95);
+  }
+}
+
+.visibilityIcon {
+  color: $color-text-muted;
+  flex-shrink: 0;
+
+  :global(body.dark) & {
+    color: $color-text-dark-muted;
+  }
+}
+
+.teamDescription {
+  @include typography(12px, $font-weight-normal, $color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  :global(body.dark) & {
+    color: $color-text-dark-muted;
+  }
+}
+
+.teamMembers {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  @include typography(11px, $font-weight-medium, $color-text-muted);
+
+  :global(body.dark) & {
+    color: $color-text-dark-muted;
+  }
+}
+
+// ==============================================================
+// EMPTY STATE
+// ==============================================================
+
+.emptyState {
+  @include flex-column-center;
+  gap: $spacing-md;
+  padding: $spacing-4xl 0;
+  color: $color-text-muted;
+
+  :global(body.dark) & {
+    color: $color-text-dark-muted;
+  }
+
+  span {
+    @include typography($text-sm, $font-weight-medium, inherit);
+  }
+}

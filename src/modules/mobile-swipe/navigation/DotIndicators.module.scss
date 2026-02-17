@@ -1,0 +1,39 @@
+@use '@/app/styles/variables' as *;
+
+.dotsContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-sm;
+  position: fixed;
+  bottom: calc(68px + env(safe-area-inset-bottom, 8px));
+  left: 0;
+  width: 100%;
+  z-index: 1061; // Above ContextualBottomNav (1060)
+  pointer-events: none;
+}
+
+.dotWrapper {
+  position: relative;
+  width: 6px;
+  height: 6px;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: $radius-full;
+  background: $zinc-400;
+  opacity: 0.4;
+
+  :global(body.dark) & {
+    background: rgba(255, 255, 255, 0.25);
+  }
+}
+
+.activeDot {
+  position: absolute;
+  inset: 0;
+  border-radius: $radius-full;
+  background: $brand-primary;
+}

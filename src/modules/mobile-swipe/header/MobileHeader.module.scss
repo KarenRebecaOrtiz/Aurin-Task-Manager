@@ -1,0 +1,105 @@
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1060; // Above MobileApp (1050)
+  padding: env(safe-area-inset-top, $spacing-md) $spacing-lg $spacing-md;
+  background: transparent;
+}
+
+// ==============================================================
+// AVATAR PILL
+// ==============================================================
+
+.avatarPill {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-xs ;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(229, 231, 235, 0.7);
+  border-radius: $radius-full;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+
+  :global(body.dark) & {
+    background: rgba(39, 39, 42, 0.85);
+    border-color: rgba(63, 63, 70, 0.7);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  }
+}
+
+.avatarWrapper {
+  width: 28px;
+  height: 28px;
+  border-radius: $radius-full;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.avatarImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: $radius-full;
+}
+
+.userName {
+  @include typography($text-sm, $font-weight-medium, $color-text-primary);
+
+  :global(body.dark) & {
+    color: rgba(255, 255, 255, 0.9);
+  }
+}
+
+// ==============================================================
+// SETTINGS BUTTON
+// ==============================================================
+
+.settingsButton {
+  @include flex-center;
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(229, 231, 235, 0.7);
+  border-radius: $radius-full;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s ease;
+
+  &:active {
+    background: rgba(241, 245, 249, 1);
+    transform: scale(0.95);
+  }
+
+  :global(body.dark) & {
+    background: rgba(39, 39, 42, 0.85);
+    border-color: rgba(63, 63, 70, 0.7);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+
+    &:active {
+      background: rgba(39, 39, 42, 1);
+    }
+  }
+}
+
+.settingsIcon {
+  width: 20px;
+  height: 20px;
+  color: $color-text-primary;
+
+  :global(body.dark) & {
+    color: rgba(255, 255, 255, 0.9);
+  }
+}
