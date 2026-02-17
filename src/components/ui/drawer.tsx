@@ -12,7 +12,7 @@ import styles from "./drawer.module.scss"
 // Drawer Root - Wraps vaul with GSAP close interception
 // ============================================================================
 
-interface DrawerRootProps extends React.ComponentProps<typeof DrawerPrimitive.Root> {
+type DrawerRootProps = React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Root> & {
   children: React.ReactNode
 }
 
