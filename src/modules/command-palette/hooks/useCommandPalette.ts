@@ -109,6 +109,7 @@ export function useCommandPalette(props: UseCommandPaletteProps = {}) {
   const { workspaces, projects, members, tasks, teams, isLoading } = useCommandPaletteData({
     navigationState,
     searchQuery,
+    activeFilters,
   });
 
   // ============================================================================

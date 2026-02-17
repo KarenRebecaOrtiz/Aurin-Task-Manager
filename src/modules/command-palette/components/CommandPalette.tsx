@@ -29,7 +29,8 @@ import {
   ResponsiveDialogTitle,
 } from '@/modules/dialogs';
 import { getPlatformShortcut, KEYBOARD_SHORTCUTS } from '../constants/shortcuts';
-import type { CommandItem, ActionCommandItem } from '../types/commandPalette.types';
+import { STATUS_FILTERS, PRIORITY_FILTERS } from '../constants/categories';
+import type { CommandItem, ActionCommandItem, StatusLevel, PriorityLevel } from '../types/commandPalette.types';
 import styles from '../styles/command-palette.module.scss';
 
 export interface CommandPaletteProps extends UseCommandPaletteProps {
@@ -71,6 +72,7 @@ export function CommandPalette({
     selectCurrentItem,
     toggleCategory,
     clearFilters,
+    setFilter,
     toggleAIPrompt,
 
     // Refs
@@ -162,6 +164,86 @@ export function CommandPalette({
     }
   }, [isOpen, open]);
 
+  // Toggle de filtro de status
+  const handleToggleStatus = useCallback((status: StatusLevel) => {
+    const current = activeFilters.statuses;
+    const next = current.includes(status)
+      ? current.filter((s) => s !== status)
+      : [...current, status];
+    setFilter({ statuses: next });
+  }, [activeFilters.statuses, setFilter]);
+
+  // Toggle de filtro de prioridad
+  const handleTogglePriority = useCallback((priority: PriorityLevel) => {
+    const current = activeFilters.priorities;
+    const next = current.includes(priority)
+      ? current.filter((p) => p !== priority)
+      : [...current, priority];
+    setFilter({ priorities: next });
+  }, [activeFilters.priorities, setFilter]);
+
+  // Mostrar chips solo en niveles con tareas
+  const showFilterChips = ['root', 'workspace', 'project', 'member'].includes(navigationState.level);
+
+  // Renderizar chips de filtro
+  const renderFilterChips = () => {
+    if (!showFilterChips) return null;
+
+    const hasActiveFilters = activeFilters.statuses.length > 0 || activeFilters.priorities.length > 0;
+
+    return (
+      <div className={styles.categoryChips}>
+        {STATUS_FILTERS.map((sf) => (
+          <button
+            key={sf.id}
+            type="button"
+            className={`${styles.categoryChip} ${activeFilters.statuses.includes(sf.value) ? styles.active : ''}`}
+            onClick={() => handleToggleStatus(sf.value)}
+          >
+            <span
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                background: sf.color,
+                flexShrink: 0,
+              }}
+            />
+            {sf.label}
+          </button>
+        ))}
+        {PRIORITY_FILTERS.map((pf) => (
+          <button
+            key={pf.id}
+            type="button"
+            className={`${styles.categoryChip} ${activeFilters.priorities.includes(pf.value) ? styles.active : ''}`}
+            onClick={() => handleTogglePriority(pf.value)}
+          >
+            <span
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                background: pf.color,
+                flexShrink: 0,
+              }}
+            />
+            {pf.label}
+          </button>
+        ))}
+        {hasActiveFilters && (
+          <button
+            type="button"
+            className={styles.categoryChip}
+            onClick={clearFilters}
+          >
+            Limpiar
+          </button>
+        )}
+      </div>
+    );
+  };
+
   // Renderizar contenido del panel
   const renderContent = () => {
     // Si estamos en nivel tarea, mostrar acciones
@@ -246,6 +328,8 @@ export function CommandPalette({
               )}
             </ResponsiveDialogHeader>
 
+            {renderFilterChips()}
+
             <ResponsiveDialogBody>
               {renderContent()}
             </ResponsiveDialogBody>
@@ -309,6 +393,9 @@ export function CommandPalette({
                 />
               </div>
             )}
+
+            {/* Filter Chips */}
+            {renderFilterChips()}
 
             {/* Content */}
             {renderContent()}

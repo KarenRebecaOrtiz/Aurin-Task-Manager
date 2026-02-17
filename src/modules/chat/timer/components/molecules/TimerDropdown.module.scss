@@ -111,7 +111,7 @@
   overflow: hidden;
 
   :global(body.dark) & {
-    background: $neutral-500;
+    background: #212121;
     border-color: rgba($white, 0.1);
    
   }

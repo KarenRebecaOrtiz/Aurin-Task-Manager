@@ -15,6 +15,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useUserDataStore } from '@/stores/userDataStore';
 import type {
   NavigationState,
+  ActiveFilters,
   WorkspaceCommandItem,
   ProjectCommandItem,
   MemberCommandItem,
@@ -29,6 +30,7 @@ import type {
 export interface UseCommandPaletteDataProps {
   navigationState: NavigationState;
   searchQuery: string;
+  activeFilters: ActiveFilters;
 }
 
 export interface UseCommandPaletteDataReturn {
@@ -47,6 +49,7 @@ export interface UseCommandPaletteDataReturn {
 export function useCommandPaletteData({
   navigationState,
   searchQuery,
+  activeFilters,
 }: UseCommandPaletteDataProps): UseCommandPaletteDataReturn {
   const { isAdmin } = useAuth();
   const currentUserId = useUserDataStore((state) => state.userData?.userId || '');
@@ -265,6 +268,20 @@ export function useCommandPaletteData({
       });
     }
 
+    // Aplicar filtros de status
+    if (activeFilters.statuses.length > 0) {
+      filteredTasks = filteredTasks.filter((t) =>
+        activeFilters.statuses.includes(t.status as any)
+      );
+    }
+
+    // Aplicar filtros de prioridad
+    if (activeFilters.priorities.length > 0) {
+      filteredTasks = filteredTasks.filter((t) =>
+        activeFilters.priorities.includes(t.priority as any)
+      );
+    }
+
     const items = filteredTasks.map((task): TaskCommandItem => {
       const client = clients.find((c) => c.id === task.clientId);
 
@@ -282,15 +299,37 @@ export function useCommandPaletteData({
     });
 
     // Filtrar por búsqueda - priorizar coincidencia en nombre de tarea
+    // También buscar por nombre de miembros asignados/líderes
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
+
+      // Crear mapa de nombres de usuario para búsqueda por miembro
+      const userNameMap = new Map<string, string>();
+      allUsers.forEach((u) => {
+        if (u.fullName) userNameMap.set(u.id, u.fullName.toLowerCase());
+      });
+
       return items
-        .filter(
-          (item) =>
+        .filter((item) => {
+          // Coincidencia directa en nombre, proyecto o cliente
+          if (
             item.title.toLowerCase().includes(query) ||
             item.subtitle?.toLowerCase().includes(query) ||
             item.clientName.toLowerCase().includes(query)
-        )
+          ) return true;
+
+          // Coincidencia en nombre de miembros involucrados
+          const task = filteredTasks.find((t) => t.id === item.id);
+          if (task) {
+            const involvedIds = [
+              task.CreatedBy,
+              ...(task.AssignedTo || []),
+              ...(task.LeadedBy || []),
+            ].filter(Boolean);
+            return involvedIds.some((uid) => userNameMap.get(uid)?.includes(query));
+          }
+          return false;
+        })
         // Ordenar: primero las que coinciden en el nombre, luego las demás
         .sort((a, b) => {
           const aNameMatch = a.title.toLowerCase().includes(query);
@@ -322,8 +361,11 @@ export function useCommandPaletteData({
     navigationState.projectName,
     navigationState.memberId,
     allowedTasks,
+    allUsers,
     clients,
     searchQuery,
+    activeFilters.statuses,
+    activeFilters.priorities,
   ]);
 
   // ============================================================================
