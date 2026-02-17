@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useEffect } from 'react';
+import { create } from 'zustand';
 import { getExistingRegistration, registerServiceWorker } from '../register-sw';
 
 type PermissionState = 'prompt' | 'granted' | 'denied' | 'unsupported';
@@ -19,85 +20,86 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return outputArray;
 }
 
-/**
- * Hook for managing push notification subscription state.
- *
- * Provides:
- * - `permission`: Current notification permission state
- * - `isSubscribed`: Whether the user has an active push subscription
- * - `isLoading`: Whether an async operation is in progress
- * - `isSupported`: Whether the browser supports push notifications
- * - `isDenied`: Whether the user has denied notification permission
- * - `subscribe()`: Request permission and subscribe to push
- * - `unsubscribe()`: Remove push subscription
- */
-export function usePushNotifications() {
-  const [permission, setPermission] = useState<PermissionState>('prompt');
-  const [isSubscribed, setIsSubscribed] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+// ─── Shared Zustand store (singleton state across all components) ───
 
-  // Check current state on mount
-  useEffect(() => {
-    async function checkState() {
-      if (
-        typeof window === 'undefined' ||
-        !('serviceWorker' in navigator) ||
-        !('PushManager' in window) ||
-        !('Notification' in window)
-      ) {
-        setPermission('unsupported');
-        setIsLoading(false);
-        return;
-      }
+interface PushNotificationsState {
+  permission: PermissionState;
+  isSubscribed: boolean;
+  isLoading: boolean;
+  _initialized: boolean;
 
-      setPermission(Notification.permission as PermissionState);
+  // Actions
+  _init: () => Promise<void>;
+  subscribe: () => Promise<boolean>;
+  unsubscribe: () => Promise<boolean>;
+}
 
-      if (Notification.permission === 'granted') {
-        const registration = await getExistingRegistration();
-        const sub = await registration?.pushManager.getSubscription();
-        setIsSubscribed(!!sub);
-      }
+const usePushStore = create<PushNotificationsState>((set, get) => ({
+  permission: 'prompt',
+  isSubscribed: false,
+  isLoading: true,
+  _initialized: false,
 
-      setIsLoading(false);
+  _init: async () => {
+    if (get()._initialized) return;
+    set({ _initialized: true });
+
+    if (
+      typeof window === 'undefined' ||
+      !('serviceWorker' in navigator) ||
+      !('PushManager' in window) ||
+      !('Notification' in window)
+    ) {
+      set({ permission: 'unsupported', isLoading: false });
+      return;
     }
 
-    checkState();
-  }, []);
+    const perm = Notification.permission as PermissionState;
+    let subscribed = false;
 
-  const subscribe = useCallback(async (): Promise<boolean> => {
+    if (perm === 'granted') {
+      try {
+        const registration = await getExistingRegistration();
+        const sub = await registration?.pushManager.getSubscription();
+        subscribed = !!sub;
+      } catch {
+        // Ignore
+      }
+    }
+
+    set({ permission: perm, isSubscribed: subscribed, isLoading: false });
+  },
+
+  subscribe: async () => {
     try {
-      setIsLoading(true);
+      set({ isLoading: true });
 
-      // Request permission (requires user gesture on iOS Safari)
       const perm = await Notification.requestPermission();
-      setPermission(perm as PermissionState);
+      set({ permission: perm as PermissionState });
 
       if (perm !== 'granted') {
-        setIsLoading(false);
+        set({ isLoading: false });
         return false;
       }
 
-      // Register SW if not already registered
       const registration = await registerServiceWorker();
       if (!registration) {
-        setIsLoading(false);
+        set({ isLoading: false });
         return false;
       }
 
       const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
       if (!vapidPublicKey) {
         console.error('[Push] VAPID public key not configured');
-        setIsLoading(false);
+        set({ isLoading: false });
         return false;
       }
 
-      // Subscribe to push manager
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
       });
 
-      // Send subscription to server
       const response = await fetch('/api/push/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -108,24 +110,23 @@ export function usePushNotifications() {
       });
 
       if (response.ok) {
-        setIsSubscribed(true);
-        setIsLoading(false);
+        set({ isSubscribed: true, isLoading: false });
         return true;
       }
 
       console.error('[Push] Server rejected subscription:', response.status);
-      setIsLoading(false);
+      set({ isLoading: false });
       return false;
     } catch (error) {
       console.error('[Push] Subscribe error:', error);
-      setIsLoading(false);
+      set({ isLoading: false });
       return false;
     }
-  }, []);
+  },
 
-  const unsubscribe = useCallback(async (): Promise<boolean> => {
+  unsubscribe: async () => {
     try {
-      setIsLoading(true);
+      set({ isLoading: true });
 
       const registration = await getExistingRegistration();
       const subscription = await registration?.pushManager.getSubscription();
@@ -134,7 +135,6 @@ export function usePushNotifications() {
         const endpoint = subscription.endpoint;
         await subscription.unsubscribe();
 
-        // Notify server
         await fetch('/api/push/unsubscribe', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -142,23 +142,37 @@ export function usePushNotifications() {
         });
       }
 
-      setIsSubscribed(false);
-      setIsLoading(false);
+      set({ isSubscribed: false, isLoading: false });
       return true;
     } catch (error) {
       console.error('[Push] Unsubscribe error:', error);
-      setIsLoading(false);
+      set({ isLoading: false });
       return false;
     }
-  }, []);
+  },
+}));
+
+/**
+ * Hook for managing push notification subscription state.
+ *
+ * Uses a shared Zustand store so ALL components see the same state.
+ * When one component subscribes, all others update instantly.
+ */
+export function usePushNotifications() {
+  const store = usePushStore();
+
+  // Initialize on first mount (singleton — runs once)
+  useEffect(() => {
+    store._init();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return {
-    permission,
-    isSubscribed,
-    isLoading,
-    isSupported: permission !== 'unsupported',
-    isDenied: permission === 'denied',
-    subscribe,
-    unsubscribe,
+    permission: store.permission,
+    isSubscribed: store.isSubscribed,
+    isLoading: store.isLoading,
+    isSupported: store.permission !== 'unsupported',
+    isDenied: store.permission === 'denied',
+    subscribe: store.subscribe,
+    unsubscribe: store.unsubscribe,
   };
 }
