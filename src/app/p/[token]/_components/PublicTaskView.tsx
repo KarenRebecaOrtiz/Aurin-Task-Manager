@@ -27,6 +27,7 @@ interface PublicTaskViewProps {
   token: string;
   tokenStatus?: 'pending' | 'redeemed';
   guestSession?: GuestSession | null;
+  guestSessionToken?: string | null;
 }
 
 /**
@@ -36,7 +37,7 @@ interface PublicTaskViewProps {
  * Usa la misma estructura visual que ChatDialog pero como vista principal
  * (no como modal overlay).
  */
-export function PublicTaskView({ task, token, tokenStatus, guestSession: initialGuestSession }: PublicTaskViewProps) {
+export function PublicTaskView({ task, token, tokenStatus, guestSession: initialGuestSession, guestSessionToken: initialSessionToken }: PublicTaskViewProps) {
   // User data from store
   const userId = useUserDataStore((state) => state.userData?.userId || '');
   const userName = useUserDataStore((state) => state.userData?.fullName || '');
@@ -48,6 +49,7 @@ export function PublicTaskView({ task, token, tokenStatus, guestSession: initial
   const [isGuestAuthOpen, setIsGuestAuthOpen] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [sessionToken, setSessionToken] = useState<string | null>(initialSessionToken || null);
   const [imagePreviewSrc, setImagePreviewSrc] = useState<string | null>(null);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
 
@@ -64,8 +66,11 @@ export function PublicTaskView({ task, token, tokenStatus, guestSession: initial
   }, [isLoading, userId, tokenStatus, guestSession]);
 
   // Handle guest auth success
-  const handleGuestAuthSuccess = useCallback((session: GuestSession) => {
+  const handleGuestAuthSuccess = useCallback((session: GuestSession & { sessionToken?: string }) => {
     setGuestSession(session);
+    if (session.sessionToken) {
+      setSessionToken(session.sessionToken);
+    }
     setIsGuestAuthOpen(false);
   }, []);
 
@@ -276,6 +281,7 @@ export function PublicTaskView({ task, token, tokenStatus, guestSession: initial
               } : null}
               onCancelReply={() => setReplyingTo(null)}
               disabled={false}
+              guestSessionToken={sessionToken}
             />
           ) : (
             <div className={styles.readOnlyMessage}>

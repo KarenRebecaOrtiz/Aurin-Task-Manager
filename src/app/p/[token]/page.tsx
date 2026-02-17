@@ -1,7 +1,7 @@
 // src/app/p/[token]/page.tsx
 import { notFound } from 'next/navigation';
 import { getPublicTask } from '@/modules/shareTask/services/shareService.server';
-import { getGuestSession } from '@/modules/shareTask/services/session.server';
+import { getGuestSession, getGuestSessionToken } from '@/modules/shareTask/services/session.server';
 import { PublicTaskView } from './_components/PublicTaskView';
 import { InteractiveBackground } from '@/components/ui/InteractiveBackground';
 import { LightRaysWrapper } from '@/components/ui/LightRaysWrapper';
@@ -23,8 +23,11 @@ export default async function PublicTaskPage({ params }: PageProps) {
     notFound();
   }
 
-  // Check for guest session
-  const guestSession = await getGuestSession();
+  // Check for guest session and get raw JWT for API auth
+  const [guestSession, guestSessionToken] = await Promise.all([
+    getGuestSession(),
+    getGuestSessionToken(),
+  ]);
 
   return (
     <>
@@ -41,13 +44,14 @@ export default async function PublicTaskPage({ params }: PageProps) {
         mouseInfluence={0}
         introAnimation={true}
       />
-      
+
       {/* Content */}
       <PublicTaskView
         task={result.task}
         token={token}
         tokenStatus={result.tokenStatus}
         guestSession={guestSession}
+        guestSessionToken={guestSessionToken}
       />
     </>
   );

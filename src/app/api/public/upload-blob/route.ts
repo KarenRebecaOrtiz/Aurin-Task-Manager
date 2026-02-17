@@ -2,8 +2,7 @@
  * Public Upload API Route for Guest Users
  *
  * POST /api/public/upload-blob - Upload files from guest sessions
- * Validates guest identity via JWT session cookie instead of Clerk auth.
- * Restricted to attachment type only with stricter size limits.
+ * Auth: JWT verified via Authorization Bearer header or guest_session cookie
  */
 
 import { NextRequest } from 'next/server';
@@ -25,11 +24,20 @@ interface GuestPayload {
   taskId: string;
 }
 
-/**
- * Verify guest session directly from request cookies
- * (avoids importing 'use server' module in Route Handler)
- */
 async function verifyGuestSession(request: NextRequest): Promise<GuestPayload | null> {
+  // Strategy 1: Authorization Bearer header (preferred - avoids cookie issues)
+  const authHeader = request.headers.get('Authorization');
+  if (authHeader?.startsWith('Bearer ')) {
+    const token = authHeader.slice(7);
+    try {
+      const { payload } = await jwtVerify(token, secret);
+      return payload as unknown as GuestPayload;
+    } catch {
+      // Fall through to cookie strategy
+    }
+  }
+
+  // Strategy 2: Cookie fallback
   const cookie = request.cookies.get(GUEST_SESSION_COOKIE);
   if (!cookie?.value) return null;
 
@@ -41,14 +49,9 @@ async function verifyGuestSession(request: NextRequest): Promise<GuestPayload | 
   }
 }
 
+
 export async function POST(request: NextRequest) {
   try {
-    // Validate guest session via JWT cookie directly from request
-    const guestSession = await verifyGuestSession(request);
-    if (!guestSession || !guestSession.taskId) {
-      return apiUnauthorized('Guest session required');
-    }
-
     if (!process.env.BLOB_READ_WRITE_TOKEN) {
       return apiBadRequest('Vercel Blob Storage not configured');
     }
@@ -61,12 +64,22 @@ export async function POST(request: NextRequest) {
       return apiBadRequest('File is required');
     }
 
-    // Guest can only upload to their authorized task
-    if (conversationId && conversationId !== guestSession.taskId) {
+    if (!conversationId) {
+      return apiBadRequest('conversationId (taskId) is required');
+    }
+
+    // Verify guest session via Authorization header or cookie
+    const guestSession = await verifyGuestSession(request);
+    if (!guestSession) {
+      return apiUnauthorized('Valid guest session required');
+    }
+
+    // Verify conversationId matches authorized task
+    if (conversationId !== guestSession.taskId) {
       return apiUnauthorized('Guest can only upload to their authorized task');
     }
 
-    const taskId = conversationId || guestSession.taskId;
+    const taskId = guestSession.taskId;
 
     // Validate file size
     if (file.size > GUEST_MAX_FILE_SIZE) {

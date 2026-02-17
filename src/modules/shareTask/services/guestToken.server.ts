@@ -216,14 +216,14 @@ export async function redeemGuestToken(
   const taskSnap = await taskRef.get();
   const taskData = taskSnap.data();
 
-  // Create a guest session
-  await createGuestSession({
+  // Create a guest session and get the JWT
+  const sessionToken = await createGuestSession({
     guestName,
     avatar,
     taskId: taskRef.id,
   });
 
-  return { success: true, taskId: taskRef.id, taskName: taskData?.name };
+  return { success: true, taskId: taskRef.id, taskName: taskData?.name, sessionToken };
 }
 
 // ============================================

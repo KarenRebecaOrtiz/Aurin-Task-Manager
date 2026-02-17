@@ -23,9 +23,11 @@ interface GuestPayload {
 }
 
 /**
- * Creates a guest session and sets it as a cookie.
+ * Creates a guest session, sets it as a cookie, and returns the raw JWT.
+ * The JWT is also returned so the client can use it as a Bearer token
+ * for API calls (avoids cookie-related issues with httpOnly cookies).
  */
-export async function createGuestSession(payload: GuestPayload) {
+export async function createGuestSession(payload: GuestPayload): Promise<string> {
   const session = await new SignJWT(payload)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
@@ -36,9 +38,12 @@ export async function createGuestSession(payload: GuestPayload) {
   cookieStore.set(GUEST_SESSION_COOKIE, session, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
     maxAge: 60 * 60 * 24, // 24 hours
     path: '/',
   });
+
+  return session;
 }
 
 /**
@@ -55,6 +60,23 @@ export async function getGuestSession(): Promise<GuestPayload | null> {
     const { payload } = await jwtVerify(sessionCookie.value, secret);
     return payload as unknown as GuestPayload;
   } catch (error) {
+    return null;
+  }
+}
+
+/**
+ * Returns the raw JWT token from the cookie (for passing to client as prop).
+ */
+export async function getGuestSessionToken(): Promise<string | null> {
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get(GUEST_SESSION_COOKIE);
+  if (!sessionCookie?.value) return null;
+
+  // Verify it's still valid before returning
+  try {
+    await jwtVerify(sessionCookie.value, secret);
+    return sessionCookie.value;
+  } catch {
     return null;
   }
 }

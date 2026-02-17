@@ -66,6 +66,9 @@ export interface InputChatProps {
   setIsSending?: React.Dispatch<React.SetStateAction<boolean>>
   disabled?: boolean
 
+  // Guest session token (JWT) for authenticated uploads
+  guestSessionToken?: string | null
+
   // Feature flags
   showWebSearch?: boolean // Show web search toggle (default: false, only for AI assistant)
 
@@ -107,6 +110,7 @@ export const InputChat: React.FC<InputChatProps> = ({
   setIsSending: setIsSendingProp,
   disabled = false,
   showWebSearch = false,
+  guestSessionToken,
 }) => {
   // ========== STORAGE KEY ==========
   const storageKey = useMemo(() => `${DRAFT_STORAGE_KEY_PREFIX}${taskId}`, [taskId])
@@ -345,10 +349,17 @@ export const InputChat: React.FC<InputChatProps> = ({
           formData.append('userId', userId)
         }
 
+        const headers: Record<string, string> = {}
+        if (isGuest && guestSessionToken) {
+          headers['Authorization'] = `Bearer ${guestSessionToken}`
+        } else if (!isGuest) {
+          headers['x-clerk-user-id'] = userId
+        }
+
         const response = await fetch(uploadEndpoint, {
           method: 'POST',
           body: formData,
-          ...(isGuest ? {} : { headers: { 'x-clerk-user-id': userId } }),
+          headers,
         })
 
         if (!response.ok) throw new Error('Failed to upload file')
@@ -384,7 +395,7 @@ export const InputChat: React.FC<InputChatProps> = ({
     } finally {
       setIsSending(false)
     }
-  }, [value, selectedFile, userId, userFirstName, taskId, isSending, isTranscribing, webSearchEnabled, onSendMessage, setIsSending, storageKey])
+  }, [value, selectedFile, userId, userFirstName, taskId, isSending, isTranscribing, webSearchEnabled, onSendMessage, setIsSending, storageKey, guestSessionToken])
 
   const hasContent = value.trim() !== '' || selectedFile !== null
 

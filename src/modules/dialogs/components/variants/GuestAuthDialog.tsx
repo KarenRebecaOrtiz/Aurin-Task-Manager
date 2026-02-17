@@ -29,7 +29,7 @@ interface GuestAuthDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   token: string;
-  onSuccess: (session: { guestName: string; avatar: string }) => void;
+  onSuccess: (session: { guestName: string; avatar: string; sessionToken?: string }) => void;
   predefinedAvatars?: string[];
 }
 
@@ -65,7 +65,7 @@ export function GuestAuthDialog({
     });
 
     if (result.success) {
-      onSuccess({ guestName, avatar: selectedAvatar });
+      onSuccess({ guestName, avatar: selectedAvatar, sessionToken: result.sessionToken });
       onOpenChange(false);
     } else {
       setError(result.error || 'No se pudo verificar el token. Puede que sea inválido o ya haya sido utilizado.');
