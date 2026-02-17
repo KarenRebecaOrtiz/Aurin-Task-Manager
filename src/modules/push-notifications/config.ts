@@ -25,7 +25,7 @@ export const pushAppConfig = {
 export const pushConfig = {
   vapidPublicKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '',
   vapidPrivateKey: process.env.VAPID_PRIVATE_KEY || '',
-  vapidSubject: process.env.VAPID_SUBJECT || 'mailto:soporte@aurincloud.com',
+  vapidSubject: process.env.VAPID_SUBJECT || 'mailto:sodioanalytics@gmail.com',
 };
 
 /**
