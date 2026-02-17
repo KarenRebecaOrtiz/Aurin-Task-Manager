@@ -1,47 +1,139 @@
 'use client';
 
+import { useState, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { BellRing, X } from 'lucide-react';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import styles from './PushNotificationPrompt.module.scss';
 
+const DISMISS_KEY = 'aurin_push_prompt_dismissed';
+
 /**
- * Contextual banner to prompt the user to enable push notifications.
+ * Mobile-only push notification opt-in prompt.
  *
- * - Only renders when push is supported AND the user hasn't subscribed yet
- * - Hides if permission was denied (can't re-prompt)
- * - Button satisfies the "user gesture" requirement for iOS Safari
+ * Appears as a bottom sheet overlay when:
+ * - Push is supported by the browser
+ * - User hasn't subscribed yet
+ * - User hasn't dismissed permanently ("Más tarde")
+ * - Permission hasn't been denied
+ *
+ * Shows after a 2s delay to avoid interrupting initial load.
+ * "Más tarde" saves to localStorage so it never shows again.
  */
 export function PushNotificationPrompt() {
   const { isSupported, isSubscribed, isDenied, subscribe, isLoading } =
     usePushNotifications();
+  const [visible, setVisible] = useState(false);
+  const [dismissed, setDismissed] = useState(true);
 
-  // Don't render if not supported, already subscribed, or permission denied
-  if (!isSupported || isSubscribed || isDenied) return null;
+  // Check localStorage on mount
+  useEffect(() => {
+    try {
+      const wasDismissed = localStorage.getItem(DISMISS_KEY) === 'true';
+      setDismissed(wasDismissed);
+    } catch {
+      setDismissed(false);
+    }
+  }, []);
+
+  // Show prompt after 2s delay (only if conditions met)
+  useEffect(() => {
+    if (!isSupported || isSubscribed || isDenied || dismissed) {
+      setVisible(false);
+      return;
+    }
+
+    const timer = setTimeout(() => setVisible(true), 2000);
+    return () => clearTimeout(timer);
+  }, [isSupported, isSubscribed, isDenied, dismissed]);
+
+  // "Más tarde" → dismiss forever
+  const handleDismiss = useCallback(() => {
+    setVisible(false);
+    try {
+      localStorage.setItem(DISMISS_KEY, 'true');
+    } catch {
+      // Ignore localStorage errors
+    }
+    setDismissed(true);
+  }, []);
+
+  // "Activar" → subscribe then close
+  const handleActivate = useCallback(async () => {
+    await subscribe();
+    setVisible(false);
+  }, [subscribe]);
 
   return (
-    <div className={styles.promptBanner}>
-      <div className={styles.content}>
-        <div className={styles.icon}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-          </svg>
-        </div>
-        <div className={styles.text}>
-          <span className={styles.title}>Activa notificaciones push</span>
-          <span className={styles.description}>
-            Recibe alertas instantaneas sobre tus tareas y equipos
-          </span>
-        </div>
-      </div>
-      <div className={styles.actions}>
-        <button
-          onClick={subscribe}
-          disabled={isLoading}
-          className={styles.enableButton}
-        >
-          {isLoading ? 'Activando...' : 'Activar'}
-        </button>
-      </div>
-    </div>
+    <AnimatePresence>
+      {visible && (
+        <>
+          {/* Backdrop */}
+          <motion.div
+            className={styles.backdrop}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={handleDismiss}
+          />
+
+          {/* Bottom sheet */}
+          <motion.div
+            className={styles.sheet}
+            initial={{ y: '100%', opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: '100%', opacity: 0 }}
+            transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+          >
+            {/* Drag handle */}
+            <div className={styles.handle} />
+
+            {/* Close button */}
+            <button
+              type="button"
+              className={styles.closeBtn}
+              onClick={handleDismiss}
+              aria-label="Cerrar"
+            >
+              <X size={18} />
+            </button>
+
+            {/* Icon */}
+            <div className={styles.iconContainer}>
+              <div className={styles.iconRing}>
+                <BellRing size={28} />
+              </div>
+            </div>
+
+            {/* Text */}
+            <h3 className={styles.title}>No te pierdas nada</h3>
+            <p className={styles.description}>
+              Recibe alertas instantaneas cuando actualicen tus tareas,
+              te asignen nuevas o te envien mensajes.
+            </p>
+
+            {/* Actions */}
+            <div className={styles.actions}>
+              <button
+                type="button"
+                className={styles.primaryBtn}
+                onClick={handleActivate}
+                disabled={isLoading}
+              >
+                {isLoading ? 'Activando...' : 'Activar notificaciones'}
+              </button>
+              <button
+                type="button"
+                className={styles.secondaryBtn}
+                onClick={handleDismiss}
+              >
+                Mas tarde
+              </button>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
   );
 }
