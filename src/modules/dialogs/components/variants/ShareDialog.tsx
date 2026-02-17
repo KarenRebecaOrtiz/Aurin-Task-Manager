@@ -197,20 +197,38 @@ export function ShareDialog({
   }, []);
 
   const handleToggleTokenComments = useCallback(async (tokenId: string, currentValue: boolean, tokenName?: string) => {
+    const newValue = !currentValue;
+
     // Optimistic update
     setGuestTokens(prev => prev.map(t =>
-      t.id === tokenId ? { ...t, commentsEnabled: !currentValue } : t
+      t.id === tokenId ? { ...t, commentsEnabled: newValue } : t
     ));
 
     const result = await updateTokenCommentsEnabledAction({
       taskId,
       tokenId,
-      commentsEnabled: !currentValue,
+      commentsEnabled: newValue,
     });
 
     if (result.success) {
+      // Sync task-level commentsEnabled: if ANY token has comments enabled,
+      // the task must also have commentsEnabled=true for Firestore rules
+      if (newValue) {
+        await updateCommentsEnabledAction({ taskId, enabled: true, entityType });
+        setCommentsEnabled(true);
+      } else {
+        // Check if any other token still has comments enabled
+        const anyTokenWithComments = guestTokens.some(t =>
+          t.id !== tokenId && t.commentsEnabled
+        );
+        if (!anyTokenWithComments) {
+          await updateCommentsEnabledAction({ taskId, enabled: false, entityType });
+          setCommentsEnabled(false);
+        }
+      }
+
       const displayName = tokenName || 'Invitado';
-      if (!currentValue) {
+      if (newValue) {
         success('Permisos actualizados', `"${displayName}" ahora puede comentar.`);
       } else {
         success('Permisos actualizados', `"${displayName}" ahora solo puede ver.`);
@@ -223,7 +241,7 @@ export function ShareDialog({
       const errorMsg = result.error || 'Error al actualizar permisos.';
       showError('No se pudo actualizar', errorMsg);
     }
-  }, [taskId, success, showError]);
+  }, [taskId, success, showError, guestTokens, entityType]);
 
   const handleGenerateInvitation = useCallback(async () => {
     if (isAtLimit || !invitationName.trim()) {
@@ -237,6 +255,11 @@ export function ShareDialog({
     setError(null);
     const result = await generateGuestTokenAction({ taskId, tokenName: invitationName.trim(), entityType });
     if (result.success) {
+      // New tokens have commentsEnabled=true by default, sync task-level
+      if (!commentsEnabled) {
+        await updateCommentsEnabledAction({ taskId, enabled: true, entityType });
+        setCommentsEnabled(true);
+      }
       success('Invitación creada', `La clave de acceso para "${invitationName.trim()}" está lista.`);
       setInvitationName('');
       await loadShareData();
