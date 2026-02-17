@@ -32,8 +32,8 @@ export default function RootLayout({
           <head>
             <link
               rel="apple-touch-icon"
-              sizes="512x512"
-              href="/aurin.jpg"
+              sizes="180x180"
+              href="/favicon/apple-touch-icon.png"
             />
             <link
               rel="icon"
