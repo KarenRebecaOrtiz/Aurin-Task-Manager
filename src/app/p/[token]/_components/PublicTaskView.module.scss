@@ -113,6 +113,30 @@
 }
 
 // ============================================================================
+// SEND ERROR BANNER
+// ============================================================================
+
+.sendErrorBanner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 8px;
+  color: #dc2626;
+  font-size: 0.8125rem;
+  animation: fadeIn 0.2s ease-out;
+
+  :global(.dark) & {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: rgba(239, 68, 68, 0.25);
+    color: #fca5a5;
+  }
+}
+
+// ============================================================================
 // READ-ONLY MESSAGE
 // ============================================================================
 

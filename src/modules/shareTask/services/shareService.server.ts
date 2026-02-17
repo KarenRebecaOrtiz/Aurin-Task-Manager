@@ -52,9 +52,10 @@ export async function enableTaskSharing(
     }
 
     // Update task with sharing fields
+    // Default commentsEnabled to true to match guest token defaults
     await taskRef.update({
       shared: true,
-      commentsEnabled: options.commentsEnabled || false,
+      commentsEnabled: options.commentsEnabled ?? true,
       updatedAt: FieldValue.serverTimestamp(),
     });
 

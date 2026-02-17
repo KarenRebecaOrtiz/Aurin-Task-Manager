@@ -102,6 +102,7 @@ export const useMessageActions = ({
         isPending: false,
         hasError: true,
       });
+      throw error;
     } finally {
       setIsSending(false);
     }

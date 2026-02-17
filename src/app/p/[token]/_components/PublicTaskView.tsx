@@ -47,6 +47,7 @@ export function PublicTaskView({ task, token, tokenStatus, guestSession: initial
   const [guestSession, setGuestSession] = useState<GuestSession | null>(initialGuestSession || null);
   const [isGuestAuthOpen, setIsGuestAuthOpen] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [sendError, setSendError] = useState<string | null>(null);
   const [imagePreviewSrc, setImagePreviewSrc] = useState<string | null>(null);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
 
@@ -125,18 +126,24 @@ export function PublicTaskView({ task, token, tokenStatus, guestSession: initial
   // Handlers
   const handleSendMessage = useCallback(
     async (messageData: Partial<Message>) => {
-      if (userId && !isLoading) {
-        await sendMessage({
-          ...messageData,
-          senderId: userId,
-          senderName: userName,
-        });
-      } else if (guestSession) {
-        await sendMessage({
-          ...messageData,
-          senderId: 'guest',
-          senderName: guestSession.guestName,
-        });
+      setSendError(null);
+      try {
+        if (userId && !isLoading) {
+          await sendMessage({
+            ...messageData,
+            senderId: userId,
+            senderName: userName,
+          });
+        } else if (guestSession) {
+          await sendMessage({
+            ...messageData,
+            senderId: 'guest',
+            senderName: guestSession.guestName,
+          });
+        }
+      } catch {
+        setSendError('No se pudo enviar el mensaje. Es posible que los comentarios estén deshabilitados.');
+        setTimeout(() => setSendError(null), 5000);
       }
     },
     [sendMessage, userId, userName, isLoading, guestSession]
@@ -251,6 +258,11 @@ export function PublicTaskView({ task, token, tokenStatus, guestSession: initial
 
         {/* Input */}
         <div className={styles.chatFooter}>
+          {sendError && (
+            <div className={styles.sendErrorBanner}>
+              <span>{sendError}</span>
+            </div>
+          )}
           {canInteract ? (
             <InputChat
               taskId={task.id}

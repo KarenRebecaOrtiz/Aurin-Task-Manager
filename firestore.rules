@@ -18,7 +18,12 @@ service cloud.firestore {
       );
     }
 
-    // Verificar si la tarea esta compartida publicamente con comentarios habilitados
+    // Verificar si la tarea esta compartida publicamente (solo lectura)
+    function isTaskShared(taskId) {
+      return get(/databases/$(database)/documents/tasks/$(taskId)).data.shared == true;
+    }
+
+    // Verificar si la tarea esta compartida publicamente con comentarios habilitados (lectura + escritura)
     function isTaskPubliclyShared(taskId) {
       let taskData = get(/databases/$(database)/documents/tasks/$(taskId)).data;
       return taskData.shared == true && taskData.commentsEnabled == true;
@@ -73,9 +78,9 @@ service cloud.firestore {
       match /messages/{messageId} {
         // LECTURA:
         // - Usuarios involucrados en la tarea
-        // - Invitados en tareas compartidas publicamente
+        // - Invitados en tareas compartidas (solo necesita shared=true, no commentsEnabled)
         allow read, list: if (request.auth != null && (isAdmin() || isInvolvedInTask(taskId))) ||
-                          isTaskPubliclyShared(taskId);
+                          isTaskShared(taskId);
 
         // CREACION:
         // - Usuarios involucrados: pueden enviar mensajes normales o de agente
