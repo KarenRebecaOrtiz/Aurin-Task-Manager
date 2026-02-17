@@ -176,21 +176,26 @@ export function TasksPanel() {
     if (!header) { lastScrollY.current = currentY; return }
 
     if (delta > scrollThreshold && currentY > 40 && headerVisibleRef.current) {
-      // Scrolling down — hide
+      // Scrolling down — hide header and collapse its space
       headerVisibleRef.current = false
       gsap.to(header, {
         y: '-100%',
         autoAlpha: 0,
+        height: 0,
+        marginBottom: 0,
+        overflow: 'hidden',
         duration: 0.45,
         ease: 'power3.inOut',
         overwrite: true,
       })
     } else if (delta < -scrollThreshold && !headerVisibleRef.current) {
-      // Scrolling up — show
+      // Scrolling up — show header and restore space
       headerVisibleRef.current = true
       gsap.to(header, {
         y: '0%',
         autoAlpha: 1,
+        height: 'auto',
+        clearProps: 'overflow,marginBottom',
         duration: 0.45,
         ease: 'power3.out',
         overwrite: true,
