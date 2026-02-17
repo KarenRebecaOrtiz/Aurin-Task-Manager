@@ -8,17 +8,43 @@
 
 import { NextRequest } from 'next/server';
 import { put } from '@vercel/blob';
-import { getGuestSession } from '@/modules/shareTask/services/session.server';
+import { jwtVerify } from 'jose';
 import { apiSuccess, apiBadRequest, apiUnauthorized, handleApiError } from '@/lib/api/response';
 
+const GUEST_SESSION_COOKIE = 'guest_session';
 const GUEST_MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB
-
 const GUEST_VALID_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf'];
+
+const secret = new TextEncoder().encode(
+  process.env.GUEST_SESSION_SECRET || 'super-secret-key-for-guest-sessions-dev-only'
+);
+
+interface GuestPayload {
+  guestName: string;
+  avatar: string;
+  taskId: string;
+}
+
+/**
+ * Verify guest session directly from request cookies
+ * (avoids importing 'use server' module in Route Handler)
+ */
+async function verifyGuestSession(request: NextRequest): Promise<GuestPayload | null> {
+  const cookie = request.cookies.get(GUEST_SESSION_COOKIE);
+  if (!cookie?.value) return null;
+
+  try {
+    const { payload } = await jwtVerify(cookie.value, secret);
+    return payload as unknown as GuestPayload;
+  } catch {
+    return null;
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
-    // Validate guest session via JWT cookie
-    const guestSession = await getGuestSession();
+    // Validate guest session via JWT cookie directly from request
+    const guestSession = await verifyGuestSession(request);
     if (!guestSession || !guestSession.taskId) {
       return apiUnauthorized('Guest session required');
     }
