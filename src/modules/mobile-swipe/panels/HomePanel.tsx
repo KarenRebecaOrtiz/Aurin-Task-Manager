@@ -266,7 +266,7 @@ export function HomePanel() {
 
           <div
             ref={inputAreaRef}
-            className={`${styles.inputArea} ${keyboardOpen ? styles.inputAreaFloating : ''}`}
+            className={`${styles.inputArea} ${styles.inputAreaNonAdmin} ${keyboardOpen ? styles.inputAreaFloating : ''}`}
             style={keyboardOpen ? { bottom: keyboardHeight } : undefined}
           >
             <SmartInput />

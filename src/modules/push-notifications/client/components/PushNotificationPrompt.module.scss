@@ -1,0 +1,214 @@
+// Push Notification Opt-in Bottom Sheet
+// Mobile-only prompt using global design system variables
+
+@use '@/app/styles/variables' as *;
+
+// ============================================================================
+// BACKDROP
+// ============================================================================
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: rgba($black, 0.4);
+  -webkit-tap-highlight-color: transparent;
+}
+
+// ============================================================================
+// BOTTOM SHEET
+// ============================================================================
+
+.sheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1201;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: $spacing-md $spacing-2xl $spacing-3xl;
+  background: $white;
+  border-radius: $radius-2xl $radius-2xl 0 0;
+  box-shadow: $shadow-popup-light;
+
+  // Safe area for iPhone notch
+  padding-bottom: calc(#{$spacing-3xl} + env(safe-area-inset-bottom, 0px));
+
+  :global(.dark) & {
+    background: $zinc-900;
+    box-shadow: $shadow-popup-dark;
+  }
+}
+
+// ============================================================================
+// DRAG HANDLE
+// ============================================================================
+
+.handle {
+  width: 2.25rem;
+  height: 0.25rem;
+  border-radius: $radius-full;
+  background: $zinc-300;
+  margin-bottom: $spacing-lg;
+  flex-shrink: 0;
+
+  :global(.dark) & {
+    background: $zinc-700;
+  }
+}
+
+// ============================================================================
+// CLOSE BUTTON
+// ============================================================================
+
+.closeBtn {
+  position: absolute;
+  top: $spacing-lg;
+  right: $spacing-lg;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  background: $zinc-100;
+  border-radius: $radius-full;
+  color: $zinc-500;
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:active {
+    background: $zinc-200;
+  }
+
+  :global(.dark) & {
+    background: $zinc-800;
+    color: $zinc-400;
+
+    &:active {
+      background: $zinc-700;
+    }
+  }
+}
+
+// ============================================================================
+// ICON
+// ============================================================================
+
+.iconContainer {
+  margin-bottom: $spacing-lg;
+}
+
+.iconRing {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: $radius-lg;
+  background: rgba($brand-primary, 0.12);
+  color: $brand-primary;
+
+  :global(.dark) & {
+    background: rgba($brand-primary, 0.15);
+  }
+}
+
+// ============================================================================
+// TEXT
+// ============================================================================
+
+.title {
+  margin: 0 0 $spacing-xs;
+  font-size: $text-lg;
+  font-weight: $font-weight-bold;
+  color: $zinc-900;
+  text-align: center;
+  letter-spacing: -0.01em;
+
+  :global(.dark) & {
+    color: $zinc-50;
+  }
+}
+
+.description {
+  margin: 0 0 $spacing-xl;
+  font-size: $text-sm;
+  line-height: $leading-normal;
+  color: $zinc-500;
+  text-align: center;
+  max-width: 280px;
+
+  :global(.dark) & {
+    color: $zinc-400;
+  }
+}
+
+// ============================================================================
+// ACTIONS
+// ============================================================================
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm + 2px;
+  width: 100%;
+  max-width: 320px;
+}
+
+.primaryBtn {
+  width: 100%;
+  padding: $spacing-md $spacing-2xl;
+  font-size: $text-base;
+  font-weight: $font-weight-semibold;
+  color: $black;
+  background: $brand-primary;
+  border: none;
+  border-radius: $radius-xl;
+  cursor: pointer;
+  transition: $transition-fast;
+  -webkit-tap-highlight-color: transparent;
+
+  // Touch target: at least 44px
+  min-height: 44px;
+
+  &:active:not(:disabled) {
+    background: $brand-primary-hover;
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}
+
+.secondaryBtn {
+  width: 100%;
+  padding: $spacing-md $spacing-2xl;
+  font-size: $text-sm;
+  font-weight: $font-weight-medium;
+  color: $zinc-500;
+  background: none;
+  border: none;
+  border-radius: $radius-xl;
+  cursor: pointer;
+  transition: $transition-fast;
+  -webkit-tap-highlight-color: transparent;
+
+  // Touch target: at least 44px
+  min-height: 44px;
+
+  &:active {
+    color: $zinc-600;
+  }
+
+  :global(.dark) & {
+    color: $zinc-400;
+
+    &:active {
+      color: $zinc-300;
+    }
+  }
+}

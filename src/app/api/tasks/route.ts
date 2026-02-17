@@ -13,7 +13,7 @@ import { Timestamp, FieldValue } from 'firebase-admin/firestore';
 import { withAuth } from '@/lib/api/auth';
 import { apiSuccess, apiCreated, apiBadRequest, handleApiError } from '@/lib/api/response';
 import { createTaskSchema, taskQuerySchema } from '@/lib/validations/task.schema';
-import { mailer } from '@/modules/mailer';
+import { notifier } from '@/modules/notifications';
 
 /**
  * POST /api/tasks
@@ -96,13 +96,13 @@ export const POST = withAuth(async (userId, request: NextRequest) => {
     if (recipients.length > 0) {
       try {
         console.log('[API] POST - Notification recipients:', { LeadedBy: taskData.LeadedBy, AssignedTo: taskData.AssignedTo, actorId: userId, total: recipients.length });
-        const result = await mailer.notifyTaskCreated({
+        const result = await notifier.notifyTaskCreated({
           recipientIds: recipients,
           taskId,
           actorId: userId,
         });
 
-        console.log('[API] Email notifications sent:', result.sent, 'successful,', result.failed, 'failed');
+        console.log('[API] Notifications dispatched (email + push)');
       } catch (notificationError) {
         console.error('[API] Failed to send notifications:', notificationError);
         // Don't fail the request if notifications fail

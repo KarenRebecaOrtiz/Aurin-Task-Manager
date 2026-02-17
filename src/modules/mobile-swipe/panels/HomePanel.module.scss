@@ -34,6 +34,10 @@
   padding-bottom: 10px;
 }
 
+.inputAreaNonAdmin {
+  margin-bottom: 10px;
+}
+
 // Floats input above virtual keyboard (native app feel)
 .inputAreaFloating {
   position: fixed;
@@ -67,54 +71,62 @@
 }
 
 .logoShimmer {
+  position: relative;
   width: 180px;
   height: 65px;
-  -webkit-mask-image: url('/logoLight.svg');
-  mask-image: url('/logoLight.svg');
-  -webkit-mask-size: contain;
-  mask-size: contain;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  mask-position: center;
-
-  background:
-    linear-gradient(
-      110deg,
-      transparent 20%,
-      rgba(255, 255, 255, 0.8) 45%,
-      rgba(255, 255, 255, 1) 50%,
-      rgba(255, 255, 255, 0.8) 55%,
-      transparent 80%
-    ),
-    rgba(0, 0, 0, 0.06);
-  background-size: 250% 100%, 100% 100%;
-  background-repeat: no-repeat;
-  animation: logoShimmer 3s ease-in-out infinite;
+  background: url('/logoLight.svg') center / contain no-repeat;
 
   :global(body.dark) & {
+    background-image: url('/logoDark.svg');
+  }
+
+  // Shimmer glow overlay — clipped to logo shape
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    -webkit-mask-image: url('/logoLight.svg');
+    mask-image: url('/logoLight.svg');
+    -webkit-mask-size: contain;
+    mask-size: contain;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+    --shimmer-spread: 40px;
     background:
       linear-gradient(
-        110deg,
-        transparent 20%,
-        rgba(255, 255, 255, 0.5) 45%,
-        rgba(255, 255, 255, 0.7) 50%,
-        rgba(255, 255, 255, 0.5) 55%,
-        transparent 80%
-      ),
-      rgba(255, 255, 255, 0.04);
-    background-size: 250% 100%, 100% 100%;
+        90deg,
+        #0000 calc(50% - var(--shimmer-spread)),
+        rgba(255, 255, 255, 0.6) 50%,
+        #0000 calc(50% + var(--shimmer-spread))
+      );
+    background-size: 250% 100%;
     background-repeat: no-repeat;
-    animation: logoShimmer 3s ease-in-out infinite;
+    animation: logoShimmer 2s linear infinite;
+
+    :global(body.dark) & {
+      -webkit-mask-image: url('/logoDark.svg');
+      mask-image: url('/logoDark.svg');
+      background:
+        linear-gradient(
+          90deg,
+          #0000 calc(50% - var(--shimmer-spread)),
+          rgba(255, 255, 255, 0.45) 50%,
+          #0000 calc(50% + var(--shimmer-spread))
+        );
+      background-size: 250% 100%;
+      background-repeat: no-repeat;
+    }
   }
 }
 
 @keyframes logoShimmer {
   0% {
-    background-position: 200% center, 0 0;
+    background-position: 100% center;
   }
   100% {
-    background-position: -200% center, 0 0;
+    background-position: 0% center;
   }
 }
 

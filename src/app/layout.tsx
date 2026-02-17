@@ -7,6 +7,7 @@ import { DialogProvider } from "@/modules/dialogs";
 import { SileoToaster } from "@/modules/toast";
 import { InteractiveBackground } from "@/components/ui/InteractiveBackground";
 import { LightRaysWrapper } from "@/components/ui/LightRaysWrapper";
+import { ServiceWorkerProvider } from "@/modules/push-notifications/client/ServiceWorkerProvider";
 
 const urbanist = Urbanist({
   subsets: ["latin"],
@@ -107,9 +108,11 @@ export default function RootLayout({
                 </filter>
               </defs>
             </svg>
-            <DialogProvider>
-              {children}
-            </DialogProvider>
+            <ServiceWorkerProvider>
+              <DialogProvider>
+                {children}
+              </DialogProvider>
+            </ServiceWorkerProvider>
             <SileoToaster position="top-right" />
             <div id="portal-root" />
           </body>

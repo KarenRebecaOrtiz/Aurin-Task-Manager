@@ -1,4 +1,4 @@
-// Service Worker para Push Notifications
+// Service Worker para Push Notifications + Cache
 const CACHE_NAME = 'task-app-v1';
 const STATIC_CACHE_URLS = [
   '/',
@@ -9,7 +9,7 @@ const STATIC_CACHE_URLS = [
 // Instalación del service worker
 self.addEventListener('install', (event) => {
   console.log('[SW] Installing service worker...');
-  
+
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
@@ -29,7 +29,7 @@ self.addEventListener('install', (event) => {
 // Activación del service worker
 self.addEventListener('activate', (event) => {
   console.log('[SW] Activating service worker...');
-  
+
   event.waitUntil(
     caches.keys()
       .then((cacheNames) => {
@@ -92,79 +92,85 @@ self.addEventListener('fetch', (event) => {
 
 // Manejar push notifications
 self.addEventListener('push', (event) => {
-  console.log('[SW] Push event received:', event);
-  
-  let notificationData = {
-    title: 'Nueva Notificación',
-    body: 'Tienes una nueva notificación',
-    icon: '/favicon.ico',
-    badge: '/favicon.ico',
-    tag: 'task-app-notification',
-    requireInteraction: false,
-    data: {}
-  };
+  console.log('[SW] Push event received');
 
-  // Si hay datos en el push
+  let data = {};
+
   if (event.data) {
     try {
-      const data = event.data.json();
-      notificationData = {
-        ...notificationData,
-        title: data.title || notificationData.title,
-        body: data.body || notificationData.body,
-        icon: data.icon || notificationData.icon,
-        data: data
-      };
+      data = event.data.json();
     } catch (error) {
       console.error('[SW] Error parsing push data:', error);
     }
   }
 
+  const title = data.title || 'Aurin Task Manager';
+  const options = {
+    body: data.body || 'Tienes una nueva notificación',
+    icon: data.icon || '/favicon/android-chrome-192x192.png',
+    badge: data.badge || '/favicon/favicon-32x32.png',
+    tag: data.tag || 'aurin-general',
+    renotify: true,
+    requireInteraction: false,
+    vibrate: [200, 100, 200],
+    data: {
+      url: data.url || '/',
+      type: data.type || 'general',
+      timestamp: Date.now(),
+      ...(data.data || {}),
+    },
+    actions: [
+      { action: 'open', title: 'Ver' },
+      { action: 'dismiss', title: 'Cerrar' },
+    ],
+  };
+
   event.waitUntil(
-    self.registration.showNotification(
-      notificationData.title,
-      notificationData
-    )
+    self.registration.showNotification(title, options)
   );
 });
 
-// Manejar clicks en notificaciones
+// Manejar clicks en notificaciones - deep linking
 self.addEventListener('notificationclick', (event) => {
-  console.log('[SW] Notification clicked:', event);
-  
+  console.log('[SW] Notification clicked');
+
   event.notification.close();
 
-  if (event.action === 'open') {
-    // Abrir la aplicación
-    event.waitUntil(
-      clients.matchAll({ type: 'window' })
-        .then((clientList) => {
-          // Si ya hay una ventana abierta, enfocarla
-          for (const client of clientList) {
-            if (client.url.includes(self.location.origin) && 'focus' in client) {
-              return client.focus();
-            }
+  // Si el usuario hizo click en "Cerrar", no hacer nada
+  if (event.action === 'dismiss') return;
+
+  // Leer la URL del deep link
+  const targetUrl = event.notification.data?.url || '/';
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then((clientList) => {
+        // Si hay una ventana abierta del mismo origen, navegar y enfocar
+        for (const client of clientList) {
+          if (client.url.includes(self.location.origin) && 'focus' in client) {
+            client.navigate(targetUrl);
+            return client.focus();
           }
-          
-          // Si no hay ventana abierta, abrir una nueva
-          if (clients.openWindow) {
-            return clients.openWindow('/');
-          }
-        })
-    );
-  }
+        }
+
+        // Si no hay ventana abierta, abrir una nueva
+        if (clients.openWindow) {
+          return clients.openWindow(targetUrl);
+        }
+      })
+  );
 });
 
 // Manejar cierre de notificaciones
 self.addEventListener('notificationclose', (event) => {
-  console.log('[SW] Notification closed:', event);
+  console.log('[SW] Notification closed');
 });
 
 // Manejar mensajes del cliente
 self.addEventListener('message', (event) => {
   console.log('[SW] Message received from client:', event.data);
-  
+
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
-}); 
+});

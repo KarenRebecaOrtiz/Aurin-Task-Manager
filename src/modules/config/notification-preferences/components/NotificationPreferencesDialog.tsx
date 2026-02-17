@@ -14,7 +14,8 @@
 import React, { useCallback, useMemo, useRef, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { sileo } from 'sileo';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Mail, BellRing } from 'lucide-react';
+import type { NotificationChannel } from '../stores/notificationPreferencesStore';
 import {
   ResponsiveDialog,
   ResponsiveDialogContent,
@@ -24,6 +25,7 @@ import {
 } from '@/modules/dialogs';
 import { useMediaQuery } from '@/modules/dialogs/hooks/useMediaQuery';
 import { useNotificationPreferences } from '../hooks';
+import { useNotificationPreferencesStore } from '../stores';
 import {
   TASK_NOTIFICATION_PREFERENCES_CONFIG,
   TEAM_NOTIFICATION_PREFERENCES_CONFIG,
@@ -95,14 +97,19 @@ interface MasterToggleProps {
   enabled: boolean;
   onChange: (enabled: boolean) => void;
   disabled?: boolean;
+  channel: NotificationChannel;
 }
 
-function MasterToggle({ enabled, onChange, disabled }: MasterToggleProps) {
+function MasterToggle({ enabled, onChange, disabled, channel }: MasterToggleProps) {
+  const label = channel === 'push'
+    ? 'Recibir notificaciones push'
+    : 'Recibir notificaciones por correo';
+
   return (
     <div className={styles.masterToggle}>
       <div className={styles.masterToggleContent}>
         <span className={styles.masterToggleLabel}>
-          Recibir notificaciones por correo
+          {label}
         </span>
         <span className={styles.masterToggleDescription}>
           Activa o desactiva todas las notificaciones de un solo paso
@@ -112,7 +119,7 @@ function MasterToggle({ enabled, onChange, disabled }: MasterToggleProps) {
         type="button"
         role="switch"
         aria-checked={enabled}
-        aria-label="Recibir notificaciones por correo"
+        aria-label={label}
         className={`${styles.switch} ${styles.switchLarge} ${enabled ? styles.switchActive : ''}`}
         onClick={() => onChange(!enabled)}
         disabled={disabled}
@@ -245,15 +252,22 @@ export function NotificationPreferencesDialog() {
     isOpen,
     entityType,
     entityName,
+    activeChannel,
     preferences,
+    pushPreferences,
     isSaving,
     isLoading,
     error,
     close,
+    setActiveChannel,
     updatePreference,
     enableAll,
     disableAll,
+    updatePushPreference,
+    enableAllPush,
+    disableAllPush,
     save,
+    savePush,
   } = useNotificationPreferences();
 
   // Reset expanded state when dialog closes
@@ -289,51 +303,68 @@ export function NotificationPreferencesDialog() {
     return grouped;
   }, [preferencesConfig]);
 
-  // Preferences as record for easy access
-  const prefsRecord = preferences as unknown as Record<string, boolean>;
+  // Preferences as record for easy access (channel-aware)
+  const currentPreferences = activeChannel === 'push' ? pushPreferences : preferences;
+  const prefsRecord = currentPreferences as unknown as Record<string, boolean>;
 
   // Calculate if all notifications are enabled (for master toggle)
   const allEnabled = useMemo(() => {
     return Object.values(prefsRecord).every((value) => value === true);
   }, [prefsRecord]);
 
-  // Auto-save function with debounce
+  // Auto-save function with debounce (channel-aware)
   const triggerAutoSave = useCallback(() => {
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
 
     saveTimeoutRef.current = setTimeout(async () => {
-      const success = await save();
+      const channel = useNotificationPreferencesStore.getState().activeChannel;
+      const saveFn = channel === 'push' ? savePush : save;
+      const success = await saveFn();
       if (success) {
         sileo.success({ title: 'Preferencias guardadas', description: 'Tus notificaciones se ajustaron correctamente.', duration: 3000 });
       }
     }, 500);
-  }, [save]);
+  }, [save, savePush]);
 
-  // Handle preference change with auto-save
+  // Handle preference change with auto-save (channel-aware)
   const handlePreferenceChange = useCallback((key: string, value: boolean) => {
-    updatePreference(key, value);
-    triggerAutoSave();
-  }, [updatePreference, triggerAutoSave]);
-
-  // Handle category group toggle
-  const handleCategoryToggle = useCallback((items: AnyPreferenceConfig[], enabled: boolean) => {
-    for (const item of items) {
-      updatePreference(item.key, enabled);
-    }
-    triggerAutoSave();
-  }, [updatePreference, triggerAutoSave]);
-
-  // Handle master toggle with auto-save
-  const handleMasterToggle = useCallback((enabled: boolean) => {
-    if (enabled) {
-      enableAll();
+    if (activeChannel === 'push') {
+      updatePushPreference(key, value);
     } else {
-      disableAll();
+      updatePreference(key, value);
     }
     triggerAutoSave();
-  }, [enableAll, disableAll, triggerAutoSave]);
+  }, [activeChannel, updatePreference, updatePushPreference, triggerAutoSave]);
+
+  // Handle category group toggle (channel-aware)
+  const handleCategoryToggle = useCallback((items: AnyPreferenceConfig[], enabled: boolean) => {
+    const updateFn = activeChannel === 'push' ? updatePushPreference : updatePreference;
+    for (const item of items) {
+      updateFn(item.key, enabled);
+    }
+    triggerAutoSave();
+  }, [activeChannel, updatePreference, updatePushPreference, triggerAutoSave]);
+
+  // Handle master toggle with auto-save (channel-aware)
+  const handleMasterToggle = useCallback((enabled: boolean) => {
+    if (activeChannel === 'push') {
+      enabled ? enableAllPush() : disableAllPush();
+    } else {
+      enabled ? enableAll() : disableAll();
+    }
+    triggerAutoSave();
+  }, [activeChannel, enableAll, disableAll, enableAllPush, disableAllPush, triggerAutoSave]);
+
+  // Handle channel tab switch
+  const handleChannelSwitch = useCallback((channel: NotificationChannel) => {
+    // Save pending changes before switching
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    setActiveChannel(channel);
+  }, [setActiveChannel]);
 
   // Toggle accordion expansion
   const toggleCategory = useCallback((category: string) => {
@@ -365,13 +396,13 @@ export function NotificationPreferencesDialog() {
     close();
   }, [close]);
 
-  const dialogTitle = 'Preferencias de correo';
+  const dialogTitle = 'Preferencias de notificaciones';
 
   const dialogSubtitle = entityName
-    ? `Decide qué correos quieres recibir sobre la actividad en ${entityName}`
+    ? `Decide qué notificaciones quieres recibir sobre la actividad en ${entityName}`
     : entityType === 'team'
-      ? 'Decide qué correos quieres recibir sobre la actividad de este equipo'
-      : 'Decide qué correos quieres recibir sobre la actividad de esta tarea';
+      ? 'Decide qué notificaciones quieres recibir sobre la actividad de este equipo'
+      : 'Decide qué notificaciones quieres recibir sobre la actividad de esta tarea';
 
   // ============================================================================
   // FORM CONTENT
@@ -380,6 +411,26 @@ export function NotificationPreferencesDialog() {
   const formContent = (
     <div className={styles.content}>
       {error && <div className={styles.error}>{error}</div>}
+
+      {/* Channel Tabs */}
+      <div className={styles.channelTabs}>
+        <button
+          type="button"
+          className={`${styles.channelTab} ${activeChannel === 'email' ? styles.channelTabActive : ''}`}
+          onClick={() => handleChannelSwitch('email')}
+        >
+          <Mail size={14} />
+          <span>Correo</span>
+        </button>
+        <button
+          type="button"
+          className={`${styles.channelTab} ${activeChannel === 'push' ? styles.channelTabActive : ''}`}
+          onClick={() => handleChannelSwitch('push')}
+        >
+          <BellRing size={14} />
+          <span>Push</span>
+        </button>
+      </div>
 
       {isLoading ? (
         <div className={styles.loading}>
@@ -392,6 +443,7 @@ export function NotificationPreferencesDialog() {
             enabled={allEnabled}
             onChange={handleMasterToggle}
             disabled={isSaving}
+            channel={activeChannel}
           />
 
           <div className={styles.divider} />

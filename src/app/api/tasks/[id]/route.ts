@@ -15,7 +15,7 @@ import { Timestamp, FieldValue } from 'firebase-admin/firestore';
 import { withAuth } from '@/lib/api/auth';
 import { apiSuccess, apiNoContent, apiBadRequest, apiNotFound, apiForbidden, handleApiError } from '@/lib/api/response';
 import { updateTaskSchema, patchTaskSchema, Task } from '@/lib/validations/task.schema';
-import { mailer } from '@/modules/mailer';
+import { notifier } from '@/modules/notifications';
 import { clerkClient } from '@clerk/nextjs/server';
 
 /**
@@ -175,7 +175,7 @@ export const PUT = withAuth(async (userId, request: NextRequest, context: { para
 
         if (updateData.status && updateData.status !== existingTask.status) {
           // Status changed
-          result = await mailer.notifyTaskStatusChanged({
+          result = await notifier.notifyTaskStatusChanged({
             recipientIds: recipients,
             taskId,
             actorId: userId,
@@ -184,7 +184,7 @@ export const PUT = withAuth(async (userId, request: NextRequest, context: { para
           });
         } else if (updateData.priority && updateData.priority !== existingTask.priority) {
           // Priority changed
-          result = await mailer.notifyTaskPriorityChanged({
+          result = await notifier.notifyTaskPriorityChanged({
             recipientIds: recipients,
             taskId,
             actorId: userId,
@@ -193,7 +193,7 @@ export const PUT = withAuth(async (userId, request: NextRequest, context: { para
           });
         } else if (updateData.startDate !== existingTask.startDate || updateData.endDate !== existingTask.endDate) {
           // Dates changed
-          result = await mailer.notifyTaskDatesChanged({
+          result = await notifier.notifyTaskDatesChanged({
             recipientIds: recipients,
             taskId,
             actorId: userId,
@@ -201,21 +201,21 @@ export const PUT = withAuth(async (userId, request: NextRequest, context: { para
         } else if (JSON.stringify(updateData.AssignedTo) !== JSON.stringify(existingTask.AssignedTo) ||
                    JSON.stringify(updateData.LeadedBy) !== JSON.stringify(existingTask.LeadedBy)) {
           // Assignment changed
-          result = await mailer.notifyTaskAssignmentChanged({
+          result = await notifier.notifyTaskAssignmentChanged({
             recipientIds: recipients,
             taskId,
             actorId: userId,
           });
         } else {
           // General update
-          result = await mailer.notifyTaskUpdated({
+          result = await notifier.notifyTaskUpdated({
             recipientIds: recipients,
             taskId,
             actorId: userId,
           });
         }
 
-        console.log('[API] Email notifications sent:', result.sent, 'successful,', result.failed, 'failed');
+        console.log('[API] PUT - Notifications dispatched (email + push)');
       } catch (notificationError) {
         console.warn('[API] Failed to send notifications:', notificationError);
         // Don't fail the request if notifications fail
@@ -276,13 +276,13 @@ export const DELETE = withAuth(async (userId, request: NextRequest, context: { p
 
     if (recipients.length > 0) {
       try {
-        const result = await mailer.notifyTaskDeleted({
+        const result = await notifier.notifyTaskDeleted({
           recipientIds: recipients,
           taskId,
           actorId: userId,
         });
 
-        console.log('[API] DELETE - Email notifications sent:', result.sent, 'successful,', result.failed, 'failed');
+        console.log('[API] DELETE - Notifications dispatched (email + push)');
       } catch (notificationError) {
         console.warn('[API] DELETE - Failed to send notifications:', notificationError);
         // Don't fail the request if notifications fail
@@ -390,7 +390,7 @@ export const PATCH = withAuth(async (userId, request: NextRequest, context: { pa
 
         if (patchData.status !== undefined && patchData.status !== existingTask.status) {
           // Status changed
-          result = await mailer.notifyTaskStatusChanged({
+          result = await notifier.notifyTaskStatusChanged({
             recipientIds: recipients,
             taskId,
             actorId: userId,
@@ -399,7 +399,7 @@ export const PATCH = withAuth(async (userId, request: NextRequest, context: { pa
           });
         } else if (patchData.priority !== undefined && patchData.priority !== existingTask.priority) {
           // Priority changed
-          result = await mailer.notifyTaskPriorityChanged({
+          result = await notifier.notifyTaskPriorityChanged({
             recipientIds: recipients,
             taskId,
             actorId: userId,
@@ -408,7 +408,7 @@ export const PATCH = withAuth(async (userId, request: NextRequest, context: { pa
           });
         } else if (patchData.startDate !== existingTask.startDate || patchData.endDate !== existingTask.endDate) {
           // Dates changed
-          result = await mailer.notifyTaskDatesChanged({
+          result = await notifier.notifyTaskDatesChanged({
             recipientIds: recipients,
             taskId,
             actorId: userId,
@@ -416,21 +416,21 @@ export const PATCH = withAuth(async (userId, request: NextRequest, context: { pa
         } else if (JSON.stringify(patchData.AssignedTo) !== JSON.stringify(existingTask.AssignedTo) ||
                    JSON.stringify(patchData.LeadedBy) !== JSON.stringify(existingTask.LeadedBy)) {
           // Assignment changed
-          result = await mailer.notifyTaskAssignmentChanged({
+          result = await notifier.notifyTaskAssignmentChanged({
             recipientIds: recipients,
             taskId,
             actorId: userId,
           });
         } else {
           // General update
-          result = await mailer.notifyTaskUpdated({
+          result = await notifier.notifyTaskUpdated({
             recipientIds: recipients,
             taskId,
             actorId: userId,
           });
         }
 
-        console.log('[API] PATCH - Email notifications sent:', result.sent, 'successful,', result.failed, 'failed');
+        console.log('[API] PATCH - Notifications dispatched (email + push)');
       } catch (notificationError) {
         console.warn('[API] PATCH - Failed to send notifications:', notificationError);
         // Don't fail the request if notifications fail

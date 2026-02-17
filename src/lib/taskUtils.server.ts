@@ -14,7 +14,7 @@ import 'server-only';
 
 import { db } from './firebase';
 import { collection, getDocs, query, deleteDoc, doc, where, updateDoc, Timestamp, writeBatch } from 'firebase/firestore';
-import { mailer } from '@/modules/mailer';
+import { notifier } from '@/modules/notifications';
 import { refreshTasksCache } from '@/services/taskService';
 
 // Helper function for conditional logging (only in development)
@@ -205,12 +205,12 @@ export async function deleteTask(taskId: string, userId: string, isAdmin: boolea
 
     if (recipients.length > 0) {
       try {
-        const result = await mailer.notifyTaskDeleted({
+        const result = await notifier.notifyTaskDeleted({
           recipientIds: recipients,
           taskId,
           actorId: userId,
         });
-        debugLog('[taskUtils] Delete email notifications sent:', result.sent, 'successful,', result.failed, 'failed');
+        debugLog('[taskUtils] Delete notifications dispatched (email + push)');
       } catch (error) {
         debugError('[taskUtils] Error sending delete email notifications:', error);
         // Don't fail the main operation due to notification errors
@@ -254,12 +254,12 @@ export async function archiveTask(taskId: string, userId: string, isAdmin: boole
 
     if (recipients.length > 0) {
       try {
-        const result = await mailer.notifyTaskArchived({
+        const result = await notifier.notifyTaskArchived({
           recipientIds: recipients,
           taskId,
           actorId: userId,
         });
-        debugLog('[taskUtils] Archive email notifications sent:', result.sent, 'successful,', result.failed, 'failed');
+        debugLog('[taskUtils] Archive notifications dispatched (email + push)');
       } catch (error) {
         debugError('[taskUtils] Error sending archive email notifications:', error);
         // Don't fail the main operation due to notification errors
@@ -300,12 +300,12 @@ export async function unarchiveTask(taskId: string, userId: string, isAdmin: boo
 
     if (recipients.length > 0) {
       try {
-        const result = await mailer.notifyTaskUnarchived({
+        const result = await notifier.notifyTaskUnarchived({
           recipientIds: recipients,
           taskId,
           actorId: userId,
         });
-        debugLog('[taskUtils] Unarchive email notifications sent:', result.sent, 'successful,', result.failed, 'failed');
+        debugLog('[taskUtils] Unarchive notifications dispatched (email + push)');
       } catch (error) {
         debugError('[taskUtils] Error sending unarchive email notifications:', error);
         // Don't fail the main operation due to notification errors

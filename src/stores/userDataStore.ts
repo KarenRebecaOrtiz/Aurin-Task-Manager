@@ -42,6 +42,16 @@ export interface UserEmailPreferences {
 }
 
 /**
+ * Preferencias de notificaciones push
+ */
+export interface UserPushPreferences {
+  messages: boolean;
+  creation: boolean;
+  edition: boolean;
+  timers: boolean;
+}
+
+/**
  * Datos completos del usuario desde Firestore
  * Esta es la Single Source of Truth
  */
@@ -81,6 +91,8 @@ export interface UserData {
   grayscale?: boolean;
   soundEnabled?: boolean;
   emailPreferences?: UserEmailPreferences;
+  pushNotificationsEnabled?: boolean;
+  pushPreferences?: UserPushPreferences;
   
   // Social
   socialLinks?: UserSocialLinks;

@@ -31,6 +31,20 @@ export interface EmailPreferences {
 }
 
 /**
+ * Preferencias de notificaciones push
+ */
+export interface PushPreferences {
+  /** Notificaciones push de mensajes */
+  messages: boolean;
+  /** Notificaciones push de creación de tareas */
+  creation: boolean;
+  /** Notificaciones push de edición de tareas */
+  edition: boolean;
+  /** Notificaciones push de timers */
+  timers: boolean;
+}
+
+/**
  * Configuración completa del usuario
  */
 export interface Config {
@@ -76,6 +90,10 @@ export interface Config {
   status?: string;
   /** Preferencias de email para notificaciones */
   emailPreferences?: EmailPreferences;
+  /** Notificaciones push habilitadas */
+  pushNotificationsEnabled?: boolean;
+  /** Preferencias de push para notificaciones */
+  pushPreferences?: PushPreferences;
   /** Redes sociales */
   socialLinks?: SocialLinks;
 }

@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Small, Muted } from '@/components/ui/Typography';
 import { useProfileFormStore } from '../../stores';
+import { usePushNotifications } from '@/modules/push-notifications/client/hooks/usePushNotifications';
 import styles from './NotificationsSection.module.scss';
 
 interface NotificationsSectionProps {
@@ -35,6 +36,7 @@ export const NotificationsSection: React.FC<NotificationsSectionProps> = ({
   isOwnProfile,
 }) => {
   const { formData, updateFormData } = useProfileFormStore();
+  const { isSupported, isSubscribed, isDenied, subscribe, unsubscribe, isLoading: pushLoading } = usePushNotifications();
 
   const handleToggleChange = useCallback((key: string, checked: boolean) => {
     updateFormData({
@@ -44,6 +46,27 @@ export const NotificationsSection: React.FC<NotificationsSectionProps> = ({
       },
     });
   }, [formData?.emailPreferences, updateFormData]);
+
+  const handlePushToggleChange = useCallback((key: string, checked: boolean) => {
+    updateFormData({
+      pushPreferences: {
+        ...formData?.pushPreferences,
+        [key]: checked,
+      },
+    });
+  }, [formData?.pushPreferences, updateFormData]);
+
+  const handlePushMasterToggle = useCallback(async () => {
+    if (isSubscribed) {
+      await unsubscribe();
+      updateFormData({ pushNotificationsEnabled: false });
+    } else {
+      const success = await subscribe();
+      if (success) {
+        updateFormData({ pushNotificationsEnabled: true });
+      }
+    }
+  }, [isSubscribed, subscribe, unsubscribe, updateFormData]);
 
   if (!formData) return null;
 
@@ -119,6 +142,75 @@ export const NotificationsSection: React.FC<NotificationsSectionProps> = ({
           ))}
         </div>
       </motion.div>
+
+      {/* Push Notifications Section */}
+      {isSupported && (
+        <motion.div
+          className={styles.sectionContent}
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          <div className={styles.sectionHeader}>
+            <h2 className={styles.sectionTitle}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={styles.sectionIcon}>
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+              </svg>
+              Notificaciones Push
+            </h2>
+            <div className={styles.stackDescription}>
+              {isDenied
+                ? 'Las notificaciones push fueron bloqueadas. Puedes habilitarlas desde la configuracion de tu navegador.'
+                : 'Recibe alertas instantaneas en tu dispositivo cuando ocurran eventos importantes.'}
+            </div>
+          </div>
+
+          {/* Master push toggle */}
+          <div className={styles.fieldGroupToggler}>
+            <div className={styles.toggleRow}>
+              <div className={styles.toggleContent}>
+                <Small className={styles.toggleLabel}>
+                  {isSubscribed ? 'Push activas' : 'Activar notificaciones push'}
+                </Small>
+                <Muted className={styles.toggleDescription}>
+                  {isSubscribed
+                    ? 'Recibes alertas push en este dispositivo'
+                    : 'Haz click para activar las notificaciones push en este dispositivo'}
+                </Muted>
+              </div>
+              <label className={styles.switch}>
+                <input
+                  type="checkbox"
+                  checked={isSubscribed}
+                  onChange={handlePushMasterToggle}
+                  disabled={!isOwnProfile || pushLoading || isDenied}
+                />
+                <span className={styles.slider}></span>
+              </label>
+            </div>
+
+            {/* Individual push preferences (only visible when subscribed) */}
+            {isSubscribed && notificationOptions.map(({ key, label, description }) => (
+              <div key={`push-${key}`} className={styles.toggleRow}>
+                <div className={styles.toggleContent}>
+                  <Small className={styles.toggleLabel}>{label}</Small>
+                  <Muted className={styles.toggleDescription}>{description}</Muted>
+                </div>
+                <label className={styles.switch}>
+                  <input
+                    type="checkbox"
+                    checked={formData.pushPreferences?.[key as keyof typeof formData.pushPreferences] ?? true}
+                    onChange={(e) => handlePushToggleChange(key, e.target.checked)}
+                    disabled={!isOwnProfile}
+                  />
+                  <span className={styles.slider}></span>
+                </label>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
     </motion.section>
   );
 };

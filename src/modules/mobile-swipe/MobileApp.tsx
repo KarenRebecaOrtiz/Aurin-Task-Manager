@@ -13,6 +13,7 @@ import { ContextualBottomNav } from './navigation/ContextualBottomNav'
 import { DotIndicators } from './navigation/DotIndicators'
 import { MobileHeader } from './header/MobileHeader'
 import { MobileFab } from './header/MobileFab'
+import { PushNotificationPrompt } from '@/modules/push-notifications/client/components/PushNotificationPrompt'
 import styles from './MobileApp.module.scss'
 
 import 'swiper/css'
@@ -108,6 +109,9 @@ export function MobileApp() {
 
       {/* Contextual bottom navigation */}
       <ContextualBottomNav />
+
+      {/* Push notification opt-in (shows once, dismiss = never again) */}
+      <PushNotificationPrompt />
     </div>
   )
 
