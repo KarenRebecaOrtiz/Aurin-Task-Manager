@@ -87,7 +87,7 @@
   min-height: 40px;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: $radius-xl;
+  border-radius: $radius-full;
   cursor: pointer;
   @include typography($text-xs, $font-weight-medium, $color-text-muted);
   transition:
