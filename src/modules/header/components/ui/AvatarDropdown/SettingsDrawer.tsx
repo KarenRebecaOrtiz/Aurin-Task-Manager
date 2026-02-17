@@ -9,6 +9,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { LogOut } from '@/components/animate-ui/icons';
 import { Sun } from '@/components/animate-ui/icons/sun';
 import { Moon } from '@/components/animate-ui/icons/moon';
+import { BellRing } from 'lucide-react';
+import { usePushNotifications } from '@/modules/push-notifications/client/hooks/usePushNotifications';
 import {
   Drawer,
   DrawerContent,
@@ -58,6 +60,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
   const { signOut } = useClerk();
   const { isDarkMode, toggleTheme } = useTheme();
   const { isAdmin } = useAuth();
+  const { isSupported: pushSupported, isSubscribed: pushSubscribed, isDenied: pushDenied, subscribe: pushSubscribe, unsubscribe: pushUnsubscribe, isLoading: pushLoading } = usePushNotifications();
 
   const handleLogout = useCallback(() => {
     signOut();
@@ -67,6 +70,15 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
   const handleToggleTheme = useCallback(() => {
     toggleTheme();
   }, [toggleTheme]);
+
+  const handleTogglePush = useCallback(async () => {
+    if (pushLoading || pushDenied) return;
+    if (pushSubscribed) {
+      await pushUnsubscribe();
+    } else {
+      await pushSubscribe();
+    }
+  }, [pushLoading, pushDenied, pushSubscribed, pushSubscribe, pushUnsubscribe]);
 
   const handleOpenChange = useCallback((open: boolean) => {
     if (!open) onClose();
@@ -153,6 +165,28 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                   {isDarkMode ? 'Modo Claro' : 'Modo Oscuro'}
                 </span>
               </motion.button>
+
+              {pushSupported && (
+                <motion.button
+                  onClick={handleTogglePush}
+                  className={styles.menuItem}
+                  custom={itemIndex++}
+                  initial="hidden"
+                  animate="visible"
+                  variants={itemVariants}
+                  disabled={pushLoading || pushDenied}
+                  style={{ opacity: pushDenied ? 0.5 : 1 }}
+                >
+                  <BellRing size={20} className={styles.menuIcon} />
+                  <span className={styles.menuText}>
+                    {pushDenied
+                      ? 'Push bloqueadas'
+                      : pushSubscribed
+                        ? 'Push activas'
+                        : 'Activar Push'}
+                  </span>
+                </motion.button>
+              )}
             </div>
 
             <div className={styles.separator} />

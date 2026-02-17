@@ -27,10 +27,21 @@ const Drawer = ({
   const wipePanelsRef = useRef<HTMLDivElement[]>([])
   const contentElRef = useRef<HTMLElement | null>(null)
   const innerElRef = useRef<HTMLElement | null>(null)
+  const isDraggingRef = useRef(false)
 
   // Controlled or uncontrolled
   const isControlled = open !== undefined
   const isOpen = isControlled ? open : internalOpen
+
+  // Track drag state — vaul fires onDrag during drag gestures
+  const handleDrag = useCallback(() => {
+    isDraggingRef.current = true
+  }, [])
+
+  const handleRelease = useCallback(() => {
+    // Keep isDragging true briefly so handleOpenChange can detect drag-initiated close
+    setTimeout(() => { isDraggingRef.current = false }, 50)
+  }, [])
 
   // Register refs from DrawerContent
   const registerContentEl = useCallback((el: HTMLElement | null) => {
@@ -43,6 +54,12 @@ const Drawer = ({
     wipePanelsRef.current = panels
   }, [])
 
+  const closeImmediate = useCallback(() => {
+    isClosingRef.current = false
+    if (isControlled) onOpenChange?.(false)
+    else setInternalOpen(false)
+  }, [isControlled, onOpenChange])
+
   const handleOpenChange = useCallback((nextOpen: boolean) => {
     if (nextOpen) {
       // Opening - let vaul handle it, GSAP mount animation runs via useEffect in DrawerContent
@@ -52,52 +69,72 @@ const Drawer = ({
         setInternalOpen(true)
       }
     } else {
-      // Closing - play GSAP exit animation, THEN close vaul
+      // Closing
       if (isClosingRef.current) return
       isClosingRef.current = true
 
       const content = contentElRef.current
       const panels = wipePanelsRef.current
       const inner = innerElRef.current
+      const wasDragged = isDraggingRef.current
 
       // If no content ref yet, just close immediately
       if (!content) {
-        isClosingRef.current = false
-        if (isControlled) onOpenChange?.(false)
-        else setInternalOpen(false)
+        closeImmediate()
         return
       }
 
-      const tl = gsap.timeline({
-        onComplete: () => {
-          isClosingRef.current = false
-          if (isControlled) onOpenChange?.(false)
-          else setInternalOpen(false)
-        },
-      })
+      // Drag-initiated close: fast & snappy, no choreography
+      if (wasDragged) {
+        const tl = gsap.timeline({ onComplete: closeImmediate })
 
-      // Animate children out first
+        // Fade children instantly
+        if (inner && inner.children.length > 0) {
+          tl.to(inner.children, {
+            autoAlpha: 0,
+            duration: 0.08,
+            ease: "power2.in",
+          })
+        }
+
+        // Wipe panels follow quickly
+        if (panels.length > 0) {
+          tl.to(panels, {
+            yPercent: 110,
+            duration: 0.18,
+            ease: "power2.in",
+            stagger: 0.02,
+          }, 0)
+        }
+
+        return
+      }
+
+      // Programmatic close: compact exit animation
+      const tl = gsap.timeline({ onComplete: closeImmediate })
+
+      // Animate children out — faster, tighter stagger
       if (inner && inner.children.length > 0) {
         tl.to(Array.from(inner.children).reverse(), {
           autoAlpha: 0,
-          y: 15,
-          stagger: 0.03,
-          duration: 0.2,
+          y: 10,
+          stagger: 0.02,
+          duration: 0.12,
           ease: "power2.in",
         })
       }
 
-      // Slide content + wipe panels down
+      // Slide content + wipe panels down — faster
       const targets = [content, ...panels].filter(Boolean)
       tl.to(targets, {
         yPercent: 110,
-        duration: 0.4,
+        duration: 0.25,
         ease: "power3.in",
-        stagger: 0.04,
-      }, inner && inner.children.length > 0 ? "-=0.1" : "0")
+        stagger: 0.02,
+      }, inner && inner.children.length > 0 ? "-=0.06" : "0")
 
     }
-  }, [isControlled, onOpenChange])
+  }, [isControlled, onOpenChange, closeImmediate])
 
   return (
     <DrawerGSAPContext.Provider value={{ registerContentEl, registerInnerEl, registerWipePanels, isOpen }}>
@@ -105,6 +142,8 @@ const Drawer = ({
         shouldScaleBackground={shouldScaleBackground}
         open={isOpen}
         onOpenChange={handleOpenChange}
+        onDrag={handleDrag}
+        onRelease={handleRelease}
         {...props}
       >
         {props.children}

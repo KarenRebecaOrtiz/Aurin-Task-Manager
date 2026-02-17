@@ -14,7 +14,8 @@
 import React, { useCallback, useMemo, useRef, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { sileo } from 'sileo';
-import { ChevronRight, Mail, BellRing } from 'lucide-react';
+import { ChevronRight, Mail, BellRing, BellOff } from 'lucide-react';
+import { usePushNotifications } from '@/modules/push-notifications/client/hooks/usePushNotifications';
 import type { NotificationChannel } from '../stores/notificationPreferencesStore';
 import {
   ResponsiveDialog,
@@ -247,6 +248,7 @@ export function NotificationPreferencesDialog() {
   const isMobile = useMediaQuery('(max-width: 767px)');
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  const { isSubscribed: pushIsSubscribed, isDenied: pushIsDenied, subscribe: pushSubscribe, isLoading: pushActivating } = usePushNotifications();
 
   const {
     isOpen,
@@ -436,6 +438,31 @@ export function NotificationPreferencesDialog() {
         <div className={styles.loading}>
           <div className={styles.spinner} />
           <span>Cargando preferencias...</span>
+        </div>
+      ) : activeChannel === 'push' && !pushIsSubscribed ? (
+        /* ── Empty state: Push not active ── */
+        <div className={styles.pushEmptyState}>
+          <div className={styles.pushEmptyIcon}>
+            {pushIsDenied ? <BellOff size={28} /> : <BellRing size={28} />}
+          </div>
+          <h3 className={styles.pushEmptyTitle}>
+            {pushIsDenied ? 'Notificaciones bloqueadas' : 'Activa las notificaciones push'}
+          </h3>
+          <p className={styles.pushEmptyDescription}>
+            {pushIsDenied
+              ? 'Tu navegador bloqueo las notificaciones. Para activarlas, ve a la configuracion de tu navegador y permite notificaciones para este sitio.'
+              : 'Recibe alertas instantaneas en tu dispositivo cuando ocurra algo importante. Despues podras elegir cuales recibir.'}
+          </p>
+          {!pushIsDenied && (
+            <button
+              type="button"
+              className={styles.pushEmptyButton}
+              onClick={async () => { await pushSubscribe(); }}
+              disabled={pushActivating}
+            >
+              {pushActivating ? 'Activando...' : 'Activar notificaciones push'}
+            </button>
+          )}
         </div>
       ) : (
         <>

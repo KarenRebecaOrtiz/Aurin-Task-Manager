@@ -14,8 +14,8 @@
   z-index: 9998;
   background: rgba(0, 0, 0, 0.8);
 
-  // Vaul controls opacity via inline styles
-  transition: opacity 500ms cubic-bezier(0.32, 0.72, 0, 1) !important;
+  // Vaul controls opacity via inline styles — fast fade for responsive drag
+  transition: opacity 200ms cubic-bezier(0.32, 0.72, 0, 1) !important;
 }
 
 // ============================================
@@ -76,8 +76,8 @@
   height: calc(100vh - 3rem);
   height: calc(100dvh - 3rem);
 
-  // Vaul handles transforms via inline styles
-  transition: transform 500ms cubic-bezier(0.32, 0.72, 0, 1) !important;
+  // Vaul handles transforms via inline styles — snappy for precise drag tracking
+  transition: transform 250ms cubic-bezier(0.32, 0.72, 0, 1) !important;
 
   // Dark mode
   :global(.dark) &,

@@ -482,6 +482,80 @@ $aurin-hover: #bccb00;
 }
 
 // ============================================================================
+// PUSH EMPTY STATE
+// ============================================================================
+
+.pushEmptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 2.5rem 1.5rem 2rem;
+  gap: 0.5rem;
+}
+
+.pushEmptyIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 0.75rem;
+  background: rgba($aurin-color, 0.12);
+  color: $aurin-color;
+  margin-bottom: 0.5rem;
+
+  :global(.dark) & {
+    background: rgba($aurin-color, 0.15);
+  }
+}
+
+.pushEmptyTitle {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #18181b;
+
+  :global(.dark) & {
+    color: #fafafa;
+  }
+}
+
+.pushEmptyDescription {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: #71717a;
+  max-width: 280px;
+
+  :global(.dark) & {
+    color: #a1a1aa;
+  }
+}
+
+.pushEmptyButton {
+  margin-top: 0.75rem;
+  padding: 0.625rem 1.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #000;
+  background: $aurin-color;
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: background 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background: $aurin-hover;
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}
+
+// ============================================================================
 // RESPONSIVE
 // ============================================================================
 
