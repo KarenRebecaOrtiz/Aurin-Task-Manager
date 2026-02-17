@@ -14,7 +14,7 @@ import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { withAuth } from '@/lib/api/auth';
 import { apiSuccess, apiBadRequest, handleApiError } from '@/lib/api/response';
-import { mailer } from '@/modules/mailer';
+import { notifier } from '@/modules/notifications';
 
 const taskNotificationSchema = z.object({
   type: z.enum(['task_new_message', 'task_time_logged']),
@@ -46,7 +46,7 @@ export const POST = withAuth(async (userId: string, request: NextRequest) => {
 
     switch (type) {
       case 'task_new_message':
-        result = await mailer.notifyTaskNewMessage({
+        result = await notifier.notifyTaskNewMessage({
           recipientIds,
           taskId,
           actorId: userId,
@@ -55,7 +55,7 @@ export const POST = withAuth(async (userId: string, request: NextRequest) => {
         break;
 
       case 'task_time_logged':
-        result = await mailer.notifyTaskTimeLogged({
+        result = await notifier.notifyTaskTimeLogged({
           recipientIds,
           taskId,
           actorId: userId,
@@ -70,8 +70,7 @@ export const POST = withAuth(async (userId: string, request: NextRequest) => {
 
     return apiSuccess({
       type,
-      sent: result.sent,
-      failed: result.failed,
+      dispatched: true,
     });
   } catch (error: unknown) {
     return handleApiError(error, 'POST /api/tasks/notifications');

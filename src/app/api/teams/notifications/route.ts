@@ -15,7 +15,7 @@ import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { withAuth } from '@/lib/api/auth';
 import { apiSuccess, apiBadRequest, handleApiError } from '@/lib/api/response';
-import { mailer } from '@/modules/mailer';
+import { notifier } from '@/modules/notifications';
 
 /**
  * Request body schema for team notifications
@@ -72,7 +72,7 @@ export const POST = withAuth(async (userId: string, request: NextRequest) => {
     switch (type) {
       case 'team_member_added_you':
         // This notification is ALWAYS sent (not configurable)
-        result = await mailer.notifyTeamMemberAddedYou({
+        result = await notifier.notifyTeamMemberAddedYou({
           recipientIds,
           teamId,
           actorId: userId,
@@ -84,7 +84,7 @@ export const POST = withAuth(async (userId: string, request: NextRequest) => {
         if (!newMemberName || !newMemberId) {
           return apiBadRequest('newMemberName and newMemberId are required for team_member_added');
         }
-        result = await mailer.notifyTeamMemberAdded({
+        result = await notifier.notifyTeamMemberAdded({
           recipientIds,
           teamId,
           actorId: userId,
@@ -95,7 +95,7 @@ export const POST = withAuth(async (userId: string, request: NextRequest) => {
 
       case 'team_new_message':
         // This notification respects user preferences
-        result = await mailer.notifyTeamNewMessage({
+        result = await notifier.notifyTeamNewMessage({
           recipientIds,
           teamId,
           actorId: userId,
@@ -107,12 +107,11 @@ export const POST = withAuth(async (userId: string, request: NextRequest) => {
         return apiBadRequest(`Unknown notification type: ${type}`);
     }
 
-    console.log('[API] Notification result - sent:', result.sent, 'failed:', result.failed);
+    console.log('[API] Team notifications dispatched (email + push)');
 
     return apiSuccess({
       type,
-      sent: result.sent,
-      failed: result.failed,
+      dispatched: true,
     });
   } catch (error: unknown) {
     console.error('[API] Error in POST /api/teams/notifications:', error);
