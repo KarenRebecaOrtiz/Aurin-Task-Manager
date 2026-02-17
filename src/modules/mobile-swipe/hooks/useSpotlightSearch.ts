@@ -1,6 +1,8 @@
 import { useMemo } from 'react'
 import { useDataStore } from '@/stores/dataStore'
 import { useShallow } from 'zustand/react/shallow'
+import { useAuth } from '@/contexts/AuthContext'
+import { useUserDataStore } from '@/stores/userDataStore'
 
 export interface SearchResultItem {
   id: string
@@ -30,6 +32,19 @@ export function useSpotlightSearch(query: string) {
   const clients = useDataStore(useShallow((s) => s.clients))
   const users = useDataStore(useShallow((s) => s.users))
   const teams = useDataStore(useShallow((s) => s.teams))
+  const { isAdmin } = useAuth()
+  const currentUserId = useUserDataStore((state) => state.userData?.userId || '')
+
+  // Permission filter: only tasks the user can see (same as command-palette)
+  const allowedTasks = useMemo(() => {
+    if (isAdmin) return tasks
+    return tasks.filter((task) => {
+      const isCreator = task.CreatedBy === currentUserId
+      const isAssigned = (task.AssignedTo || []).includes(currentUserId)
+      const isLeader = (task.LeadedBy || []).includes(currentUserId)
+      return isCreator || isAssigned || isLeader
+    })
+  }, [tasks, isAdmin, currentUserId])
 
   const results = useMemo((): SearchResultGroup[] => {
     if (!query || query.trim().length < 2) return []
@@ -38,8 +53,8 @@ export function useSpotlightSearch(query: string) {
     const groups: SearchResultGroup[] = []
     let remaining = MAX_TOTAL_RESULTS
 
-    // Search tasks
-    const matchedTasks = tasks
+    // Search tasks (permission-filtered)
+    const matchedTasks = allowedTasks
       .filter((t) => !t.archived && (
         t.name.toLowerCase().includes(q) ||
         t.project?.toLowerCase().includes(q) ||
@@ -65,13 +80,16 @@ export function useSpotlightSearch(query: string) {
       })
     }
 
-    // Search teams
-    const teamsArray = teams as Array<{ id: string; name: string; description?: string; memberIds: string[]; gradientId?: string; avatarUrl?: string }>
+    // Search teams (permission-filtered: admin, member, or public)
+    const teamsArray = teams as Array<{ id: string; name: string; description?: string; memberIds: string[]; gradientId?: string; avatarUrl?: string; isPublic?: boolean }>
     const matchedTeams = teamsArray
-      ?.filter((t) =>
-        t.name.toLowerCase().includes(q) ||
-        t.description?.toLowerCase().includes(q)
-      )
+      ?.filter((t) => {
+        // Permission check
+        const canSee = isAdmin || t.memberIds?.includes(currentUserId) || t.isPublic
+        if (!canSee) return false
+        return t.name.toLowerCase().includes(q) ||
+          t.description?.toLowerCase().includes(q)
+      })
       .slice(0, Math.min(4, remaining))
 
     if (matchedTeams?.length > 0) {
@@ -116,7 +134,7 @@ export function useSpotlightSearch(query: string) {
     }
 
     return groups
-  }, [query, tasks, clients, users, teams])
+  }, [query, allowedTasks, clients, users, teams, isAdmin, currentUserId])
 
   return {
     results,
