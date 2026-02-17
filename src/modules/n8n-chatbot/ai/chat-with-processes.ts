@@ -130,10 +130,31 @@ export async function enhancedChat(options: EnhancedChatOptions): Promise<Enhanc
     ? message 
     : message.find(item => item.type === 'text')?.text || ''
 
-  // Si skipProcesses está activo, ir directo al LLM
-  if (skipProcesses) {
-    onLLMDelegated?.('skipProcesses flag enabled')
-    const llmResponse = await originalChat(options)
+  // Determine if processes should be bypassed
+  // When modes are active, the user expects mode-dependent tools (web search,
+  // document analysis, audio transcription, canvas) which only the LLM can use.
+  // Processes have no concept of modes, so they would silently ignore these tools.
+  const modes = restOptions.modes || {}
+  const hasActiveMode = modes.webSearch || modes.audioMode || modes.documentMode || modes.canvasMode
+  const hasFileContent = typeof message !== 'string' // vision/image content array
+  const shouldSkipProcesses = skipProcesses || hasActiveMode || hasFileContent
+
+  if (shouldSkipProcesses) {
+    const reason = skipProcesses
+      ? 'skipProcesses flag enabled'
+      : hasActiveMode
+        ? `Active mode requires LLM tools: ${Object.entries(modes).filter(([, v]) => v).map(([k]) => k).join(', ')}`
+        : 'Message contains file/vision content'
+    onLLMDelegated?.(reason)
+
+    const llmResponse = await originalChat({
+      ...restOptions,
+      userId,
+      message,
+      conversationHistory,
+      userName,
+      isAdmin
+    })
     return {
       ...llmResponse,
       handledBy: 'llm',
@@ -145,7 +166,7 @@ export async function enhancedChat(options: EnhancedChatOptions): Promise<Enhanc
     }
   }
 
-  // Intentar manejar con procesos estructurados
+  // Intentar manejar con procesos estructurados (only when no modes are active)
   try {
     const processResult = await processMessage({
       message: messageText,

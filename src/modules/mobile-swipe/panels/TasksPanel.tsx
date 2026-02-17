@@ -1,9 +1,9 @@
 'use client'
 
-import { useMemo, useState, useCallback } from 'react'
+import { useMemo, useState, useCallback, useRef, useEffect, useLayoutEffect } from 'react'
 import Image from 'next/image'
-import { motion } from 'framer-motion'
-import { ClipboardList, Archive, Clock, ChevronDown, Building2, Check } from 'lucide-react'
+import gsap from 'gsap'
+import { ClipboardList, Archive, Clock, ChevronDown, Building2, Check, Search } from 'lucide-react'
 import { useDataStore } from '@/stores/dataStore'
 import { useShallow } from 'zustand/react/shallow'
 import { GradientAvatar } from '@/components/ui/gradient-avatar'
@@ -16,7 +16,11 @@ import {
   ALL_WORKSPACES_ID,
   type Workspace,
 } from '@/stores/workspacesStore'
-import { useMobilePanel } from '../hooks/useMobilePanel'
+import {
+  useMobilePanel,
+  EXIT_DURATION,
+  ENTER_DURATION,
+} from '../hooks/useMobilePanel'
 import styles from './TasksPanel.module.scss'
 
 const STATUS_COLORS: Record<string, string> = {
@@ -62,11 +66,10 @@ function TaskCard({ task, clientName, clientImage, onTap }: TaskCardProps) {
   const timeLabel = formatTime(totalHours, totalMinutes)
 
   return (
-    <motion.button
+    <button
       className={styles.taskCard}
       onClick={onTap}
-      whileTap={{ scale: 0.98 }}
-      layout
+      type="button"
     >
       {/* Client avatar */}
       <div className={styles.clientAvatar}>
@@ -103,14 +106,99 @@ function TaskCard({ task, clientName, clientImage, onTap }: TaskCardProps) {
           <span>{timeLabel}</span>
         </div>
       )}
-    </motion.button>
+    </button>
   )
 }
 
 export function TasksPanel() {
   const tasks = useDataStore(useShallow((s) => s.tasks))
   const clients = useDataStore(useShallow((s) => s.clients))
+  const activePanel = useMobilePanel((s) => s.activePanel)
+  const transitionPhase = useMobilePanel((s) => s.transitionPhase)
   const taskSubView = useMobilePanel((s) => s.taskSubView)
+
+  // Workspace button GSAP enter/exit (phase-based)
+  const wsBtnRef = useRef<HTMLButtonElement>(null)
+  const hasWsInitRef = useRef(false)
+
+  useEffect(() => {
+    const btn = wsBtnRef.current
+    if (!btn) return
+
+    const isTasks = activePanel === 'tasks'
+
+    if (!hasWsInitRef.current) {
+      hasWsInitRef.current = true
+      if (isTasks) {
+        gsap.set(btn, { autoAlpha: 1, y: 0, scale: 1 })
+        btn.style.pointerEvents = 'auto'
+      } else {
+        gsap.set(btn, { autoAlpha: 0, y: -12, scale: 0.92 })
+        btn.style.pointerEvents = 'none'
+      }
+      return
+    }
+
+    // Phase: exiting — leaving tasks
+    if (transitionPhase === 'exiting' && !isTasks) {
+      gsap.killTweensOf(btn)
+      gsap.to(btn, {
+        autoAlpha: 0, y: -12, scale: 0.92,
+        duration: EXIT_DURATION / 1000, ease: 'power2.in',
+        onComplete: () => {
+          if (wsBtnRef.current) wsBtnRef.current.style.pointerEvents = 'none'
+        },
+      })
+    }
+
+    // Phase: entering — arriving at tasks
+    if (transitionPhase === 'entering' && isTasks) {
+      btn.style.pointerEvents = 'auto'
+      gsap.killTweensOf(btn)
+      gsap.fromTo(
+        btn,
+        { autoAlpha: 0, y: -12, scale: 0.92 },
+        { autoAlpha: 1, y: 0, scale: 1, duration: ENTER_DURATION / 1000, ease: 'power3.out' },
+      )
+    }
+  }, [transitionPhase, activePanel])
+
+  const [searchQuery, setSearchQuery] = useState('')
+  const headerRef = useRef<HTMLDivElement>(null)
+  const headerVisibleRef = useRef(true)
+  const lastScrollY = useRef(0)
+  const scrollThreshold = 8
+
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    const currentY = e.currentTarget.scrollTop
+    const delta = currentY - lastScrollY.current
+    const header = headerRef.current
+    if (!header) { lastScrollY.current = currentY; return }
+
+    if (delta > scrollThreshold && currentY > 40 && headerVisibleRef.current) {
+      // Scrolling down — hide
+      headerVisibleRef.current = false
+      gsap.to(header, {
+        y: '-100%',
+        autoAlpha: 0,
+        duration: 0.45,
+        ease: 'power3.inOut',
+        overwrite: true,
+      })
+    } else if (delta < -scrollThreshold && !headerVisibleRef.current) {
+      // Scrolling up — show
+      headerVisibleRef.current = true
+      gsap.to(header, {
+        y: '0%',
+        autoAlpha: 1,
+        duration: 0.45,
+        ease: 'power3.out',
+        overwrite: true,
+      })
+    }
+
+    lastScrollY.current = currentY
+  }, [])
 
   // Workspace selector state
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -145,11 +233,25 @@ export function TasksPanel() {
   }, [clients])
 
   const activeTasks = useMemo(() => {
-    if (taskSubView === 'archive') {
-      return tasks.filter((t) => t.archived)
+    let filtered = taskSubView === 'archive'
+      ? tasks.filter((t) => t.archived)
+      : tasks.filter((t) => !t.archived)
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase()
+      filtered = filtered.filter((t) => {
+        const client = clientMap.get(t.clientId)
+        return (
+          t.name.toLowerCase().includes(q) ||
+          t.project?.toLowerCase().includes(q) ||
+          t.status?.toLowerCase().includes(q) ||
+          client?.name.toLowerCase().includes(q)
+        )
+      })
     }
-    return tasks.filter((t) => !t.archived)
-  }, [tasks, taskSubView])
+
+    return filtered
+  }, [tasks, taskSubView, searchQuery, clientMap])
 
   const handleTaskTap = (taskId: string) => {
     const { openChatSidebar } = require('@/stores/sidebarStateStore').useSidebarStateStore.getState()
@@ -166,10 +268,52 @@ export function TasksPanel() {
 
   const viewLabel = taskSubView === 'archive' ? 'Inactivas' : 'Activas'
 
+  // ---- GSAP reveal animation for task cards ----
+  const taskListRef = useRef<HTMLDivElement>(null)
+  const gsapRevealRef = useRef<gsap.core.Timeline | null>(null)
+  const prevTaskKeyRef = useRef<string>('')
+
+  // Stable key derived from task IDs
+  const taskKey = useMemo(() => activeTasks.map((t) => t.id).join(','), [activeTasks])
+
+  useLayoutEffect(() => {
+    const container = taskListRef.current
+    if (!container) return
+
+    const cards = Array.from(container.children)
+    if (cards.length === 0) return
+
+    // Skip if same list
+    if (taskKey === prevTaskKeyRef.current) return
+    prevTaskKeyRef.current = taskKey
+
+    // Kill previous animation and clear inline styles
+    gsapRevealRef.current?.kill()
+    gsap.killTweensOf(cards)
+
+    // Set hidden → animate in
+    gsap.set(cards, { autoAlpha: 0, y: 40, scale: 0.97 })
+
+    const tl = gsap.timeline()
+    tl.to(cards, {
+      autoAlpha: 1,
+      y: 0,
+      scale: 1,
+      duration: 0.6,
+      stagger: { each: 0.06, ease: 'power2.out' },
+      ease: 'power3.out',
+    })
+
+    gsapRevealRef.current = tl
+
+    return () => { tl.kill() }
+  }, [taskKey])
+
   return (
     <div className={styles.panel}>
       {/* Workspace selector (replaces section title) */}
       <button
+        ref={wsBtnRef}
         type="button"
         className={styles.workspaceButton}
         onClick={() => setDrawerOpen(true)}
@@ -252,17 +396,32 @@ export function TasksPanel() {
         </DrawerContent>
       </Drawer>
 
-      {/* Sub-view header */}
-      <div className={styles.panelHeader}>
-        <div className={styles.panelTitle}>
-          {viewIcon}
-          <span>{viewLabel}</span>
+      {/* Collapsible header + search wrapper — GSAP animated */}
+      <div ref={headerRef} className={styles.stickyHeader}>
+        {/* Sub-view header */}
+        <div className={styles.panelHeader}>
+          <div className={styles.panelTitle}>
+            {viewIcon}
+            <span>{viewLabel}</span>
+          </div>
+          <span className={styles.taskCount}>{activeTasks.length}</span>
         </div>
-        <span className={styles.taskCount}>{activeTasks.length}</span>
+
+        {/* Search filter */}
+        <div className={styles.searchBar}>
+          <Search size={16} className={styles.searchBarIcon} />
+          <input
+            type="text"
+            className={styles.searchBarInput}
+            placeholder="Buscar tareas..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
       </div>
 
-      {/* Task list */}
-      <div className={styles.taskList}>
+      {/* Task list — GSAP stagger reveal */}
+      <div ref={taskListRef} className={styles.taskList} onScroll={handleScroll}>
         {activeTasks.length === 0 ? (
           <div className={styles.emptyState}>
             <Archive size={40} strokeWidth={1} />
@@ -271,22 +430,17 @@ export function TasksPanel() {
             </span>
           </div>
         ) : (
-          activeTasks.map((task, i) => {
+          activeTasks.map((task) => {
             const client = clientMap.get(task.clientId)
             return (
-              <motion.div
-                key={task.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.03, duration: 0.2 }}
-              >
+              <div key={task.id} className={styles.taskCardWrapper}>
                 <TaskCard
                   task={task}
                   clientName={client?.name || 'Sin cuenta'}
                   clientImage={client?.imageUrl || ''}
                   onTap={() => handleTaskTap(task.id)}
                 />
-              </motion.div>
+              </div>
             )
           })
         )}

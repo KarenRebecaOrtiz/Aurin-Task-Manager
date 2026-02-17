@@ -3,6 +3,7 @@
 .dotsContainer {
   display: flex;
   align-items: center;
+  display: none;
   justify-content: center;
   gap: $spacing-sm;
   position: fixed;

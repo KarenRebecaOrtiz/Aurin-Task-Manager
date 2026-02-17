@@ -8,36 +8,11 @@ import { ACTIVE_TASK_STATUSES } from './types'
 
 export async function searchTasks(
   userId: string,
-  filters: TaskSearchFilters = {}
+  filters: TaskSearchFilters = {},
+  isAdmin: boolean = false
 ): Promise<TaskSearchResult> {
   try {
-    // We need to search tasks where the user is involved:
-    // - CreatedBy == userId
-    // - userId in AssignedTo array
-    // - userId in LeadedBy array
-    //
-    // Since Firestore doesn't support OR queries across different fields,
-    // we execute multiple queries and merge results
-
     const tasksCollection = db.collection('tasks')
-
-    // Query 1: Tasks created by user
-    const createdByQuery = tasksCollection.where('CreatedBy', '==', userId).get()
-
-    // Query 2: Tasks where user is assigned (array-contains)
-    const assignedToQuery = tasksCollection.where('AssignedTo', 'array-contains', userId).get()
-
-    // Query 3: Tasks where user is leader (array-contains)
-    const leadedByQuery = tasksCollection.where('LeadedBy', 'array-contains', userId).get()
-
-    // Execute all queries in parallel
-    const [createdBySnapshot, assignedToSnapshot, leadedBySnapshot] = await Promise.all([
-      createdByQuery,
-      assignedToQuery,
-      leadedByQuery
-    ])
-
-    // Merge results and deduplicate by task ID
     const taskMap = new Map<string, TaskData & { id: string }>()
 
     const processSnapshot = (snapshot: FirebaseFirestore.QuerySnapshot) => {
@@ -57,24 +32,54 @@ export async function searchTasks(
       })
     }
 
-    processSnapshot(createdBySnapshot)
-    processSnapshot(assignedToSnapshot)
-    processSnapshot(leadedBySnapshot)
+    if (filters.allTasks && isAdmin) {
+      // Admin global query — no user scope, fetch all tasks
+      const allSnapshot = await tasksCollection.get()
+      processSnapshot(allSnapshot)
+    } else {
+      // Standard user-scoped queries:
+      // Tasks where the user is involved (creator, assigned, or leader)
+      const [createdBySnapshot, assignedToSnapshot, leadedBySnapshot] = await Promise.all([
+        tasksCollection.where('CreatedBy', '==', userId).get(),
+        tasksCollection.where('AssignedTo', 'array-contains', userId).get(),
+        tasksCollection.where('LeadedBy', 'array-contains', userId).get()
+      ])
+
+      processSnapshot(createdBySnapshot)
+      processSnapshot(assignedToSnapshot)
+      processSnapshot(leadedBySnapshot)
+    }
 
     let tasks = Array.from(taskMap.values())
 
-    // Apply filters in memory
-    
-    // Filter by name (partial, case-insensitive)
+    // --- Apply filters in memory ---
+
+    // Text search in name only (backward compatible)
     if (filters.name) {
       const nameLower = filters.name.toLowerCase()
-      tasks = tasks.filter(task => 
+      tasks = tasks.filter(task =>
         task.name && task.name.toLowerCase().includes(nameLower)
       )
     }
 
+    // Text search in name AND description
+    if (filters.searchText) {
+      const textLower = filters.searchText.toLowerCase()
+      tasks = tasks.filter(task => {
+        const nameMatch = task.name && task.name.toLowerCase().includes(textLower)
+        const descMatch = task.description && task.description.toLowerCase().includes(textLower)
+        return nameMatch || descMatch
+      })
+    }
+
+    // Single status filter
     if (filters.status) {
       tasks = tasks.filter(task => task.status === filters.status)
+    }
+
+    // Multi-status filter
+    if (filters.statusIn && filters.statusIn.length > 0) {
+      tasks = tasks.filter(task => filters.statusIn!.includes(task.status))
     }
 
     // Filter only active tasks if requested (for workload calculations)
@@ -106,6 +111,32 @@ export async function searchTasks(
 
     if (filters.project) {
       tasks = tasks.filter(task => task.project === filters.project)
+    }
+
+    // Date range filters (compare ISO strings)
+    if (filters.createdAfter) {
+      const after = new Date(filters.createdAfter).getTime()
+      tasks = tasks.filter(task => {
+        const created = typeof task.createdAt === 'string' ? new Date(task.createdAt).getTime() : 0
+        return created >= after
+      })
+    }
+
+    if (filters.createdBefore) {
+      const before = new Date(filters.createdBefore).getTime()
+      tasks = tasks.filter(task => {
+        const created = typeof task.createdAt === 'string' ? new Date(task.createdAt).getTime() : 0
+        return created <= before
+      })
+    }
+
+    if (filters.dueBefore) {
+      const due = new Date(filters.dueBefore).getTime()
+      tasks = tasks.filter(task => {
+        if (!task.endDate) return false
+        const end = typeof task.endDate === 'string' ? new Date(task.endDate).getTime() : 0
+        return end <= due
+      })
     }
 
     // Sort in memory (always, to avoid index requirements)

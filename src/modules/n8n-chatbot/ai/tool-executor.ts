@@ -81,14 +81,6 @@ export async function executeTool(
     }
   }
 
-  if (toolName === 'analyze_document' && !modes?.documentMode) {
-    return {
-      success: false,
-      error: 'Modo análisis de documentos no está habilitado. Activa el botón de análisis de documentos para usar esta función.',
-      toolName,
-    }
-  }
-
   if (toolName === 'create_notion_plan' && !modes?.canvasMode) {
     return {
       success: false,
@@ -114,7 +106,7 @@ export async function executeTool(
 
       // Task management
       case 'search_tasks':
-        return await searchTasks(userId, args)
+        return await searchTasks(userId, args, isAdmin)
 
       case 'create_task':
         return await createTask(userId, args)

@@ -72,7 +72,7 @@ export const getUserTasksTool: ChatCompletionTool = {
         },
         status: {
           type: 'string',
-          enum: ['todo', 'in_progress', 'done', 'archived'],
+          enum: ['Por Iniciar', 'En Proceso', 'Backlog', 'Por Finalizar', 'Finalizado', 'Cancelado'],
           description: 'Filtrar por estado de las tareas'
         }
       },

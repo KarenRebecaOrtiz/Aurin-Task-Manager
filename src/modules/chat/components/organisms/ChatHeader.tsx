@@ -128,7 +128,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
 
   // Client initials for fallback avatar
   const clientInitials = useMemo(() => {
-    return clientName
+    return (clientName || '')
       .split(' ')
       .map(w => w[0])
       .join('')
@@ -136,7 +136,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
       .toUpperCase();
   }, [clientName]);
 
-  const clientAvatarColor = useMemo(() => stringToColor(clientName), [clientName]);
+  const clientAvatarColor = useMemo(() => stringToColor(clientName || ''), [clientName]);
 
   // Format total hours for mobile display
   const formattedTime = useMemo(() => {
@@ -154,122 +154,40 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
       {/* MOBILE LAYOUT (< 768px) */}
       {/* ================================================================ */}
       <div className={styles.mobileHeader}>
-        {/* Top Bar: Client Avatar + Breadcrumb + Actions */}
-        <div className={styles.mobileTopBar}>
-          <div className={styles.mobileTopLeft}>
-            {/* Client Avatar */}
-            {clientImageUrl && !clientImgError ? (
-              <img
-                src={clientImageUrl}
-                alt={clientName}
-                className={styles.clientAvatar}
-                onError={() => setClientImgError(true)}
-              />
-            ) : (
-              <div
-                className={styles.clientInitials}
-                style={{ backgroundColor: clientAvatarColor }}
-              >
-                {clientInitials}
-              </div>
-            )}
-            {/* Breadcrumb */}
-            <div className={styles.mobileBreadcrumb}>
-              {clientName}
-              {!isTeamChat && task.project && (
-                <>
-                  <span className={styles.separator}>/</span>
-                  {task.project}
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          {!isPublicView && (
-            <div className={styles.mobileActions}>
-              <button
-                type="button"
-                onClick={handleOpenNotificationPreferences}
-                className={styles.mobileActionBtn}
-                aria-label="Preferencias de notificaciones"
-                title="Preferencias de notificaciones"
-              >
-                <Bell size={16} />
-              </button>
-              {isAdmin && (
-                <ShareButton
-                  taskId={task.id}
-                  taskName={task.name}
-                  className={styles.mobileActionBtn}
-                  entityType={isTeamChat ? 'team' : 'task'}
-                />
-              )}
-              {!isTeamChat && (
-                <TimerDropdown
-                  taskId={task.id}
-                  userId={userId}
-                  userName={userName}
-                  onOpenManualEntry={onOpenManualTimeEntry}
-                />
-              )}
+        {/* Client Avatar - centered at top */}
+        <div className={styles.mobileAvatarSection}>
+          {clientImageUrl && !clientImgError ? (
+            <img
+              src={clientImageUrl}
+              alt={clientName}
+              className={styles.clientAvatar}
+              onError={() => setClientImgError(true)}
+            />
+          ) : (
+            <div
+              className={styles.clientInitials}
+              style={{ backgroundColor: clientAvatarColor }}
+            >
+              {clientInitials}
             </div>
           )}
         </div>
 
-        {/* Title */}
+        {/* Breadcrumb */}
+        <div className={styles.mobileBreadcrumb}>
+          {clientName}
+          {!isTeamChat && task.project && (
+            <>
+              <span className={styles.separator}>/</span>
+              {task.project}
+            </>
+          )}
+        </div>
+
+        {/* Task Title */}
         <div className={styles.mobileTitleRow}>
           <h1 className={styles.mobileTitle}>{task.name}</h1>
           {!isPublicView && task.shared && <SharedBadge iconSize={12} />}
-        </div>
-
-        {/* Meta Row: Status + Date */}
-        {!isPublicView && !isTeamChat && (
-          <div className={styles.mobileMetaRow}>
-            <StatusDropdown
-              taskId={task.id}
-              currentStatus={task.status}
-              createdBy={task.CreatedBy}
-              userId={userId}
-            />
-            <div className={styles.mobileDatePill}>
-              <Calendar size={12} className={styles.mobileDateIcon} />
-              {formatDateRange(task.startDate, task.endDate) || (
-                <span className={styles.noDate}>Sin fechas</span>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Team Row: Avatars + Time */}
-        <div className={styles.mobileTeamRow}>
-          <div className={styles.mobileAvatarGroup}>
-            {teamMembers.slice(0, 4).map((member) => (
-              <div key={member.id} className={styles.mobileAvatarWrapper}>
-                <UserAvatar
-                  userId={member.id}
-                  imageUrl={member.imageUrl}
-                  userName={member.fullName}
-                  size="xs"
-                  showStatus={true}
-                  availabilityStatus={(member as any).status}
-                  lastActive={(member as any).lastActive}
-                  className={styles.mobileAvatar}
-                />
-              </div>
-            ))}
-            {teamMembers.length > 4 && (
-              <div className={styles.mobileAvatarOverflow}>
-                +{teamMembers.length - 4}
-              </div>
-            )}
-          </div>
-          {!isTeamChat && (
-            <div className={styles.mobileTimePill}>
-              <Clock size={12} />
-              <span>{formattedTime}</span>
-            </div>
-          )}
         </div>
 
         {/* Description - tap to expand */}
@@ -283,6 +201,51 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           >
             {task.description}
           </p>
+        )}
+
+        {/* Meta Row: Status + Date + Time + Notifications + Share */}
+        {!isPublicView && (
+          <div className={styles.mobileMetaRow}>
+            {!isTeamChat && (
+              <StatusDropdown
+                taskId={task.id}
+                currentStatus={task.status}
+                createdBy={task.CreatedBy}
+                userId={userId}
+              />
+            )}
+            {!isTeamChat && (
+              <div className={styles.mobileDatePill}>
+                <Calendar size={12} className={styles.mobileDateIcon} />
+                {formatDateRange(task.startDate, task.endDate) || (
+                  <span className={styles.noDate}>Sin fechas</span>
+                )}
+              </div>
+            )}
+            {!isTeamChat && (
+              <div className={styles.mobileTimePill}>
+                <Clock size={12} />
+                <span>{formattedTime}</span>
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={handleOpenNotificationPreferences}
+              className={styles.mobileActionBtn}
+              aria-label="Preferencias de notificaciones"
+              title="Preferencias de notificaciones"
+            >
+              <Bell size={14} />
+            </button>
+            {isAdmin && (
+              <ShareButton
+                taskId={task.id}
+                taskName={task.name}
+                className={styles.mobileActionBtn}
+                entityType={isTeamChat ? 'team' : 'task'}
+              />
+            )}
+          </div>
         )}
       </div>
 

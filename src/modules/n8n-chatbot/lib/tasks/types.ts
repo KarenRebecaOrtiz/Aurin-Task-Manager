@@ -34,13 +34,19 @@ export interface TaskData {
 
 export interface TaskSearchFilters {
   name?: string // Search by task name (partial, case-insensitive)
+  searchText?: string // Search in both name AND description
   status?: TaskStatus
+  statusIn?: TaskStatus[] // Filter by multiple statuses at once
   priority?: 'Alta' | 'Media' | 'Baja'
   onlyActive?: boolean // Filter only active tasks (En Proceso, Por Finalizar)
   clientId?: string
   assignedToUserId?: string // To search if a user is in AssignedTo array
   leadedByUserId?: string // To search if a user is in LeadedBy array
   project?: string
+  allTasks?: boolean // If true (admin only), query ALL tasks without user scope
+  createdAfter?: string // ISO date - tasks created after this date
+  createdBefore?: string // ISO date - tasks created before this date
+  dueBefore?: string // ISO date - tasks with endDate before this date
   limit?: number
   orderBy?: 'createdAt' | 'updatedAt' | 'name'
   orderDirection?: 'asc' | 'desc'

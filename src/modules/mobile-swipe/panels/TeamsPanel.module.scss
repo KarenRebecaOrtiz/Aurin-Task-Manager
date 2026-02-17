@@ -56,7 +56,7 @@
 .teamGrid {
   display: flex;
   flex-direction: column;
-  gap: $spacing-md;
+  gap: $spacing-sm;
   flex: 1;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
@@ -64,47 +64,80 @@
 }
 
 // ==============================================================
-// TEAM CARD
+// TEAM CARD — Liquid Glass (Safari-safe)
 // ==============================================================
 
 .teamCard {
   display: flex;
-  align-items: stretch;
+  align-items: center;
+  gap: $spacing-md;
   width: 100%;
-  min-height: 72px;
-  background: rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(229, 231, 235, 0.6);
-  border-radius: $radius-xl;
-  overflow: hidden;
+  padding: $spacing-md;
+  border-radius: 20px;
   cursor: pointer;
+  will-change: transform, opacity;
   text-align: left;
   -webkit-tap-highlight-color: transparent;
-  transition: background 0.15s ease;
+  transition: all 0.3s ease;
+
+  // ---- Glass base (Safari-safe) ----
+  background: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(20px) brightness(1.1) saturate(1.3);
+  -webkit-backdrop-filter: blur(20px) brightness(1.1) saturate(1.3);
+
+  border: 1px solid #ffffff;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08),
+              inset -10px -8px 0px -11px rgba(255, 255, 255, 1);
 
   &:active {
-    background: rgba(241, 245, 249, 1);
+    background: rgba(255, 255, 255, 0.28);
   }
 
   :global(body.dark) & {
-    background: rgba(39, 39, 42, 0.6);
-    border-color: rgba(63, 63, 70, 0.5);
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(20px) brightness(1.2) saturate(1.2);
+    -webkit-backdrop-filter: blur(20px) brightness(1.2) saturate(1.2);
+    border-color: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2),
+                inset -10px -8px 0px -11px rgba(255, 255, 255, 0.08);
 
     &:active {
-      background: rgba(39, 39, 42, 0.9);
+      background: rgba(255, 255, 255, 0.14);
     }
   }
 }
 
-.teamGradient {
-  width: 6px;
+// ==============================================================
+// TEAM AVATAR — Gradient circle with initials
+// ==============================================================
+
+.teamAvatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
   flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
+
+.teamInitials {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.02em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+// ==============================================================
+// TEAM INFO
+// ==============================================================
 
 .teamInfo {
   display: flex;
   flex-direction: column;
-  gap: $spacing-xs;
-  padding: $spacing-md $spacing-lg;
+  gap: 4px;
   flex: 1;
   min-width: 0;
 }
@@ -112,7 +145,7 @@
 .teamNameRow {
   display: flex;
   align-items: center;
-  gap: $spacing-xs;
+  gap: 6px;
 }
 
 .teamName {
@@ -126,17 +159,25 @@
   }
 }
 
-.visibilityIcon {
+.visibilityBadge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: $radius-full;
+  background: rgba(0, 0, 0, 0.05);
   color: $color-text-muted;
   flex-shrink: 0;
 
   :global(body.dark) & {
+    background: rgba(255, 255, 255, 0.08);
     color: $color-text-dark-muted;
   }
 }
 
 .teamDescription {
-  @include typography(12px, $font-weight-normal, $color-text-muted);
+  @include typography($text-xs, $font-weight-normal, $color-text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -146,11 +187,92 @@
   }
 }
 
-.teamMembers {
+// ==============================================================
+// TEAM META — Avatar stack + member count
+// ==============================================================
+
+.teamMeta {
   display: flex;
   align-items: center;
-  gap: $spacing-xs;
+  gap: $spacing-sm;
+  margin-top: 2px;
+}
+
+.memberLabel {
   @include typography(11px, $font-weight-medium, $color-text-muted);
+
+  :global(body.dark) & {
+    color: $color-text-dark-muted;
+  }
+}
+
+// ==============================================================
+// AVATAR STACK — Overlapping member avatars
+// ==============================================================
+
+.avatarStack {
+  display: flex;
+  align-items: center;
+}
+
+.stackAvatar {
+  width: 22px;
+  height: 22px;
+  border-radius: $radius-full;
+  border: 2px solid #fff;
+  margin-left: -6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.06);
+
+  &:first-child {
+    margin-left: 0;
+  }
+
+  :global(body.dark) & {
+    border-color: rgba(30, 30, 34, 1);
+    background: rgba(255, 255, 255, 0.1);
+  }
+}
+
+.stackAvatarImg {
+  width: 100%;
+  height: 100%;
+  border-radius: $radius-full;
+  object-fit: cover;
+}
+
+.stackAvatarFallback {
+  font-size: 9px;
+  font-weight: 600;
+  color: $color-text-muted;
+  line-height: 1;
+
+  :global(body.dark) & {
+    color: $color-text-dark-muted;
+  }
+}
+
+.stackAvatarOverflow {
+  font-size: 8px;
+  font-weight: 700;
+  color: $color-text-muted;
+  line-height: 1;
+
+  :global(body.dark) & {
+    color: $color-text-dark-muted;
+  }
+}
+
+// ==============================================================
+// CHEVRON
+// ==============================================================
+
+.teamChevron {
+  flex-shrink: 0;
+  color: $color-text-muted;
+  opacity: 0.4;
 
   :global(body.dark) & {
     color: $color-text-dark-muted;

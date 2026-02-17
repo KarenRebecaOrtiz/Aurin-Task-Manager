@@ -7,6 +7,7 @@ import {
   createSessionId,
   loadSession,
   updateSessionActivity,
+  clearSession,
   isOnline as checkOnline,
 } from "../utils"
 import { DEFAULT_TRANSLATIONS } from "../constants"
@@ -247,6 +248,25 @@ export function useChat(options: UseChatOptions = {}) {
     setDocumentModeEnabled((prev) => !prev)
   }, [])
 
+  const clearConversation = useCallback(() => {
+    clearSession()
+    const newId = createSessionId()
+    setSessionId(newId)
+    const welcomeMessage: Message = {
+      id: nanoid(8),
+      text: t.welcome,
+      sender: "bot",
+      timestamp: new Date().toISOString(),
+    }
+    setMessages([welcomeMessage])
+    setInputValue("")
+    setSelectedFile(null)
+    setIsTyping(false)
+    setWebSearchEnabled(false)
+    setAudioModeEnabled(false)
+    setDocumentModeEnabled(false)
+  }, [t.welcome])
+
   return {
     messages,
     inputValue,
@@ -264,6 +284,7 @@ export function useChat(options: UseChatOptions = {}) {
     toggleWebSearch,
     toggleAudioMode,
     toggleDocumentMode,
+    clearConversation,
     scrollToBottom,
   }
 }

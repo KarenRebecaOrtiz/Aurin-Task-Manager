@@ -26,7 +26,38 @@ export function MobileApp() {
 
   useEffect(() => {
     setMounted(true)
-    return () => setMounted(false)
+
+    // Override browser chrome color with brand primary
+    // Safari iOS ignores dynamic attribute changes — must remove & re-insert the tag
+    const BRAND_PRIMARY = '#d0df00'
+    const oldMeta = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null
+    const originalColor = oldMeta?.content
+
+    if (oldMeta) {
+      oldMeta.remove()
+    }
+
+    const newMeta = document.createElement('meta')
+    newMeta.name = 'theme-color'
+    newMeta.content = BRAND_PRIMARY
+    document.head.appendChild(newMeta)
+
+    // Also update apple status bar style for iOS PWA
+    const appleStatusBar = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]') as HTMLMetaElement | null
+    if (appleStatusBar) appleStatusBar.content = 'black-translucent'
+
+    return () => {
+      setMounted(false)
+      // Restore original theme-color
+      newMeta.remove()
+      if (originalColor) {
+        const restored = document.createElement('meta')
+        restored.name = 'theme-color'
+        restored.content = originalColor
+        document.head.appendChild(restored)
+      }
+      if (appleStatusBar) appleStatusBar.content = 'default'
+    }
   }, [])
 
   // Restrict swipe to bottom 25% of viewport

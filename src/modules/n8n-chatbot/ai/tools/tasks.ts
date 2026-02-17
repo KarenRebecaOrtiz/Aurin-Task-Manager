@@ -35,10 +35,22 @@ export const searchTasksTool: ChatCompletionTool = {
           type: 'string',
           description: 'Buscar tarea por nombre (búsqueda parcial, case-insensitive)'
         },
+        searchText: {
+          type: 'string',
+          description: 'Buscar texto en nombre Y descripción de la tarea (búsqueda parcial, case-insensitive). Más amplio que "name".'
+        },
         status: {
           type: 'string',
           enum: ['Por Iniciar', 'En Proceso', 'Backlog', 'Por Finalizar', 'Finalizado', 'Cancelado'],
-          description: 'Filtrar por estado de la tarea'
+          description: 'Filtrar por UN solo estado de la tarea'
+        },
+        statusIn: {
+          type: 'array',
+          items: {
+            type: 'string',
+            enum: ['Por Iniciar', 'En Proceso', 'Backlog', 'Por Finalizar', 'Finalizado', 'Cancelado']
+          },
+          description: 'Filtrar por MÚLTIPLES estados a la vez. Ej: ["En Proceso", "Por Iniciar"] para tareas activas y pendientes.'
         },
         onlyActive: {
           type: 'boolean',
@@ -64,6 +76,22 @@ export const searchTasksTool: ChatCompletionTool = {
         project: {
           type: 'string',
           description: 'Filtrar por nombre del proyecto'
+        },
+        allTasks: {
+          type: 'boolean',
+          description: 'SOLO ADMINS: Si es true, busca en TODAS las tareas sin limitarse a las del usuario. Útil para reportes globales, auditorías o consultas como "todas las tareas del cliente X".'
+        },
+        createdAfter: {
+          type: 'string',
+          description: 'Filtrar tareas creadas DESPUÉS de esta fecha (formato ISO: YYYY-MM-DD). Ej: "2025-01-01" para tareas de este año.'
+        },
+        createdBefore: {
+          type: 'string',
+          description: 'Filtrar tareas creadas ANTES de esta fecha (formato ISO: YYYY-MM-DD).'
+        },
+        dueBefore: {
+          type: 'string',
+          description: 'Filtrar tareas con fecha de vencimiento (endDate) ANTES de esta fecha. Útil para "tareas que vencen esta semana".'
         },
         limit: {
           type: 'number',
