@@ -233,7 +233,44 @@ async function shouldSendTeamPush(
   return prefs[prefKey] ?? true;
 }
 
+// --- Constants ---
+
+const APP_NAME = 'Aurin Task Manager';
+
 // --- Push Content Generators ---
+
+/**
+ * Truncate text for push body (mobile notifications cut off around 100 chars)
+ */
+function truncate(text: string, max = 90): string {
+  return text.length > max ? text.slice(0, max - 1) + '...' : text;
+}
+
+/**
+ * Format status labels for human readability
+ */
+function formatStatus(status: string): string {
+  const map: Record<string, string> = {
+    pending: 'Pendiente',
+    in_progress: 'En proceso',
+    in_review: 'En revision',
+    completed: 'Finalizada',
+    cancelled: 'Cancelada',
+    blocked: 'Bloqueada',
+  };
+  return map[status] || status;
+}
+
+function formatPriority(priority: string): string {
+  const map: Record<string, string> = {
+    low: 'Baja',
+    medium: 'Media',
+    high: 'Alta',
+    urgent: 'Urgente',
+    critical: 'Critica',
+  };
+  return map[priority] || priority;
+}
 
 function generateTaskPushPayload(
   type: NotificationType,
@@ -256,31 +293,105 @@ function generateTaskPushPayload(
     tag: `aurin-${type}`,
   };
 
+  const task = truncate(ctx.taskName, 40);
+
   switch (type) {
     case 'task_created':
-      return { ...base, title: 'Nueva tarea asignada', body: `${ctx.actorName} te asigno "${ctx.taskName}"` };
-    case 'task_status_changed':
-      return { ...base, title: ctx.taskName, body: `Estado cambiado a ${ctx.newValue || 'nuevo estado'}` };
-    case 'task_priority_changed':
-      return { ...base, title: ctx.taskName, body: `Prioridad cambiada a ${ctx.newValue || 'actualizada'}` };
+      return {
+        ...base,
+        title: `${APP_NAME}`,
+        body: `${ctx.actorName} te asigno una nueva tarea: ${task}`,
+      };
+
+    case 'task_status_changed': {
+      const from = ctx.oldValue ? formatStatus(ctx.oldValue) : null;
+      const to = formatStatus(ctx.newValue || '');
+      const change = from ? `${from} → ${to}` : to;
+      return {
+        ...base,
+        title: `${task}`,
+        body: `${ctx.actorName} cambio el estado a ${change}`,
+      };
+    }
+
+    case 'task_priority_changed': {
+      const from = ctx.oldValue ? formatPriority(ctx.oldValue) : null;
+      const to = formatPriority(ctx.newValue || '');
+      const change = from ? `${from} → ${to}` : to;
+      return {
+        ...base,
+        title: `${task}`,
+        body: `Prioridad actualizada: ${change}`,
+      };
+    }
+
     case 'task_dates_changed':
-      return { ...base, title: ctx.taskName, body: `Fechas actualizadas por ${ctx.actorName}` };
+      return {
+        ...base,
+        title: `${task}`,
+        body: `${ctx.actorName} modifico las fechas de esta tarea`,
+      };
+
     case 'task_assignment_changed':
-      return { ...base, title: ctx.taskName, body: `Equipo actualizado por ${ctx.actorName}` };
+      return {
+        ...base,
+        title: `${task}`,
+        body: `${ctx.actorName} actualizo los miembros del equipo`,
+      };
+
     case 'task_updated':
-      return { ...base, title: ctx.taskName, body: `Actualizada por ${ctx.actorName}` };
+      return {
+        ...base,
+        title: `${task}`,
+        body: `${ctx.actorName} realizo cambios en esta tarea`,
+      };
+
     case 'task_archived':
-      return { ...base, title: 'Tarea archivada', body: `"${ctx.taskName}" fue archivada por ${ctx.actorName}` };
+      return {
+        ...base,
+        title: `${APP_NAME}`,
+        body: `${ctx.actorName} archivo la tarea "${task}"`,
+      };
+
     case 'task_unarchived':
-      return { ...base, title: 'Tarea reactivada', body: `"${ctx.taskName}" fue reactivada por ${ctx.actorName}` };
+      return {
+        ...base,
+        title: `${APP_NAME}`,
+        body: `${ctx.actorName} reactivo la tarea "${task}"`,
+      };
+
     case 'task_deleted':
-      return { ...base, title: 'Tarea eliminada', body: `"${ctx.taskName}" fue eliminada por ${ctx.actorName}` };
-    case 'task_new_message':
-      return { ...base, title: `Mensaje en ${ctx.taskName}`, body: ctx.messageSummary || `${ctx.actorName} envio un mensaje` };
+      return {
+        ...base,
+        title: `${APP_NAME}`,
+        body: `${ctx.actorName} elimino la tarea "${task}"`,
+      };
+
+    case 'task_new_message': {
+      const preview = ctx.messageSummary
+        ? truncate(ctx.messageSummary, 70)
+        : null;
+      return {
+        ...base,
+        title: `${ctx.actorName} en ${task}`,
+        body: preview || 'Te envio un nuevo mensaje',
+        tag: `aurin-msg-${ctx.taskUrl}`, // Group messages per task
+      };
+    }
+
     case 'task_time_logged':
-      return { ...base, title: 'Tiempo registrado', body: `${ctx.actorName} registro tiempo en "${ctx.taskName}"` };
+      return {
+        ...base,
+        title: `${task}`,
+        body: `${ctx.actorName} registro ${ctx.timeEntry || 'tiempo'} en esta tarea`,
+      };
+
     default:
-      return { ...base, title: ctx.taskName, body: `Notificacion de ${ctx.actorName}` };
+      return {
+        ...base,
+        title: `${APP_NAME}`,
+        body: `${ctx.actorName} actualizo "${task}"`,
+      };
   }
 }
 
@@ -302,15 +413,41 @@ function generateTeamPushPayload(
     tag: `aurin-${type}`,
   };
 
+  const team = truncate(ctx.teamName, 40);
+
   switch (type) {
     case 'team_member_added_you':
-      return { ...base, title: 'Nuevo equipo', body: `${ctx.actorName} te agrego a "${ctx.teamName}"` };
+      return {
+        ...base,
+        title: `${APP_NAME}`,
+        body: `${ctx.actorName} te agrego al equipo "${team}"`,
+      };
+
     case 'team_member_added':
-      return { ...base, title: ctx.teamName, body: `${ctx.newMemberName || 'Alguien'} se unio al equipo` };
-    case 'team_new_message':
-      return { ...base, title: `Mensaje en ${ctx.teamName}`, body: ctx.messageSummary || `${ctx.actorName} envio un mensaje` };
+      return {
+        ...base,
+        title: `${team}`,
+        body: `${ctx.newMemberName || 'Un nuevo miembro'} se unio al equipo`,
+      };
+
+    case 'team_new_message': {
+      const preview = ctx.messageSummary
+        ? truncate(ctx.messageSummary, 70)
+        : null;
+      return {
+        ...base,
+        title: `${ctx.actorName} en ${team}`,
+        body: preview || 'Nuevo mensaje en el equipo',
+        tag: `aurin-msg-${ctx.teamUrl}`, // Group messages per team
+      };
+    }
+
     default:
-      return { ...base, title: ctx.teamName, body: `Notificacion de ${ctx.actorName}` };
+      return {
+        ...base,
+        title: `${APP_NAME}`,
+        body: `Actividad en "${team}"`,
+      };
   }
 }
 

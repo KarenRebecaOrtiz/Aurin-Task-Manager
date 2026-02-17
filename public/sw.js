@@ -104,7 +104,7 @@ self.addEventListener('push', (event) => {
     }
   }
 
-  const title = data.title || 'Nueva Notificación';
+  const title = data.title || 'Aurin Task Manager';
   const options = {
     body: data.body || 'Tienes una nueva notificación',
     icon: data.icon || '/favicon/android-chrome-192x192.png',
