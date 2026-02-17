@@ -77,9 +77,10 @@
   height: calc(100dvh - 3rem);
 
   // Vaul handles transforms via inline styles — snappy for precise drag tracking
-  // Also transition height for smooth iOS keyboard open/close
+  // Also transition height + bottom for smooth iOS keyboard open/close
   transition: transform 250ms cubic-bezier(0.32, 0.72, 0, 1),
-              height 0.15s ease-out !important;
+              height 0.15s ease-out,
+              bottom 0.15s ease-out !important;
 
   // Dark mode
   :global(.dark) &,

@@ -211,8 +211,11 @@ const DrawerContent = forwardRef<
   const contentLocalRef = useRef<HTMLDivElement>(null)
   const hasAnimatedIn = useRef(false)
 
-  // ---- iOS Virtual Keyboard: adjust drawer height via visualViewport ----
-  const [viewportHeight, setViewportHeight] = useState<number | null>(null)
+  // ---- iOS Virtual Keyboard: reposition drawer above keyboard ----
+  // On iOS Safari, position:fixed bottom:0 sits at the layout viewport bottom,
+  // which is BEHIND the keyboard. We detect the keyboard via visualViewport
+  // and shift the drawer up so its bottom edge meets the keyboard top.
+  const [kbLayout, setKbLayout] = useState<{ height: number; bottom: number } | null>(null)
 
   useEffect(() => {
     const vv = window.visualViewport
@@ -223,11 +226,14 @@ const DrawerContent = forwardRef<
       cancelAnimationFrame(rafId)
       rafId = requestAnimationFrame(() => {
         const kbHeight = Math.round(window.innerHeight - vv.height - vv.offsetTop)
-        // Keyboard is open when the difference exceeds 150px (avoids browser chrome false positives)
+        // Threshold 150px avoids false positives from browser chrome changes
         if (kbHeight > 150) {
-          setViewportHeight(vv.height)
+          setKbLayout({
+            height: vv.height - 48,   // drawer height = visual viewport minus top offset (handle + radius)
+            bottom: kbHeight,          // push drawer above keyboard
+          })
         } else {
-          setViewportHeight(null)
+          setKbLayout(null)
         }
       })
     }
@@ -336,7 +342,7 @@ const DrawerContent = forwardRef<
           compact && styles.contentCompact,
           className
         )}
-        style={viewportHeight != null ? { height: `${viewportHeight - 48}px` } : undefined}
+        style={kbLayout ? { height: `${kbLayout.height}px`, bottom: `${kbLayout.bottom}px` } : undefined}
         {...props}
       >
         <div className={styles.handleContainer}>

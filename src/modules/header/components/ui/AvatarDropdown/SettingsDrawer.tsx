@@ -182,8 +182,8 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                     {pushDenied
                       ? 'Push bloqueadas'
                       : pushSubscribed
-                        ? 'Push activas'
-                        : 'Activar Push'}
+                        ? 'Desactivar Notificaciones Push'
+                        : 'Activar Notificaciones Push'}
                   </span>
                 </motion.button>
               )}
