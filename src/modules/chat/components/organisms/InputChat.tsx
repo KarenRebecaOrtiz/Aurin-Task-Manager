@@ -334,16 +334,21 @@ export const InputChat: React.FC<InputChatProps> = ({
 
       // Upload file if present
       if (currentFile) {
+        const isGuest = userId === 'guest'
+        const uploadEndpoint = isGuest ? '/api/public/upload-blob' : '/api/upload-blob'
+
         const formData = new FormData()
         formData.append('file', currentFile)
-        formData.append('userId', userId)
         formData.append('type', 'attachment')
         formData.append('conversationId', taskId)
+        if (!isGuest) {
+          formData.append('userId', userId)
+        }
 
-        const response = await fetch('/api/upload-blob', {
+        const response = await fetch(uploadEndpoint, {
           method: 'POST',
           body: formData,
-          headers: { 'x-clerk-user-id': userId },
+          ...(isGuest ? {} : { headers: { 'x-clerk-user-id': userId } }),
         })
 
         if (!response.ok) throw new Error('Failed to upload file')
