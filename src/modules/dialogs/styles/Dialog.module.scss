@@ -27,6 +27,7 @@
   z-index: -1;
   background: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   animation: overlayShow 150ms ease-out;
 }
 

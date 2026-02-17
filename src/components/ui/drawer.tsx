@@ -211,6 +211,37 @@ const DrawerContent = forwardRef<
   const contentLocalRef = useRef<HTMLDivElement>(null)
   const hasAnimatedIn = useRef(false)
 
+  // ---- iOS Virtual Keyboard: adjust drawer height via visualViewport ----
+  const [viewportHeight, setViewportHeight] = useState<number | null>(null)
+
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+
+    let rafId = 0
+    const update = () => {
+      cancelAnimationFrame(rafId)
+      rafId = requestAnimationFrame(() => {
+        const kbHeight = Math.round(window.innerHeight - vv.height - vv.offsetTop)
+        // Keyboard is open when the difference exceeds 150px (avoids browser chrome false positives)
+        if (kbHeight > 150) {
+          setViewportHeight(vv.height)
+        } else {
+          setViewportHeight(null)
+        }
+      })
+    }
+
+    vv.addEventListener('resize', update)
+    vv.addEventListener('scroll', update)
+
+    return () => {
+      vv.removeEventListener('resize', update)
+      vv.removeEventListener('scroll', update)
+      cancelAnimationFrame(rafId)
+    }
+  }, [])
+
   // Merge refs
   const setContentRef = useCallback((node: HTMLDivElement | null) => {
     contentLocalRef.current = node
@@ -305,6 +336,7 @@ const DrawerContent = forwardRef<
           compact && styles.contentCompact,
           className
         )}
+        style={viewportHeight != null ? { height: `${viewportHeight - 48}px` } : undefined}
         {...props}
       >
         <div className={styles.handleContainer}>

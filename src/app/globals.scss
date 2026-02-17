@@ -94,6 +94,31 @@ html.dark [data-sileo-toast],
 }
 
 // ============================================
+// SILEO SVG — Apply theme variables to fill
+// ============================================
+// The SVG rects use inline fill from JS, override with CSS variables
+[data-sileo-pill] {
+  fill: var(--sileo-bg) !important;
+  stroke: var(--sileo-border) !important;
+  stroke-width: 1 !important;
+}
+
+[data-sileo-body] {
+  fill: var(--sileo-bg) !important;
+  stroke: var(--sileo-border) !important;
+  stroke-width: 1 !important;
+}
+
+// ============================================
+// SILEO BUTTON — Dark mode support
+// ============================================
+body.dark [data-sileo-button],
+html.dark [data-sileo-button],
+[data-theme="dark"] [data-sileo-button] {
+  color: var(--sileo-color) !important;
+}
+
+// ============================================
 // SILEO ACCESSIBILITY FIX
 // ============================================
 // 🚨 CRITICAL: Icons use state colors, texts use theme colors
