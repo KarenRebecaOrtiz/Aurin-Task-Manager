@@ -291,6 +291,15 @@
   &::-webkit-scrollbar {
     display: none;
   }
+
+  @media (max-width: 1024px) {
+    gap: 2px;
+
+    .breadcrumbItem {
+      padding: 3px 6px;
+      font-size: $text-xs;
+    }
+  }
 }
 
 .breadcrumbItem {
@@ -369,10 +378,15 @@
     border-color: rgba($white, 0.1);
     color: $color-text-dark-secondary;
 
-    &:hover {
+    &:hover:not(:disabled) {
       background: rgba($white, 0.1);
       color: $color-text-dark-primary;
       border-color: rgba($white, 0.2);
+    }
+
+    &:disabled {
+      opacity: 0.25;
+      border-color: rgba($white, 0.05);
     }
   }
 }
@@ -385,7 +399,7 @@
   display: flex;
   align-items: center;
   gap: $spacing-sm;
-  padding: $spacing-sm $spacing-lg;
+  padding: $spacing-xl $spacing-lg;
   overflow-x: auto;
   scrollbar-width: none;
   border-bottom: 1px solid $color-border-subtle;

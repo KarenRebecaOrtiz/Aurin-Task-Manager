@@ -102,6 +102,8 @@ export function CommandItem({
   return (
     <motion.button
       type="button"
+      role="option"
+      aria-selected={isSelected}
       data-command-index={index}
       className={`${styles.item} ${isSelected ? styles.selected : ''} ${item.type === 'action' ? styles.itemAction : ''} ${getActionClass()}`}
       onClick={onClick}

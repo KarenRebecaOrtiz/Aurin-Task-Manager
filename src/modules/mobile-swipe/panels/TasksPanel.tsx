@@ -16,8 +16,8 @@ import {
   useWorkspaces,
   useSelectedWorkspaceId,
   ALL_WORKSPACES_ID,
-  type Workspace,
 } from '@/stores/workspacesStore'
+import { useSidebarStateStore } from '@/stores/sidebarStateStore'
 import {
   useMobilePanel,
   EXIT_DURATION,
@@ -41,19 +41,21 @@ function formatTime(hours: number, minutes: number): string {
   return `${hours}h ${minutes}m`
 }
 
-interface TaskCardProps {
-  task: {
-    id: string
-    name: string
-    status: string
-    project: string
-    clientId: string
-    timeTracking?: {
-      totalHours: number
-      totalMinutes: number
-    }
-    totalHours?: number
+interface TaskItem {
+  id: string
+  name: string
+  status: string
+  project: string
+  clientId: string
+  timeTracking?: {
+    totalHours: number
+    totalMinutes: number
   }
+  totalHours?: number
+}
+
+interface TaskCardProps {
+  task: TaskItem
   clientName: string
   clientImage: string
   onTap: () => void
@@ -112,6 +114,62 @@ function TaskCard({ task, clientName, clientImage, onTap }: TaskCardProps) {
   )
 }
 
+interface WorkspaceItemProps {
+  ws: { id: string; name: string; logo?: string; gradientId?: string; gradientColors?: string[]; taskCount?: number }
+  isActive: boolean
+  onSelect: (id: string) => void
+}
+
+function WorkspaceItem({ ws, isActive, onSelect }: WorkspaceItemProps) {
+  const handleClick = useCallback(() => onSelect(ws.id), [onSelect, ws.id])
+  return (
+    <button
+      type="button"
+      className={`${styles.drawerItem} ${isActive ? styles.drawerItemActive : ''}`}
+      onClick={handleClick}
+    >
+      <GradientAvatar
+        imageUrl={ws.logo}
+        gradientId={ws.gradientId}
+        gradientColors={ws.gradientColors}
+        name={ws.name}
+        className={styles.drawerItemAvatar}
+        size="sm"
+      />
+      <div className={styles.drawerItemText}>
+        <span className={styles.drawerItemName}>{ws.name}</span>
+        {ws.taskCount !== undefined && (
+          <span className={styles.drawerItemSub}>
+            {ws.taskCount} tarea{ws.taskCount !== 1 ? 's' : ''}
+          </span>
+        )}
+      </div>
+      {isActive && <Check size={16} className={styles.drawerCheck} />}
+    </button>
+  )
+}
+
+interface TaskCardWrapperProps {
+  task: TaskItem
+  clientName: string
+  clientImage: string
+  onTaskTap: (taskId: string) => void
+}
+
+function TaskCardWrapper({ task, clientName, clientImage, onTaskTap }: TaskCardWrapperProps) {
+  const handleTap = useCallback(() => onTaskTap(task.id), [onTaskTap, task.id])
+  return (
+    <div className={styles.taskCardWrapper}>
+      <TaskCard
+        task={task}
+        clientName={clientName}
+        clientImage={clientImage}
+        onTap={handleTap}
+      />
+    </div>
+  )
+}
+
 export function TasksPanel() {
   const allTasks = useDataStore(useShallow((s) => s.tasks))
   const clients = useDataStore(useShallow((s) => s.clients))
@@ -132,6 +190,7 @@ export function TasksPanel() {
   const activePanel = useMobilePanel((s) => s.activePanel)
   const transitionPhase = useMobilePanel((s) => s.transitionPhase)
   const taskSubView = useMobilePanel((s) => s.taskSubView)
+  const setScrollDirection = useMobilePanel((s) => s.setScrollDirection)
 
   // Workspace button GSAP enter/exit (phase-based)
   const wsBtnRef = useRef<HTMLButtonElement>(null)
@@ -194,6 +253,7 @@ export function TasksPanel() {
     if (delta > scrollThreshold && currentY > 40 && headerVisibleRef.current) {
       // Scrolling down — hide header and collapse its space
       headerVisibleRef.current = false
+      setScrollDirection('down')
       gsap.to(header, {
         y: '-100%',
         autoAlpha: 0,
@@ -207,6 +267,7 @@ export function TasksPanel() {
     } else if (delta < -scrollThreshold && !headerVisibleRef.current) {
       // Scrolling up — show header and restore space
       headerVisibleRef.current = true
+      setScrollDirection('up')
       gsap.to(header, {
         y: '0%',
         autoAlpha: 1,
@@ -219,7 +280,7 @@ export function TasksPanel() {
     }
 
     lastScrollY.current = currentY
-  }, [])
+  }, [setScrollDirection])
 
   // Workspace selector state
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -239,12 +300,21 @@ export function TasksPanel() {
     [workspaces]
   )
 
+  const handleOpenDrawer = useCallback(() => setDrawerOpen(true), [])
+
   const handleWorkspaceSelect = useCallback(
     (workspaceId: string | null) => {
       setSelectedWorkspace(workspaceId || ALL_WORKSPACES_ID)
       setDrawerOpen(false)
     },
     [setSelectedWorkspace]
+  )
+
+  const handleSelectAll = useCallback(() => handleWorkspaceSelect(null), [handleWorkspaceSelect])
+
+  const handleSearchChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value),
+    []
   )
 
   const clientMap = useMemo(() => {
@@ -274,14 +344,14 @@ export function TasksPanel() {
     return filtered
   }, [tasks, taskSubView, searchQuery, clientMap])
 
-  const handleTaskTap = (taskId: string) => {
-    const { openChatSidebar } = require('@/stores/sidebarStateStore').useSidebarStateStore.getState()
+  const handleTaskTap = useCallback((taskId: string) => {
+    const { openChatSidebar } = useSidebarStateStore.getState()
     const task = tasks.find((t) => t.id === taskId)
     if (task) {
       const client = clientMap.get(task.clientId)
       openChatSidebar(task, client?.name || 'Sin cuenta')
     }
-  }
+  }, [tasks, clientMap])
 
   const viewIcon = taskSubView === 'archive'
     ? <Archive size={16} />
@@ -337,7 +407,7 @@ export function TasksPanel() {
         ref={wsBtnRef}
         type="button"
         className={styles.workspaceButton}
-        onClick={() => setDrawerOpen(true)}
+        onClick={handleOpenDrawer}
       >
         {isViewAll ? (
           <div className={styles.wsIconAll}>
@@ -370,7 +440,7 @@ export function TasksPanel() {
             <button
               type="button"
               className={`${styles.drawerItem} ${isViewAll ? styles.drawerItemActive : ''}`}
-              onClick={() => handleWorkspaceSelect(null)}
+              onClick={handleSelectAll}
             >
               <div className={styles.drawerItemIcon}>
                 <Building2 size={16} />
@@ -384,35 +454,14 @@ export function TasksPanel() {
 
             {sortedWorkspaces.length > 0 && <div className={styles.drawerDivider} />}
 
-            {sortedWorkspaces.map((ws) => {
-              const isActive = !isViewAll && selectedWorkspaceId === ws.id
-              return (
-                <button
-                  key={ws.id}
-                  type="button"
-                  className={`${styles.drawerItem} ${isActive ? styles.drawerItemActive : ''}`}
-                  onClick={() => handleWorkspaceSelect(ws.id)}
-                >
-                  <GradientAvatar
-                    imageUrl={ws.logo}
-                    gradientId={ws.gradientId}
-                    gradientColors={ws.gradientColors}
-                    name={ws.name}
-                    className={styles.drawerItemAvatar}
-                    size="sm"
-                  />
-                  <div className={styles.drawerItemText}>
-                    <span className={styles.drawerItemName}>{ws.name}</span>
-                    {ws.taskCount !== undefined && (
-                      <span className={styles.drawerItemSub}>
-                        {ws.taskCount} tarea{ws.taskCount !== 1 ? 's' : ''}
-                      </span>
-                    )}
-                  </div>
-                  {isActive && <Check size={16} className={styles.drawerCheck} />}
-                </button>
-              )
-            })}
+            {sortedWorkspaces.map((ws) => (
+              <WorkspaceItem
+                key={ws.id}
+                ws={ws}
+                isActive={!isViewAll && selectedWorkspaceId === ws.id}
+                onSelect={handleWorkspaceSelect}
+              />
+            ))}
           </div>
         </DrawerContent>
       </Drawer>
@@ -436,7 +485,7 @@ export function TasksPanel() {
             className={styles.searchBarInput}
             placeholder="Buscar tareas..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={handleSearchChange}
           />
         </div>
       </div>
@@ -454,14 +503,13 @@ export function TasksPanel() {
           activeTasks.map((task) => {
             const client = clientMap.get(task.clientId)
             return (
-              <div key={task.id} className={styles.taskCardWrapper}>
-                <TaskCard
-                  task={task}
-                  clientName={client?.name || 'Sin cuenta'}
-                  clientImage={client?.imageUrl || ''}
-                  onTap={() => handleTaskTap(task.id)}
-                />
-              </div>
+              <TaskCardWrapper
+                key={task.id}
+                task={task}
+                clientName={client?.name || 'Sin cuenta'}
+                clientImage={client?.imageUrl || ''}
+                onTaskTap={handleTaskTap}
+              />
             )
           })
         )}

@@ -370,8 +370,6 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
           setSearchQuery={tableState.setSearchQuery}
           searchCategory={tableState.searchCategory}
           setSearchCategory={tableState.setSearchCategory}
-          onPriorityFiltersChange={tableState.setPriorityFilters}
-          onStatusFiltersChange={tableState.setStatusFilters}
           currentView="table"
         />
         <TableSkeletonLoader type="tasks" rows={12} />
@@ -387,8 +385,6 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
         setSearchQuery={tableState.setSearchQuery}
         searchCategory={tableState.searchCategory}
         setSearchCategory={tableState.setSearchCategory}
-        onPriorityFiltersChange={tableState.setPriorityFilters}
-        onStatusFiltersChange={tableState.setStatusFilters}
         currentView="table"
       />
       {/* View Toggle - Below header */}

@@ -21,6 +21,7 @@ import { useSharedTasksState } from '@/hooks/useSharedTasksState';
 import { useUserDataSubscription } from '@/hooks/useUserDataSubscription';
 import { usePinnedTasksSubscription } from '@/modules/data-views/tasks/hooks/usePinnedTasksSubscription';
 import { useVisibilityRefresh } from '@/hooks/useVisibilityRefresh';
+import { useScrollWatcher } from '@/hooks/useScrollWatcher';
 import tasksStyles from './tasks/styles/TasksPage.module.scss';
 import { ChatbotWidget } from '@/modules/n8n-chatbot';
 import { MobileApp } from '@/modules/mobile-swipe';
@@ -47,6 +48,9 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
 
   // 🔄 Refresh users when tab becomes visible (for status updates)
   useVisibilityRefresh({ enabled: !!user?.id });
+
+  // 📜 Global scroll direction detection for hiding floating elements
+  useScrollWatcher();
 
   // Get state from stores
   const isCreateTaskOpen = useTasksPageStore(useShallow(state => state.isCreateTaskOpen));

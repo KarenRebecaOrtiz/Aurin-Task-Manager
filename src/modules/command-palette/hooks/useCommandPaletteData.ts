@@ -193,32 +193,35 @@ export function useCommandPaletteData({
     }
 
     // Obtener usuarios únicos involucrados en las tareas
+    // Usar Set por tarea para evitar contar al mismo usuario 2 veces en la misma tarea
     const userTaskCounts = new Map<string, number>();
 
     relevantTasks.forEach((task) => {
-      const involvedUsers = [
-        task.CreatedBy,
-        ...(task.AssignedTo || []),
-        ...(task.LeadedBy || []),
-      ].filter(Boolean);
+      const uniqueUsers = new Set(
+        [
+          task.CreatedBy,
+          ...(task.AssignedTo || []),
+          ...(task.LeadedBy || []),
+        ].filter(Boolean)
+      );
 
-      involvedUsers.forEach((userId) => {
+      uniqueUsers.forEach((userId) => {
         userTaskCounts.set(userId, (userTaskCounts.get(userId) || 0) + 1);
       });
     });
 
     const items: MemberCommandItem[] = [];
 
-    userTaskCounts.forEach((taskCount, oduserId) => {
-      const user = allUsers.find((u) => u.id === oduserId);
+    userTaskCounts.forEach((taskCount, userId) => {
+      const user = allUsers.find((u) => u.id === userId);
       if (!user) return;
 
       items.push({
-        id: oduserId,
+        id: userId,
         type: 'member',
         title: user.fullName || 'Usuario',
         subtitle: `${taskCount} tarea${taskCount !== 1 ? 's' : ''}`,
-        userId: oduserId,
+        userId,
         avatar: user.imageUrl,
         taskCount,
         badge: taskCount > 0 ? taskCount : undefined,
@@ -270,16 +273,14 @@ export function useCommandPaletteData({
 
     // Aplicar filtros de status
     if (activeFilters.statuses.length > 0) {
-      filteredTasks = filteredTasks.filter((t) =>
-        activeFilters.statuses.includes(t.status as any)
-      );
+      const statusSet = new Set<string>(activeFilters.statuses);
+      filteredTasks = filteredTasks.filter((t) => statusSet.has(t.status));
     }
 
     // Aplicar filtros de prioridad
     if (activeFilters.priorities.length > 0) {
-      filteredTasks = filteredTasks.filter((t) =>
-        activeFilters.priorities.includes(t.priority as any)
-      );
+      const prioritySet = new Set<string>(activeFilters.priorities);
+      filteredTasks = filteredTasks.filter((t) => prioritySet.has(t.priority));
     }
 
     const items = filteredTasks.map((task): TaskCommandItem => {
@@ -346,10 +347,12 @@ export function useCommandPaletteData({
       .sort((a, b) => {
         // Ordenar por status: tareas en proceso primero
         const statusOrder: Record<string, number> = {
-          'en-proceso': 0,
-          'por-iniciar': 1,
-          'por-finalizar': 2,
-          'finalizado': 3,
+          'En Proceso': 0,
+          'Por Iniciar': 1,
+          'Backlog': 2,
+          'Por Finalizar': 3,
+          'Finalizado': 4,
+          'Cancelado': 5,
         };
         const aOrder = statusOrder[a.status] ?? 99;
         const bOrder = statusOrder[b.status] ?? 99;

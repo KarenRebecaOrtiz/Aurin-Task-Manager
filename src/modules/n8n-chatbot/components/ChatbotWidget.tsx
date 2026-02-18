@@ -3,9 +3,11 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { MessageCircle } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import gsap from 'gsap'
 import type { ChatbotWidgetProps } from '../types'
 import { DEFAULT_TRANSLATIONS } from '../constants'
 import { useChatbotControl } from '../hooks/useChatbotControl'
+import { useScrollDirectionStore } from '@/stores/scrollDirectionStore'
 import {
   ResponsiveDialog,
   ResponsiveDialogContent,
@@ -32,6 +34,9 @@ export default function ChatbotWidget({
   const [isExpanded, setIsExpanded] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const chatContainerRef = useRef<HTMLDivElement>(null)
+  const floatingBtnRef = useRef<HTMLButtonElement>(null)
+  const btnVisibleRef = useRef(true)
+  const scrollDirection = useScrollDirectionStore((s) => s.scrollDirection)
 
   const isOpen = controlled ? isOpenControlled : isExpanded
   const handleToggle = (open: boolean) => {
@@ -113,21 +118,51 @@ export default function ChatbotWidget({
     }
   }, [isOpen, scrollToBottom])
 
+  // GSAP: hide/show floating button based on scroll direction
+  useEffect(() => {
+    const btn = floatingBtnRef.current
+    if (!btn || isOpen) return
+
+    if (scrollDirection === 'down' && btnVisibleRef.current) {
+      btnVisibleRef.current = false
+      gsap.to(btn, {
+        y: '120%',
+        autoAlpha: 0,
+        duration: 0.45,
+        ease: 'power3.inOut',
+        overwrite: true,
+      })
+    } else if (scrollDirection === 'up' && !btnVisibleRef.current) {
+      btnVisibleRef.current = true
+      gsap.to(btn, {
+        y: '0%',
+        autoAlpha: 1,
+        duration: 0.45,
+        ease: 'power3.out',
+        overwrite: true,
+      })
+    }
+  }, [scrollDirection, isOpen])
+
+  // Reset button visibility when chat closes
+  useEffect(() => {
+    if (!isOpen && floatingBtnRef.current) {
+      btnVisibleRef.current = true
+      gsap.set(floatingBtnRef.current, { y: '0%', autoAlpha: 1 })
+    }
+  }, [isOpen])
+
   // Don't show floating button if controlled (mobile will use navigation button)
   if (!isOpen && controlled) return null
 
   // Floating button (closed state)
   if (!isOpen) {
     return (
-      <motion.button
+      <button
+        ref={floatingBtnRef}
         onClick={() => handleToggle(true)}
         className={styles.floatingBtn}
         aria-label={t.openChat}
-        variants={floatingButtonVariants}
-        initial="hidden"
-        animate="visible"
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
       >
         <MessageCircle size={32} />
         {messages.length > 1 && (
@@ -135,7 +170,7 @@ export default function ChatbotWidget({
             {messages.filter((m) => m.sender === 'bot').length}
           </motion.span>
         )}
-      </motion.button>
+      </button>
     )
   }
 

@@ -64,7 +64,7 @@ export type PriorityLevel = 'Alta' | 'Media' | 'Baja';
 /**
  * Estados de tarea
  */
-export type StatusLevel = 'por-iniciar' | 'en-proceso' | 'por-finalizar' | 'finalizado';
+export type StatusLevel = 'Por Iniciar' | 'En Proceso' | 'Backlog' | 'Por Finalizar' | 'Finalizado' | 'Cancelado';
 
 /**
  * Filtros activos
@@ -206,11 +206,6 @@ export interface CommandPaletteProps {
   // Estado controlado (opcional)
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
-
-  // Callbacks de filtrado
-  onSearch?: (keywords: string[], category: SearchCategory | null) => void;
-  onPriorityFiltersChange?: (priorities: PriorityLevel[]) => void;
-  onStatusFiltersChange?: (statuses: StatusLevel[]) => void;
 
   // Callbacks de navegación/selección
   onWorkspaceSelect?: (workspaceId: string | null) => void;

@@ -298,6 +298,7 @@ export function CommandPalette({
           type="button"
           className={`${styles.trigger} ${isOpen ? styles.focused : ''}`}
           onClick={toggle}
+          aria-label="Abrir búsqueda"
         >
           <div className={styles.triggerContent}>
             <Search className={styles.triggerIcon} size={16} />

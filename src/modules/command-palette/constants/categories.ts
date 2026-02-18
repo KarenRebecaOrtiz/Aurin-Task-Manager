@@ -101,7 +101,7 @@ export interface StatusConfig {
   id: string;
   label: string;
   value: StatusLevel;
-  variant: 'status-backlog' | 'status-todo' | 'status-in-progress' | 'status-in-review' | 'status-done' | 'status-archived';
+  variant: 'status-backlog' | 'status-todo' | 'status-in-progress' | 'status-in-review' | 'status-done' | 'status-cancelled';
   color: string;
 }
 
@@ -109,30 +109,44 @@ export const STATUS_FILTERS: StatusConfig[] = [
   {
     id: 'por-iniciar',
     label: 'Por Iniciar',
-    value: 'por-iniciar',
+    value: 'Por Iniciar',
     variant: 'status-todo',
     color: '#64748b',
   },
   {
     id: 'en-proceso',
     label: 'En Proceso',
-    value: 'en-proceso',
+    value: 'En Proceso',
     variant: 'status-in-progress',
     color: '#3b82f6',
   },
   {
+    id: 'backlog',
+    label: 'Backlog',
+    value: 'Backlog',
+    variant: 'status-backlog',
+    color: '#8b5cf6',
+  },
+  {
     id: 'por-finalizar',
     label: 'Por Finalizar',
-    value: 'por-finalizar',
+    value: 'Por Finalizar',
     variant: 'status-in-review',
     color: '#f59e0b',
   },
   {
     id: 'finalizado',
     label: 'Finalizado',
-    value: 'finalizado',
+    value: 'Finalizado',
     variant: 'status-done',
     color: '#22c55e',
+  },
+  {
+    id: 'cancelado',
+    label: 'Cancelado',
+    value: 'Cancelado',
+    variant: 'status-cancelled',
+    color: '#ef4444',
   },
 ];
 

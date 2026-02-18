@@ -1,15 +1,17 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter, usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
+import gsap from 'gsap';
 import clsx from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { CirclePlus, Users, ClipboardList } from 'lucide-react';
 import { Unplug } from '@/components/animate-ui/icons/unplug';
 import { useTasksPageStore } from '@/stores/tasksPageStore';
 import { useSidebarStateStore } from '@/stores/sidebarStateStore';
+import { useScrollDirectionStore } from '@/stores/scrollDirectionStore';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
@@ -96,13 +98,68 @@ export const DesktopFloatingNav: React.FC<DesktopFloatingNavProps> = ({
   const pathname = usePathname();
   const openCreateTask = useTasksPageStore((state) => state.openCreateTask);
   const isSidebarOpen = useSidebarStateStore((state) => state.isOpen);
+  const scrollDirection = useScrollDirectionStore((s) => s.scrollDirection);
   const [mounted, setMounted] = useState(false);
+  const navRef = useRef<HTMLElement>(null);
+  const visibleRef = useRef(true);
 
   // Mount portal
   useEffect(() => {
     setMounted(true);
     return () => setMounted(false);
   }, []);
+
+  // GSAP: hide/show based on scroll direction
+  useEffect(() => {
+    const nav = navRef.current;
+    if (!nav || isSidebarOpen) return;
+
+    if (scrollDirection === 'down' && visibleRef.current) {
+      visibleRef.current = false;
+      gsap.to(nav, {
+        y: '120%',
+        autoAlpha: 0,
+        duration: 0.45,
+        ease: 'power3.inOut',
+        overwrite: true,
+      });
+    } else if (scrollDirection === 'up' && !visibleRef.current) {
+      visibleRef.current = true;
+      gsap.to(nav, {
+        y: '0%',
+        autoAlpha: 1,
+        duration: 0.45,
+        ease: 'power3.out',
+        overwrite: true,
+      });
+    }
+  }, [scrollDirection, isSidebarOpen]);
+
+  // GSAP: hide when sidebar opens, show when it closes
+  useEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+
+    if (isSidebarOpen) {
+      gsap.to(nav, {
+        y: '120%',
+        autoAlpha: 0,
+        duration: 0.4,
+        ease: 'power3.inOut',
+        overwrite: true,
+      });
+      visibleRef.current = false;
+    } else {
+      gsap.to(nav, {
+        y: '0%',
+        autoAlpha: 1,
+        duration: 0.4,
+        ease: 'power3.out',
+        overwrite: true,
+      });
+      visibleRef.current = true;
+    }
+  }, [isSidebarOpen]);
 
   // 🚀 PREFETCH: Preload all view routes on mount for instant navigation
   useEffect(() => {
@@ -169,19 +226,9 @@ export const DesktopFloatingNav: React.FC<DesktopFloatingNavProps> = ({
   }
 
   const floatingNav = (
-    <motion.nav
+    <nav
+      ref={navRef}
       className={styles.floatingNav}
-      initial={{ y: 100, opacity: 0 }}
-      animate={isSidebarOpen
-        ? { y: 100, opacity: 0, pointerEvents: 'none' as const }
-        : { y: 0, opacity: 1, pointerEvents: 'auto' as const }
-      }
-      exit={{ y: 100, opacity: 0 }}
-      transition={{
-        type: 'spring',
-        stiffness: 300,
-        damping: 25,
-      }}
     >
       <motion.div
         className={styles.navContainer}
@@ -230,7 +277,7 @@ export const DesktopFloatingNav: React.FC<DesktopFloatingNavProps> = ({
           tooltip="Crear Nueva Tarea"
         />
       </motion.div>
-    </motion.nav>
+    </nav>
   );
 
   // Render as portal to body

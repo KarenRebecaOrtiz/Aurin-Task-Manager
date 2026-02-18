@@ -17,9 +17,12 @@ interface MobilePanelState {
   transitionPhase: TransitionPhase
   taskSubView: TaskSubView
   searchQuery: string
+  /** Scroll direction for hiding/showing bottom nav pill */
+  scrollDirection: 'up' | 'down' | null
   setActivePanel: (panel: MobilePanel) => void
   setTaskSubView: (view: TaskSubView) => void
   setSearchQuery: (query: string) => void
+  setScrollDirection: (dir: 'up' | 'down' | null) => void
 }
 
 let enterTimer: ReturnType<typeof setTimeout> | null = null
@@ -31,6 +34,7 @@ export const useMobilePanel = create<MobilePanelState>((set, get) => ({
   transitionPhase: 'idle',
   taskSubView: 'table',
   searchQuery: '',
+  scrollDirection: null,
 
   setActivePanel: (panel) => {
     const { activePanel: current } = get()
@@ -56,4 +60,5 @@ export const useMobilePanel = create<MobilePanelState>((set, get) => ({
 
   setTaskSubView: (view) => set({ taskSubView: view }),
   setSearchQuery: (query) => set({ searchQuery: query }),
+  setScrollDirection: (dir) => set({ scrollDirection: dir }),
 }))

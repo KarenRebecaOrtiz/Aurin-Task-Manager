@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { CommandPalette, type SearchCategory, type PriorityLevel, type StatusLevel } from '@/modules/command-palette';
+import { CommandPalette, type SearchCategory } from '@/modules/command-palette';
 import { ViewSwitcher } from './ViewSwitcher';
 import { WorkspacesDropdown } from '@/components/ui/workspaces';
 import { ClientDialog } from '@/modules/client-crud/components/ClientDialog';
@@ -24,8 +24,6 @@ interface TasksHeaderProps {
   setSearchQuery: (query: string[]) => void;
   searchCategory: SearchCategory | null;
   setSearchCategory: (category: SearchCategory | null) => void;
-  onPriorityFiltersChange?: (priorities: string[]) => void;
-  onStatusFiltersChange?: (statuses: StatusLevel[]) => void;
   currentView?: 'table' | 'kanban' | 'archive';
 }
 
@@ -34,8 +32,6 @@ export const TasksHeader: React.FC<TasksHeaderProps> = ({
   setSearchQuery,
   searchCategory,
   setSearchCategory,
-  onPriorityFiltersChange,
-  onStatusFiltersChange,
   currentView = 'table',
 }) => {
   // Estado para diálogo de cliente (crear/editar)
@@ -121,16 +117,6 @@ export const TasksHeader: React.FC<TasksHeaderProps> = ({
     setIsClientDialogOpen(true);
   }, []);
 
-  // Convert PriorityLevel[] to string[] for the store
-  const handlePriorityFiltersChange = useCallback((priorities: PriorityLevel[]) => {
-    onPriorityFiltersChange?.(priorities as string[]);
-  }, [onPriorityFiltersChange]);
-
-  // Convert StatusLevel[] to string[] for the store
-  const handleStatusFiltersChange = useCallback((statuses: StatusLevel[]) => {
-    onStatusFiltersChange?.(statuses);
-  }, [onStatusFiltersChange]);
-
   // Handle workspace selection from CommandPalette
   const handleWorkspaceSelectFromPalette = useCallback((workspaceId: string | null) => {
     setSelectedWorkspace(workspaceId || ALL_WORKSPACES_ID);
@@ -211,8 +197,6 @@ export const TasksHeader: React.FC<TasksHeaderProps> = ({
 
             {/* Enhanced Command Palette Search */}
             <CommandPalette
-              onPriorityFiltersChange={handlePriorityFiltersChange}
-              onStatusFiltersChange={handleStatusFiltersChange}
               onWorkspaceSelect={handleWorkspaceSelectFromPalette}
               onMemberSelect={handleMemberSelect}
               onTaskSelect={handleTaskSelect}

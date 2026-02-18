@@ -25,7 +25,7 @@ export const getTaskNewMessageTemplate = (data: TaskNewMessageTemplateData): str
     <h2>Hola, ${data.recipientName}</h2>
     <p>
       ${getPersonBadge(data.senderName, data.actorImageUrl)} ha enviado un mensaje en la tarea.
-    </p>
+    </p
 
     <div class="info-box">
       ${getClientBlock(data.clientName, data.clientImageUrl)}

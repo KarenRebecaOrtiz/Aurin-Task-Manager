@@ -9,7 +9,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, FolderKanban, Users, Building2, UsersRound, ClipboardCheck } from 'lucide-react';
 import { CommandItem } from '../items/CommandItem';
@@ -88,8 +88,8 @@ export function CommandList({
     );
   }
 
-  // Agrupar items por tipo para mostrar secciones
-  const sections = groupItemsBySection(items, level);
+  // Agrupar items por tipo para mostrar secciones (memoizado)
+  const sections = useMemo(() => groupItemsBySection(items, level), [items, level]);
 
   return (
     <div className={styles.content}>
@@ -162,6 +162,14 @@ function groupItemsBySection(
         title: 'Tareas',
         icon: <ClipboardCheck size={12} style={{ marginRight: 4 }} />,
         items: tasks,
+      });
+    }
+    if (members.length > 0) {
+      sections.push({
+        id: 'members',
+        title: 'Miembros',
+        icon: <Users size={12} style={{ marginRight: 4 }} />,
+        items: members,
       });
     }
     if (workspaces.length > 0) {

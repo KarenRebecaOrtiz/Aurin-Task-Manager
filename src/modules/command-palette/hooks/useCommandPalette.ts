@@ -7,20 +7,17 @@
  * @module command-palette/hooks/useCommandPalette
  */
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useNavigationStack } from './useNavigationStack';
 import { useKeyboardNavigation } from './useKeyboardNavigation';
 import { useCommandPaletteData } from './useCommandPaletteData';
-import { useSelectedWorkspace, ALL_WORKSPACES_ID } from '@/stores/workspacesStore';
+import { useSelectedWorkspace } from '@/stores/workspacesStore';
 import type {
   NavigationLevel,
   NavigationState,
   SearchCategory,
-  PriorityLevel,
-  StatusLevel,
   ActiveFilters,
   CommandItem,
-  UseCommandPaletteReturn,
 } from '../types/commandPalette.types';
 
 // ============================================================================
@@ -28,12 +25,6 @@ import type {
 // ============================================================================
 
 export interface UseCommandPaletteProps {
-  /** Callback cuando cambia la búsqueda */
-  onSearch?: (keywords: string[], category: SearchCategory | null) => void;
-  /** Callback cuando cambian los filtros de prioridad */
-  onPriorityFiltersChange?: (priorities: PriorityLevel[]) => void;
-  /** Callback cuando cambian los filtros de estado */
-  onStatusFiltersChange?: (statuses: StatusLevel[]) => void;
   /** Callback cuando se selecciona un workspace */
   onWorkspaceSelect?: (workspaceId: string | null) => void;
   /** Callback cuando se selecciona un proyecto */
@@ -62,13 +53,7 @@ export interface UseCommandPaletteProps {
 
 export function useCommandPalette(props: UseCommandPaletteProps = {}) {
   const {
-    onSearch,
-    onPriorityFiltersChange,
-    onStatusFiltersChange,
-    onWorkspaceSelect,
     onProjectSelect,
-    onMemberSelect,
-    onTaskSelect,
     onTeamSelect,
   } = props;
 
@@ -122,13 +107,12 @@ export function useCommandPalette(props: UseCommandPaletteProps = {}) {
 
     switch (level) {
       case 'root':
-        // En root: si hay búsqueda, priorizar tareas; si no, mostrar todo
+        // En root: si hay búsqueda, priorizar tareas y miembros
         if (hasSearch) {
-          // Con búsqueda: tareas primero, luego workspaces y teams
-          return [...tasks, ...workspaces, ...teams];
+          return [...tasks, ...members, ...workspaces, ...teams];
         }
-        // Sin búsqueda: workspaces, teams, y tareas recientes
-        return [...workspaces, ...teams, ...tasks];
+        // Sin búsqueda: workspaces, teams, miembros y tareas recientes
+        return [...workspaces, ...teams, ...members, ...tasks];
 
       case 'workspace':
         // En workspace: si hay búsqueda, priorizar tareas
@@ -159,6 +143,13 @@ export function useCommandPalette(props: UseCommandPaletteProps = {}) {
     }
   }, [navigationState.level, workspaces, projects, members, tasks, teams, searchQuery]);
 
+  // Clamp selectedIndex cuando la lista se reduce (ej. al filtrar)
+  useEffect(() => {
+    if (currentItems.length > 0 && selectedIndex >= currentItems.length) {
+      setSelectedIndex(currentItems.length - 1);
+    }
+  }, [currentItems.length, selectedIndex]);
+
   // ============================================================================
   // ACTIONS: Open/Close
   // ============================================================================
@@ -184,8 +175,12 @@ export function useCommandPalette(props: UseCommandPaletteProps = {}) {
     setSearchQuery('');
     setSelectedIndex(0);
     setShowAIPrompt(false);
-    // Opcional: resetear navegación al cerrar
-    // navigationStack.reset();
+    setActiveFilters({
+      category: null,
+      priorities: [],
+      statuses: [],
+      searchQuery: '',
+    });
   }, []);
 
   const toggle = useCallback(() => {
@@ -319,24 +314,9 @@ export function useCommandPalette(props: UseCommandPaletteProps = {}) {
 
   const setFilter = useCallback(
     (filter: Partial<ActiveFilters>) => {
-      setActiveFilters((prev) => {
-        const newFilters = { ...prev, ...filter };
-
-        // Notificar cambios
-        if (filter.category !== undefined) {
-          onSearch?.(searchQuery.split(' ').filter(Boolean), filter.category);
-        }
-        if (filter.priorities !== undefined) {
-          onPriorityFiltersChange?.(filter.priorities);
-        }
-        if (filter.statuses !== undefined) {
-          onStatusFiltersChange?.(filter.statuses);
-        }
-
-        return newFilters;
-      });
+      setActiveFilters((prev) => ({ ...prev, ...filter }));
     },
-    [searchQuery, onSearch, onPriorityFiltersChange, onStatusFiltersChange]
+    []
   );
 
   const toggleCategory = useCallback(
@@ -357,10 +337,7 @@ export function useCommandPalette(props: UseCommandPaletteProps = {}) {
       searchQuery: '',
     });
     setSearchQuery('');
-    onSearch?.([], null);
-    onPriorityFiltersChange?.([]);
-    onStatusFiltersChange?.([]);
-  }, [onSearch, onPriorityFiltersChange, onStatusFiltersChange]);
+  }, []);
 
   // ============================================================================
   // ACTIONS: Search
@@ -370,12 +347,9 @@ export function useCommandPalette(props: UseCommandPaletteProps = {}) {
     (query: string) => {
       setSearchQuery(query);
       setSelectedIndex(0);
-
-      // Notificar búsqueda
-      const keywords = query.split(' ').filter(Boolean);
-      onSearch?.(keywords, activeFilters.category);
+      setActiveFilters((prev) => ({ ...prev, searchQuery: query }));
     },
-    [activeFilters.category, onSearch]
+    []
   );
 
   // ============================================================================

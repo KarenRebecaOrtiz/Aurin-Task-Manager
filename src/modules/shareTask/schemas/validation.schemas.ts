@@ -185,7 +185,7 @@ export type RevokeGuestTokenInput = z.infer<typeof RevokeGuestTokenInputSchema>;
 export const RedeemGuestTokenInputSchema = z.object({
   token: z.string().min(1, 'Token es requerido'),
   guestName: z.string().min(2, 'El nombre debe tener al menos 2 caracteres').max(50, 'El nombre no puede tener más de 50 caracteres'),
-  avatar: z.string().url('La URL del avatar no es válida'),
+  avatar: z.string().min(1, 'El avatar es requerido'),
 });
 
 export type RedeemGuestTokenInput = z.infer<typeof RedeemGuestTokenInputSchema>;
