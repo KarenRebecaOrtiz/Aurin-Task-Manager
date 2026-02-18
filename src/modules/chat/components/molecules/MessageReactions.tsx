@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useCallback, memo } from "react";
 import { Smile } from "lucide-react";
 import { ReactionButton } from "../atoms/ReactionButton";
 import { ReactionPicker } from "../atoms/ReactionPicker";
@@ -14,7 +14,7 @@ interface MessageReactionsProps {
   onRemoveReaction: (emoji: string) => void;
 }
 
-export const MessageReactions: React.FC<MessageReactionsProps> = ({
+export const MessageReactions: React.FC<MessageReactionsProps> = memo(({
   reactions,
   currentUserId,
   onAddReaction,
@@ -23,7 +23,7 @@ export const MessageReactions: React.FC<MessageReactionsProps> = ({
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const addButtonRef = useRef<HTMLButtonElement>(null);
 
-  const handleReactionClick = (reaction: MessageReaction) => {
+  const handleReactionClick = useCallback((reaction: MessageReaction) => {
     const hasReacted = reaction.userIds.includes(currentUserId);
 
     if (hasReacted) {
@@ -31,9 +31,9 @@ export const MessageReactions: React.FC<MessageReactionsProps> = ({
     } else {
       onAddReaction(reaction.emoji);
     }
-  };
+  }, [currentUserId, onAddReaction, onRemoveReaction]);
 
-  const handleEmojiSelect = (emoji: string) => {
+  const handleEmojiSelect = useCallback((emoji: string) => {
     const existingReaction = reactions.find((r) => r.emoji === emoji);
 
     if (existingReaction?.userIds.includes(currentUserId)) {
@@ -41,7 +41,15 @@ export const MessageReactions: React.FC<MessageReactionsProps> = ({
     } else {
       onAddReaction(emoji);
     }
-  };
+  }, [reactions, currentUserId, onAddReaction, onRemoveReaction]);
+
+  const handleTogglePicker = useCallback(() => {
+    setIsPickerOpen(prev => !prev);
+  }, []);
+
+  const handleClosePicker = useCallback(() => {
+    setIsPickerOpen(false);
+  }, []);
 
   return (
     <div className={styles.reactionsContainer}>
@@ -62,7 +70,7 @@ export const MessageReactions: React.FC<MessageReactionsProps> = ({
       <button
         ref={addButtonRef}
         className={styles.addReactionButton}
-        onClick={() => setIsPickerOpen(!isPickerOpen)}
+        onClick={handleTogglePicker}
         aria-label="Añadir reacción"
       >
         <Smile size={16} />
@@ -71,10 +79,12 @@ export const MessageReactions: React.FC<MessageReactionsProps> = ({
       {/* Reaction picker */}
       <ReactionPicker
         isOpen={isPickerOpen}
-        onClose={() => setIsPickerOpen(false)}
+        onClose={handleClosePicker}
         onSelectEmoji={handleEmojiSelect}
         triggerRef={addButtonRef}
       />
     </div>
   );
-};
+});
+
+MessageReactions.displayName = 'MessageReactions';

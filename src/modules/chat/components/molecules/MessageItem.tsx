@@ -76,9 +76,12 @@ export const MessageItem = memo(
       const actionButtonRef = useRef<HTMLButtonElement>(null);
       const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
 
-      // ✅ Si no se pasan users, obtenerlos del dataStore
-      const storeUsers = useDataStore((state) => state.users);
-      const effectiveUsers = users || storeUsers;
+      // ✅ Si no se pasan users, buscar solo el sender en dataStore (evita re-render por otros usuarios)
+      const storeSender = useDataStore(
+        useCallback((state: any) => state.users?.find((u: any) => u.id === message.senderId), [message.senderId])
+      );
+      // Build effectiveUsers: prefer prop, fallback to store sender wrapped in array
+      const effectiveUsers = users || (storeSender ? [storeSender] : []);
 
       // Calcular posición en el grupo
       const position: MessagePosition = getMessagePosition(

@@ -13,6 +13,14 @@ import React, { useRef, useState, useCallback, useEffect, useMemo } from 'react'
 import { ArrowUp, Paperclip, Mic, X, Square, StopCircle, Globe } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAudioRecorder } from '@/modules/chat/hooks/useAudioRecorder'
+
+// Pre-computed random bar heights to avoid Math.random() on every render
+const BAR_HEIGHTS = Array.from({ length: 12 }, () => [
+  2,
+  3 + Math.random() * 10,
+  3 + Math.random() * 5,
+  2,
+]);
 import { sileo } from 'sileo'
 import styles from '@/modules/n8n-chatbot/styles/components/input-area.module.scss'
 
@@ -231,14 +239,17 @@ export const InputChat: React.FC<InputChatProps> = ({
     }
   }
 
+  // Ref declared here, assigned after handleSend is defined
+  const handleSendRef = useRef<() => void>(() => {})
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault()
-        handleSend()
+        handleSendRef.current()
       }
     },
-    [value, selectedFile],
+    [],
   )
 
   const handleFileChange = useCallback(
@@ -397,6 +408,9 @@ export const InputChat: React.FC<InputChatProps> = ({
     }
   }, [value, selectedFile, userId, userFirstName, taskId, isSending, isTranscribing, webSearchEnabled, onSendMessage, setIsSending, storageKey, guestSessionToken])
 
+  // Keep ref in sync with latest handleSend
+  handleSendRef.current = handleSend
+
   const hasContent = value.trim() !== '' || selectedFile !== null
 
   // ========== RENDER ==========
@@ -486,7 +500,7 @@ export const InputChat: React.FC<InputChatProps> = ({
                       className={styles.bar}
                       initial={{ height: 2 }}
                       animate={{
-                        height: [2, 3 + Math.random() * 10, 3 + Math.random() * 5, 2],
+                        height: BAR_HEIGHTS[i],
                       }}
                       transition={{
                         duration: 1,
@@ -623,7 +637,7 @@ export const InputChat: React.FC<InputChatProps> = ({
                             className={styles.bar}
                             initial={{ height: 2 }}
                             animate={{
-                              height: audioModeEnabled ? [2, 3 + Math.random() * 10, 3 + Math.random() * 5, 2] : 2,
+                              height: audioModeEnabled ? BAR_HEIGHTS[i] : 2,
                             }}
                             transition={{
                               duration: audioModeEnabled ? 1 : 0.3,

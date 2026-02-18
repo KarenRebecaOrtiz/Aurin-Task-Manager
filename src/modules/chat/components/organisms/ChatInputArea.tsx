@@ -16,6 +16,14 @@ import { ArrowUp, Paperclip, Mic, X, StopCircle } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { EditorContent, Editor } from '@tiptap/react'
 import { useAudioRecorder } from '@/modules/chat/hooks/useAudioRecorder'
+
+// Pre-computed random bar heights to avoid Math.random() on every render
+const BAR_HEIGHTS = Array.from({ length: 12 }, () => [
+  2,
+  3 + Math.random() * 10,
+  3 + Math.random() * 5,
+  2,
+]);
 import { useMediaQuery } from '@/modules/dialogs/hooks/useMediaQuery'
 import { TimerDropdown } from '@/modules/chat/timer/components/molecules/TimerDropdown'
 import { sileo } from 'sileo'
@@ -285,7 +293,7 @@ export function ChatInputArea({
                       className={styles.bar}
                       initial={{ height: 2 }}
                       animate={{
-                        height: [2, 3 + Math.random() * 10, 3 + Math.random() * 5, 2],
+                        height: BAR_HEIGHTS[i],
                       }}
                       transition={{
                         duration: 1,
@@ -385,7 +393,7 @@ export function ChatInputArea({
                             className={styles.bar}
                             initial={{ height: 2 }}
                             animate={{
-                              height: audioModeEnabled ? [2, 3 + Math.random() * 10, 3 + Math.random() * 5, 2] : 2,
+                              height: audioModeEnabled ? BAR_HEIGHTS[i] : 2,
                             }}
                             transition={{
                               duration: audioModeEnabled ? 1 : 0.3,

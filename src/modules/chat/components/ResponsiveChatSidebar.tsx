@@ -186,6 +186,55 @@ const MobileChatDrawer: React.FC<ChatSidebarProps> = memo(({
   const [editingMessageId, setEditingMessageId] = useStateReact<string | null>(null);
   const [editingText, setEditingText] = useStateReact<string>('');
 
+  // Stable message action callbacks (avoid inline arrows in renderMessage)
+  const handleImagePreview = useCallback((url: string) => setImagePreviewSrc(url), []);
+  const handleRetryMessage = useCallback((msg: any) => resendMessage(msg), [resendMessage]);
+  const handleCopyMessage = useCallback(async (text: string) => {
+    await navigator.clipboard.writeText(text);
+  }, []);
+  const handleEditMessage = useCallback((msg: any) => {
+    setEditingMessageId(msg.id);
+    setEditingText(msg.text || '');
+  }, []);
+  const handleDeleteMessage = useCallback((msgId: string) => {
+    if (confirm("¿Estás seguro de que quieres eliminar este mensaje?")) {
+      deleteMessage(msgId);
+    }
+  }, [deleteMessage]);
+  const handleReplyMessage = useCallback((msg: any) => setReplyingTo(msg), []);
+  const handleDownloadMessage = useCallback((msg: any) => {
+    if (msg.fileUrl) {
+      window.open(msg.fileUrl, '_blank');
+    }
+  }, []);
+  const handleCancelReply = useCallback(() => setReplyingTo(null), []);
+  const handleCancelEdit = useCallback(() => {
+    setEditingMessageId(null);
+    setEditingText('');
+  }, []);
+
+  // Stable renderMessage for VirtualizedMessageList
+  const renderMessage = useCallback((message: any) => {
+    const isOwn = message.senderId === userId;
+    return (
+      <MessageItem
+        key={message.id}
+        message={message}
+        users={users}
+        isOwn={isOwn}
+        userId={userId}
+        taskId={task?.id || ''}
+        onImagePreview={handleImagePreview}
+        onRetryMessage={handleRetryMessage}
+        onCopy={handleCopyMessage}
+        onEdit={handleEditMessage}
+        onDelete={handleDeleteMessage}
+        onReply={handleReplyMessage}
+        onDownload={handleDownloadMessage}
+      />
+    );
+  }, [userId, users, task?.id, handleImagePreview, handleRetryMessage, handleCopyMessage, handleEditMessage, handleDeleteMessage, handleReplyMessage, handleDownloadMessage]);
+
   const handleClose = useCallback(() => {
     onClose();
   }, [onClose]);
@@ -256,39 +305,7 @@ const MobileChatDrawer: React.FC<ChatSidebarProps> = memo(({
               isLoadingMore={isLoadingMore}
               onLoadMore={loadMoreMessages}
               onInitialLoad={initialLoad}
-              renderMessage={(message, prevMessage, nextMessage) => {
-                const isOwn = message.senderId === userId;
-                return (
-                  <MessageItem
-                    key={message.id}
-                    message={message}
-                    users={users}
-                    isOwn={isOwn}
-                    userId={userId}
-                    taskId={task?.id || ''}
-                    onImagePreview={(url) => setImagePreviewSrc(url)}
-                    onRetryMessage={(msg) => resendMessage(msg)}
-                    onCopy={async (text) => {
-                      await navigator.clipboard.writeText(text);
-                    }}
-                    onEdit={(msg) => {
-                      setEditingMessageId(msg.id);
-                      setEditingText(msg.text || '');
-                    }}
-                    onDelete={(msgId) => {
-                      if (confirm("¿Estás seguro de que quieres eliminar este mensaje?")) {
-                        deleteMessage(msgId);
-                      }
-                    }}
-                    onReply={(msg) => setReplyingTo(msg)}
-                    onDownload={(msg) => {
-                      if (msg.fileUrl) {
-                        window.open(msg.fileUrl, '_blank');
-                      }
-                    }}
-                  />
-                );
-              }}
+              renderMessage={renderMessage}
             />
           </div>
 
@@ -302,13 +319,10 @@ const MobileChatDrawer: React.FC<ChatSidebarProps> = memo(({
               onSendMessage={handleSendMessage}
               onEditMessage={editMessage}
               replyingTo={replyingTo}
-              onCancelReply={() => setReplyingTo(null)}
+              onCancelReply={handleCancelReply}
               editingMessageId={editingMessageId}
               editingText={editingText}
-              onCancelEdit={() => {
-                setEditingMessageId(null);
-                setEditingText('');
-              }}
+              onCancelEdit={handleCancelEdit}
               onOpenManualEntry={handleOpenManualTimeEntry}
             />
           </div>

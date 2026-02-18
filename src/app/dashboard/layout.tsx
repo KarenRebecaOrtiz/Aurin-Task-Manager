@@ -124,9 +124,12 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
       />
 
       {/* Animated page transitions - optimized for speed */}
+      {/* Use stable key for table/kanban routes since DataViewsContainer handles switching internally.
+         Without this, pushState between /tasks and /kanban triggers AnimatePresence to create
+         TWO motion.main wrappers (old exiting + new entering), causing visible duplication. */}
       <AnimatePresence mode="popLayout" initial={false}>
         <motion.main
-          key={pathname}
+          key={pathname === '/dashboard/kanban' ? '/dashboard/tasks' : pathname}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}

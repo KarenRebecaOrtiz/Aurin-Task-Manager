@@ -222,10 +222,9 @@ export function useTimerSync(
     const syncInterval = setInterval(() => {
       const localTimer = getTimerForTask(taskId);
 
-      // Only sync if timer is running
+      // Only log if timer is running - avoid store update to prevent re-renders
       if (localTimer?.status === TimerStatus.RUNNING) {
         console.log('[useTimerSync] Periodic sync check');
-        setLastSyncTimestamp(Date.now());
       }
     }, SYNC_INTERVAL_MS);
 
@@ -234,7 +233,7 @@ export function useTimerSync(
     return () => {
       clearInterval(syncInterval);
     };
-  }, [taskId, enabled, isTaskInitialized, getTimerForTask, setLastSyncTimestamp]);
+  }, [taskId, enabled, isTaskInitialized, getTimerForTask]);
 
   /**
    * Handle online/offline events

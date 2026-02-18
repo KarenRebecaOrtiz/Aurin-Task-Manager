@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, memo } from "react";
 import { ChevronDown, Calendar, Bell, Clock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { UserAvatar } from "@/modules/shared/components/atoms/Avatar/UserAvatar";
@@ -11,6 +11,7 @@ import { TimerDropdown } from "../../timer/components/molecules/TimerDropdown";
 import { ShareButton } from "../atoms/ShareButton";
 import { SharedBadge } from "@/modules/shared/components/ui";
 import { useDataStore } from "@/stores/dataStore";
+import { useShallow } from "zustand/react/shallow";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   NotificationPreferencesDialog,
@@ -42,7 +43,7 @@ const stringToColor = (str: string) => {
   return `hsl(${hue}, 55%, 55%)`;
 };
 
-export const ChatHeader: React.FC<ChatHeaderProps> = ({
+export const ChatHeader: React.FC<ChatHeaderProps> = memo(({
   task,
   clientName,
   clientImageUrl,
@@ -69,8 +70,8 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
     openNotificationPreferencesDialog(entityType, task.id, task.name);
   }, [isTeamChat, task.id, task.name, openNotificationPreferencesDialog]);
 
-  // ✅ Si no se pasan users como prop, obtenerlos del dataStore centralizado
-  const storeUsers = useDataStore((state) => state.users);
+  // ✅ Si no se pasan users como prop, obtenerlos del dataStore centralizado (con useShallow)
+  const storeUsers = useDataStore(useShallow((state) => state.users));
   const effectiveUsers = users || storeUsers;
 
   const formatDateRange = (start: string | null, end: string | null) => {
@@ -454,4 +455,6 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
       <NotificationPreferencesDialog />
     </div>
   );
-};
+});
+
+ChatHeader.displayName = 'ChatHeader';

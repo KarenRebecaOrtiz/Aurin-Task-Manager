@@ -48,18 +48,16 @@ export const useMessagePagination = ({
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const maxReconnectAttempts = 5;
 
-  const {
-    getCurrentMessages,
-    getCurrentHasMore,
-    getCurrentIsLoading,
-    setMessages,
-    setHasMore,
-    setIsLoading,
-    prependMessages,
-    setCurrentTask,
-    addMessage,
-    updateMessage,
-  } = useChatStore();
+  const getCurrentMessages = useChatStore((state) => state.getCurrentMessages);
+  const getCurrentHasMore = useChatStore((state) => state.getCurrentHasMore);
+  const getCurrentIsLoading = useChatStore((state) => state.getCurrentIsLoading);
+  const setMessages = useChatStore((state) => state.setMessages);
+  const setHasMore = useChatStore((state) => state.setHasMore);
+  const setIsLoading = useChatStore((state) => state.setIsLoading);
+  const prependMessages = useChatStore((state) => state.prependMessages);
+  const setCurrentTask = useChatStore((state) => state.setCurrentTask);
+  const addMessage = useChatStore((state) => state.addMessage);
+  const updateMessage = useChatStore((state) => state.updateMessage);
 
   // Inicializar tarea en el store
   const messages = getCurrentMessages();
@@ -326,7 +324,7 @@ export const useMessagePagination = ({
         clearTimeout(reconnectTimeoutRef.current);
       }
     };
-  }, [taskId, processMessage, addMessage, updateMessage, onNewMessage, getCurrentMessages, attemptReconnect]);
+  }, [taskId, processMessage, addMessage, updateMessage, onNewMessage, attemptReconnect]);
 
   /**
    * ✅ NUEVO: Guardar scroll position antes de cambiar de tarea
@@ -369,32 +367,28 @@ export const useMessagePagination = ({
   const groupedMessages = useMemo(() => {
     if (!messages || messages.length === 0) return [];
 
+    // Extract comparator to avoid repeating it 3 times
+    const compareAsc = (a: Message, b: Message) => {
+      const aTime = a.timestamp ? (a.timestamp instanceof Date ? a.timestamp.getTime() : a.timestamp.toDate().getTime()) : 0;
+      const bTime = b.timestamp ? (b.timestamp instanceof Date ? b.timestamp.getTime() : b.timestamp.toDate().getTime()) : 0;
+      return aTime - bTime;
+    };
+
     const grouped: Array<{ date: Date; messages: Message[] }> = [];
     let currentDate: Date | null = null;
     let currentGroup: Message[] = [];
 
-    // ✅ Ordenar mensajes ASC (más antiguos primero, como WhatsApp)
-    const sortedMessages = [...messages].sort((a, b) => {
-      const aTime = a.timestamp ? (a.timestamp instanceof Date ? a.timestamp.getTime() : a.timestamp.toDate().getTime()) : 0;
-      const bTime = b.timestamp ? (b.timestamp instanceof Date ? b.timestamp.getTime() : b.timestamp.toDate().getTime()) : 0;
-      return aTime - bTime; // ✅ ASC: antiguos primero
-    });
+    // Ordenar mensajes ASC (más antiguos primero, como WhatsApp)
+    const sortedMessages = [...messages].sort(compareAsc);
 
     sortedMessages.forEach((message) => {
       const messageDate = message.timestamp ? (message.timestamp instanceof Date ? message.timestamp : message.timestamp.toDate()) : new Date();
 
       if (!currentDate || messageDate.toDateString() !== currentDate.toDateString()) {
         if (currentGroup.length > 0 && currentDate) {
-          // ✅ Ordenar mensajes dentro del grupo ASC también
-          const sortedGroup = [...currentGroup].sort((a, b) => {
-            const aTime = a.timestamp ? (a.timestamp instanceof Date ? a.timestamp.getTime() : a.timestamp.toDate().getTime()) : 0;
-            const bTime = b.timestamp ? (b.timestamp instanceof Date ? b.timestamp.getTime() : b.timestamp.toDate().getTime()) : 0;
-            return aTime - bTime; // ✅ ASC: antiguos primero
-          });
-
           grouped.push({
             date: currentDate,
-            messages: sortedGroup,
+            messages: [...currentGroup].sort(compareAsc),
           });
         }
         currentDate = messageDate;
@@ -406,15 +400,9 @@ export const useMessagePagination = ({
 
     // Último grupo
     if (currentGroup.length > 0 && currentDate) {
-      const sortedGroup = [...currentGroup].sort((a, b) => {
-        const aTime = a.timestamp ? (a.timestamp instanceof Date ? a.timestamp.getTime() : a.timestamp.toDate().getTime()) : 0;
-        const bTime = b.timestamp ? (b.timestamp instanceof Date ? b.timestamp.getTime() : b.timestamp.toDate().getTime()) : 0;
-        return aTime - bTime; // ✅ ASC: antiguos primero
-      });
-
       grouped.push({
         date: currentDate,
-        messages: sortedGroup,
+        messages: [...currentGroup].sort(compareAsc),
       });
     }
 

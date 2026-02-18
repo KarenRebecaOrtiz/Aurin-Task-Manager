@@ -18,7 +18,7 @@
  * - ✅ Ordenamiento consistente (solo ASC)
  */
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import type { QueryDocumentSnapshot } from 'firebase/firestore';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -392,7 +392,7 @@ export const useVirtuosoMessages = ({
   // RETURN
   // ============================================================================
 
-  const groupData = getGroupData(messages);
+  const groupData = useMemo(() => getGroupData(messages), [getGroupData, messages]);
 
   return {
     // Messages (siempre ordenados ASC)

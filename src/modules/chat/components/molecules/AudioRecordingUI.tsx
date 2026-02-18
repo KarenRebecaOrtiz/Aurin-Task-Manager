@@ -14,6 +14,14 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { StopCircle } from 'lucide-react'
 import styles from '@/modules/n8n-chatbot/styles/components/input-area.module.scss'
 
+// Pre-computed random bar heights to avoid Math.random() on every render
+const BAR_HEIGHTS = Array.from({ length: 12 }, () => [
+  2,
+  3 + Math.random() * 10,
+  3 + Math.random() * 5,
+  2,
+]);
+
 interface AudioRecordingUIProps {
   isRecording: boolean
   audioTime: number
@@ -59,7 +67,7 @@ export const AudioRecordingUI: React.FC<AudioRecordingUIProps> = ({
                   className={styles.bar}
                   initial={{ height: 2 }}
                   animate={{
-                    height: [2, 3 + Math.random() * 10, 3 + Math.random() * 5, 2],
+                    height: BAR_HEIGHTS[i],
                   }}
                   transition={{
                     duration: 1,

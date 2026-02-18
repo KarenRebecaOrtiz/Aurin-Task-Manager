@@ -14,6 +14,14 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Mic } from 'lucide-react'
 import styles from '@/modules/n8n-chatbot/styles/components/input-area.module.scss'
 
+// Pre-computed random bar heights to avoid Math.random() on every render
+const BAR_HEIGHTS = Array.from({ length: 12 }, () => [
+  2,
+  3 + Math.random() * 10,
+  3 + Math.random() * 5,
+  2,
+]);
+
 interface InputToggleButtonsProps {
   audioModeEnabled: boolean
   onToggleAudioMode: () => void
@@ -84,7 +92,7 @@ export const InputToggleButtons: React.FC<InputToggleButtonsProps> = ({
                     className={styles.bar}
                     initial={{ height: 2 }}
                     animate={{
-                      height: audioModeEnabled ? [2, 3 + Math.random() * 10, 3 + Math.random() * 5, 2] : 2,
+                      height: audioModeEnabled ? BAR_HEIGHTS[i] : 2,
                     }}
                     transition={{
                       duration: audioModeEnabled ? 1 : 0.3,
