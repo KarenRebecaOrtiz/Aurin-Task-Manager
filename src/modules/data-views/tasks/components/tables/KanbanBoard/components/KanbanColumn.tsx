@@ -1,5 +1,6 @@
 'use client';
 
+import { memo, useMemo } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -58,7 +59,7 @@ interface KanbanColumnProps {
   normalizeStatus: (status: string) => string;
 }
 
-export const KanbanColumn: React.FC<KanbanColumnProps> = ({
+export const KanbanColumn: React.FC<KanbanColumnProps> = memo(({
   columnId,
   title,
   tasks,
@@ -77,6 +78,8 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
 }) => {
   const { setNodeRef } = useDroppable({ id: columnId });
 
+  const taskIds = useMemo(() => tasks.map((task) => task.id), [tasks]);
+
   return (
     <motion.div
       ref={setNodeRef}
@@ -91,7 +94,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
 
       <SortableContext
         id={columnId}
-        items={tasks.map((task) => task.id)}
+        items={taskIds}
         strategy={verticalListSortingStrategy}
       >
         <div className={styles.taskList}>
@@ -128,6 +131,22 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
       </SortableContext>
     </motion.div>
   );
-};
+}, (prev, next) => {
+  return (
+    prev.columnId === next.columnId &&
+    prev.title === next.title &&
+    prev.tasks === next.tasks &&
+    prev.isAdmin === next.isAdmin &&
+    prev.userId === next.userId &&
+    prev.onEditTaskOpen === next.onEditTaskOpen &&
+    prev.onDeleteTaskOpen === next.onDeleteTaskOpen &&
+    prev.onArchiveTask === next.onArchiveTask &&
+    prev.onEditClient === next.onEditClient &&
+    prev.onCardClick === next.onCardClick &&
+    prev.animateClick === next.animateClick &&
+    prev.isTouchDevice === next.isTouchDevice &&
+    prev.normalizeStatus === next.normalizeStatus
+  );
+});
 
 KanbanColumn.displayName = 'KanbanColumn';

@@ -43,7 +43,14 @@ export const TasksHeader: React.FC<TasksHeaderProps> = ({
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [selectedMemberId, setSelectedMemberId] = useState<string | undefined>(undefined);
 
-  const { workspaces, selectedWorkspaceId, setWorkspacesFromClients, setSelectedWorkspace } = useWorkspacesStore();
+  const { workspaces, selectedWorkspaceId, setWorkspacesFromClients, setSelectedWorkspace } = useWorkspacesStore(
+    useShallow((state) => ({
+      workspaces: state.workspaces,
+      selectedWorkspaceId: state.selectedWorkspaceId,
+      setWorkspacesFromClients: state.setWorkspacesFromClients,
+      setSelectedWorkspace: state.setSelectedWorkspace,
+    }))
+  );
 
   // Auth y datos del usuario
   const { isAdmin } = useAuth();

@@ -101,9 +101,12 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
   } = useTasksCommon();
 
   // ==================== EFFECTS ====================
+  // Sync filtered tasks to store (using extracted fn ref to avoid object dep)
+  const setFilteredTasks = tableState.setFilteredTasks;
+  const filteredTasks = tableState.filteredTasks;
   useEffect(() => {
-    tableState.setFilteredTasks(tableState.filteredTasks);
-  }, [tableState.filteredTasks, tableState]);
+    setFilteredTasks(filteredTasks);
+  }, [filteredTasks, setFilteredTasks]);
 
   useEffect(() => {
     const tableElement = document.querySelector('[data-table="tasks"]');
@@ -311,28 +314,34 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
   // Mobile: solo Tarea, Proyecto y Acciones visibles
   // Desktop: 60px + 24% + 12% + 16% + 12% + 10% + 10% + 8% (uses min-width for table)
   // Mobile: 50% + 35% + 15% = 100%
-  const baseColumns = [
-    { key: 'client', label: 'Cuenta', width: '60px', mobileVisible: false, sortable: false },
-    { key: 'name', label: 'Tarea', width: '24%', mobileVisible: true, mobileWidth: '50%', sortable: true },
-    { key: 'assignedTo', label: 'Asignados', width: '12%', mobileVisible: false, sortable: true },
-    { key: 'project', label: 'Proyecto', width: '16%', mobileVisible: true, mobileWidth: '35%', sortable: true },
-    { key: 'status', label: 'Estado', width: '12%', mobileVisible: false, sortable: true },
-    { key: 'priority', label: 'Prioridad', width: '10%', mobileVisible: false, sortable: true },
-    { key: 'timeTracking', label: 'Tiempo', width: '10%', mobileVisible: false, sortable: true },
-    { key: 'action', label: 'Acciones', width: '8%', mobileVisible: true, mobileWidth: '15%', sortable: false },
-  ];
+  const columns = useMemo(() => {
+    const baseColumns = [
+      { key: 'client', label: 'Cuenta', width: '60px', mobileVisible: false, sortable: false },
+      { key: 'name', label: 'Tarea', width: '24%', mobileVisible: true, mobileWidth: '50%', sortable: true },
+      { key: 'assignedTo', label: 'Asignados', width: '12%', mobileVisible: false, sortable: true },
+      { key: 'project', label: 'Proyecto', width: '16%', mobileVisible: true, mobileWidth: '35%', sortable: true },
+      { key: 'status', label: 'Estado', width: '12%', mobileVisible: false, sortable: true },
+      { key: 'priority', label: 'Prioridad', width: '10%', mobileVisible: false, sortable: true },
+      { key: 'timeTracking', label: 'Tiempo', width: '10%', mobileVisible: false, sortable: true },
+      { key: 'action', label: 'Acciones', width: '8%', mobileVisible: true, mobileWidth: '15%', sortable: false },
+    ];
 
-  const columns = baseColumns.map((col) => {
-    if (col.key === 'client') return { ...col, render: renderClientColumn };
-    if (col.key === 'name') return { ...col, render: renderTaskNameColumn };
-    if (col.key === 'assignedTo') return { ...col, render: renderAssignedToColumn };
-    if (col.key === 'project') return { ...col, render: renderProjectColumn };
-    if (col.key === 'status') return { ...col, render: renderStatusColumn };
-    if (col.key === 'priority') return { ...col, render: renderPriorityColumn };
-    if (col.key === 'timeTracking') return { ...col, render: renderTimeColumn };
-    if (col.key === 'action') return { ...col, render: renderActionColumn };
-    return col;
-  });
+    const renderMap: Record<string, (task: Task) => React.ReactNode> = {
+      client: renderClientColumn,
+      name: renderTaskNameColumn,
+      assignedTo: renderAssignedToColumn,
+      project: renderProjectColumn,
+      status: renderStatusColumn,
+      priority: renderPriorityColumn,
+      timeTracking: renderTimeColumn,
+      action: renderActionColumn,
+    };
+
+    return baseColumns.map((col) => {
+      const render = renderMap[col.key];
+      return render ? { ...col, render } : col;
+    });
+  }, [renderClientColumn, renderTaskNameColumn, renderAssignedToColumn, renderProjectColumn, renderStatusColumn, renderPriorityColumn, renderTimeColumn, renderActionColumn]);
 
   const handleUndoClick = useCallback(async () => {
     await undoLastArchive();
@@ -397,7 +406,6 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
         </div>
       )}
       <Table
-        key={`tasks-table-${effectiveTasksIds}-${tableState.filteredTasks.length}`}
         data={sortedTasks}
         columns={columns}
         itemsPerPage={10}

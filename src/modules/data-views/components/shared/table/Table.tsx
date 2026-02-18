@@ -80,13 +80,6 @@ const Table = memo(
     };
   }, []);
 
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [data.length]);
-
-  useEffect(() => {
-  }, [data.length, currentPage, totalPages, startIndex, itemsPerPage, paginatedData.length]);
-
     // Detect mobile screen size
     useEffect(() => {
       const checkMobile = () => {

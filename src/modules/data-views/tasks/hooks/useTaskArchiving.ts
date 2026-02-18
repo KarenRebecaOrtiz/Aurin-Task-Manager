@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { archiveTask, unarchiveTask } from '@/services/taskService';
 import { useDataStore } from '@/stores/dataStore';
 
@@ -79,24 +79,23 @@ export const useTaskArchiving = (props: UseTaskArchivingProps = {}): UseTaskArch
   const [showUndo, setShowUndo] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Timeout para auto-ocultar undo
-  const [undoTimeoutRef, setUndoTimeoutRef] = useState<NodeJS.Timeout | null>(null);
+  // Timeout para auto-ocultar undo - useRef to avoid re-renders on timeout set/clear
+  const undoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Helper para limpiar timeout
   const clearUndoTimeout = useCallback(() => {
-    if (undoTimeoutRef) {
-      clearTimeout(undoTimeoutRef);
-      setUndoTimeoutRef(null);
+    if (undoTimeoutRef.current) {
+      clearTimeout(undoTimeoutRef.current);
+      undoTimeoutRef.current = null;
     }
-  }, [undoTimeoutRef]);
+  }, []);
 
   // Helper para configurar auto-hide del undo
   const setupUndoTimeout = useCallback(() => {
     clearUndoTimeout();
-    const timeoutId = setTimeout(() => {
+    undoTimeoutRef.current = setTimeout(() => {
       setShowUndo(false);
     }, 5000); // 5 segundos para deshacer
-    setUndoTimeoutRef(timeoutId);
   }, [clearUndoTimeout]);
 
   // Actualización optimista del dataStore
@@ -324,11 +323,11 @@ export const useTaskArchiving = (props: UseTaskArchivingProps = {}): UseTaskArch
   }, [undoStack]);
 
   // Cleanup al desmontar
-  // useEffect(() => {
-  //   return () => {
-  //     clearUndoTimeout();
-  //   };
-  // }, [clearUndoTimeout]);
+  useEffect(() => {
+    return () => {
+      clearUndoTimeout();
+    };
+  }, [clearUndoTimeout]);
 
   return {
     // Estados

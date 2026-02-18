@@ -109,11 +109,14 @@ export const useKanbanState = (): UseKanbanStateReturn => {
     }))
   );
 
+  // Extract stable ref to avoid re-running effect when kanbanState object changes
+  const setIsTouchDevice = kanbanState.setIsTouchDevice;
+
   // Detect touch device
   useEffect(() => {
     const checkTouchDevice = () => {
       const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-      kanbanState.setIsTouchDevice(isTouch);
+      setIsTouchDevice(isTouch);
     };
 
     checkTouchDevice();
@@ -122,7 +125,7 @@ export const useKanbanState = (): UseKanbanStateReturn => {
     return () => {
       window.removeEventListener('resize', checkTouchDevice);
     };
-  }, [kanbanState.setIsTouchDevice]);
+  }, [setIsTouchDevice]);
 
   return {
     // Data

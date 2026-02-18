@@ -84,7 +84,9 @@ export const useAdvancedSearch = (
       // Check if all keywords are present
       return lowerKeywords.every((kw) => searchable.includes(kw));
     });
-  }, [tasks, clients, users, keywords, getInvolvedUserIds, searchCategory]);
+  // Note: clients is not used in search logic (workspace filter handles client filtering)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tasks, users, keywords, getInvolvedUserIds, searchCategory]);
 };
 
 /**

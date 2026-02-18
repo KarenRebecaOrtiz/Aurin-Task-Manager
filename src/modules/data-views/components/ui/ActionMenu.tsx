@@ -7,7 +7,6 @@ import { createPortal } from 'react-dom';
 import styles from './ActionMenu.module.scss';
 import { useAuth } from '@/contexts/AuthContext';
 import { useActionMenuStore } from '@/stores/actionMenuStore';
-import { useShallow } from 'zustand/react/shallow';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMediaQuery } from '@/modules/dialogs/hooks/useMediaQuery';
 import {
@@ -97,28 +96,19 @@ const ActionMenu = memo<ActionMenuProps>(({
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const isMobile = useMediaQuery('(max-width: 767px)');
 
-  // Pin functionality
-  const { isPinned, togglePin, canPin } = usePinnedTasksStore();
+  // Pin functionality - use individual selectors to avoid re-renders from unrelated pin changes
+  const isPinned = usePinnedTasksStore((state) => state.isPinned);
+  const togglePin = usePinnedTasksStore((state) => state.togglePin);
   const taskIsPinned = isPinned(task.id);
   const { success: toastSuccess, warning: toastWarning } = useToast();
 
-  // Selectors optimizados con shallow
-  const {
-    openMenuId,
-    dropdownPositions,
-    setOpenMenuId,
-    setDropdownPosition,
-  } = useActionMenuStore(
-    useShallow(state => ({
-      openMenuId: state.openMenuId,
-      dropdownPositions: state.dropdownPositions,
-      setOpenMenuId: state.setOpenMenuId,
-      setDropdownPosition: state.setDropdownPosition,
-    }))
-  );
+  // Selectors optimizados - use individual selectors to minimize re-renders
+  const openMenuId = useActionMenuStore((state) => state.openMenuId);
+  const setOpenMenuId = useActionMenuStore((state) => state.setOpenMenuId);
+  const setDropdownPosition = useActionMenuStore((state) => state.setDropdownPosition);
+  const dropdownPosition = useActionMenuStore((state) => state.dropdownPositions[task.id]) || { top: 0, left: 0 };
 
   const isOpen = openMenuId === task.id;
-  const dropdownPosition = dropdownPositions[task.id] || { top: 0, left: 0 };
 
   // Memoizar handlers
   const handleDropdownPosition = useCallback(() => {

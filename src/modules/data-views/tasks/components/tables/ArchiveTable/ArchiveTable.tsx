@@ -368,128 +368,82 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
       return styles.taskRow;
     }, []);
 
-    // Configurar columnas de la tabla - ESPECÍFICO PARA ARCHIVETABLE
-    const baseColumns = [
-      {
-        key: 'clientId',
-        label: 'Cuenta',
-        width: isMobile ? '30%' : '10%',
-        mobileVisible: true,
-        mobileWidth: '30%',
-      },
-      {
-        key: 'name',
-        label: 'Tarea',
-        width: isMobile ? '40%' : '25%', 
-        mobileVisible: true,
-        mobileWidth: '40%',
-      },
-      {
-        key: 'assignedTo',
-        label: 'Asignados',
-        width: isMobile ? '0%' : '20%',
-        mobileVisible: false,
-      },
-      {
-        key: 'archivedAt',
-        label: 'Fecha de Archivado',
-        width: isMobile ? '0%' : '20%',
-        mobileVisible: false,
-      },
-      {
-        key: 'action',
-        label: 'Acciones',
-        width: isMobile ? '30%' : '20%',
-        mobileVisible: true,
-        mobileWidth: '30%',
-      },
-    ];
+    // Memoized render functions for columns
+    const renderClientColumn = useCallback((task: Task) => {
+      const client = effectiveClients.find((c) => c.id === task.clientId);
+      return client ? (
+        <div className={styles.clientWrapper}>
+          <Image
+            style={{ borderRadius: '999px' }}
+            src={client.imageUrl || '/empty-image.png'}
+            alt={client.name || 'Client Image'}
+            width={40}
+            height={40}
+            className={styles.clientImage}
+            onError={handleImageError}
+          />
+        </div>
+      ) : 'Sin cuenta';
+    }, [effectiveClients, handleImageError]);
 
-    const columns = baseColumns.map((col) => {
-      if (col.key === 'clientId') {
-        return {
-          ...col,
-          render: (task: Task) => {
-            const client = effectiveClients.find((c) => c.id === task.clientId);
-            return client ? (
-              <div className={styles.clientWrapper}>
-                <Image
-                  style={{ borderRadius: '999px' }}
-                  src={client.imageUrl || '/empty-image.png'}
-                  alt={client.name || 'Client Image'}
-                  width={40}
-                  height={40}
-                  className={styles.clientImage}
-                  onError={handleImageError}
-                />
-              </div>
-            ) : 'Sin cuenta';
-          },
-        };
-      }
-      if (col.key === 'name') {
-        return {
-          ...col,
-          render: (task: Task) => {
-            return (
-              <div className={styles.taskNameWrapper}>
-                <span className={styles.taskName}>{task.name}</span>
-              </div>
-            );
-          },
-        };
-      }
-      if (col.key === 'assignedTo') {
-        return {
-          ...col,
-          render: (task: Task) => {
-            return <AvatarGroup assignedUserIds={task.AssignedTo} leadedByUserIds={task.LeadedBy} currentUserId={userId} />;
-          },
-        };
-      }
-      if (col.key === 'archivedAt') {
-        return {
-          ...col,
-          render: (task: Task) => {
-            return (
-              <div className={styles.archivedAtWrapper}>
-                {task.archivedAt ? (
-                  <span>{new Date(task.archivedAt).toLocaleDateString()}</span>
-                ) : (
-                  <span>Sin archivar</span>
-                )}
-              </div>
-            );
-          },
-        };
-      }
-      if (col.key === 'action') {
-        return {
-          ...col,
-          render: (task: Task) => {
-            // El ActionMenu ahora maneja internamente los permisos:
-            // - Usuarios involucrados pueden ver el menú y fijar
-            // - Solo Admin o Creator pueden editar/desarchivar/eliminar
-            // - Solo Admin puede editar la cuenta del cliente
-            return (
-              <ActionMenu
-                task={task}
-                userId={userId}
-                onEdit={createEditHandler(task.id)}
-                onDelete={createDeleteHandler(task.id)}
-                onArchive={createArchiveHandler(task)}
-                onEditClient={task.clientId ? createEditClientHandler(task.clientId) : undefined}
-                showPinOption={false}
-                animateClick={animateClick}
-                actionMenuRef={actionMenuRef}
-                actionButtonRef={createActionButtonRefHandler(task.id)}
-              />
-            );
-          },
-        };
-      }
-      return col;
-    });
+    const renderNameColumn = useCallback((task: Task) => (
+      <div className={styles.taskNameWrapper}>
+        <span className={styles.taskName}>{task.name}</span>
+      </div>
+    ), []);
+
+    const renderAssignedToColumn = useCallback((task: Task) => (
+      <AvatarGroup assignedUserIds={task.AssignedTo} leadedByUserIds={task.LeadedBy} currentUserId={userId} />
+    ), [userId]);
+
+    const renderArchivedAtColumn = useCallback((task: Task) => (
+      <div className={styles.archivedAtWrapper}>
+        {task.archivedAt ? (
+          <span>{new Date(task.archivedAt).toLocaleDateString()}</span>
+        ) : (
+          <span>Sin archivar</span>
+        )}
+      </div>
+    ), []);
+
+    const renderActionColumn = useCallback((task: Task) => (
+      <ActionMenu
+        task={task}
+        userId={userId}
+        onEdit={createEditHandler(task.id)}
+        onDelete={createDeleteHandler(task.id)}
+        onArchive={createArchiveHandler(task)}
+        onEditClient={task.clientId ? createEditClientHandler(task.clientId) : undefined}
+        showPinOption={false}
+        animateClick={animateClick}
+        actionMenuRef={actionMenuRef}
+        actionButtonRef={createActionButtonRefHandler(task.id)}
+      />
+    ), [userId, createEditHandler, createDeleteHandler, createArchiveHandler, createEditClientHandler, animateClick, createActionButtonRefHandler]);
+
+    // Configurar columnas de la tabla - ESPECÍFICO PARA ARCHIVETABLE
+    const columns = useMemo(() => {
+      const baseColumns = [
+        { key: 'clientId', label: 'Cuenta', width: isMobile ? '30%' : '10%', mobileVisible: true, mobileWidth: '30%' },
+        { key: 'name', label: 'Tarea', width: isMobile ? '40%' : '25%', mobileVisible: true, mobileWidth: '40%' },
+        { key: 'assignedTo', label: 'Asignados', width: isMobile ? '0%' : '20%', mobileVisible: false },
+        { key: 'archivedAt', label: 'Fecha de Archivado', width: isMobile ? '0%' : '20%', mobileVisible: false },
+        { key: 'action', label: 'Acciones', width: isMobile ? '30%' : '20%', mobileVisible: true, mobileWidth: '30%' },
+      ];
+
+      const renderMap: Record<string, (task: Task) => React.ReactNode> = {
+        clientId: renderClientColumn,
+        name: renderNameColumn,
+        assignedTo: renderAssignedToColumn,
+        archivedAt: renderArchivedAtColumn,
+        action: renderActionColumn,
+      };
+
+      return baseColumns.map((col) => {
+        const render = renderMap[col.key];
+        return render ? { ...col, render } : col;
+      });
+    }, [isMobile, renderClientColumn, renderNameColumn, renderAssignedToColumn, renderArchivedAtColumn, renderActionColumn]);
 
     // Cleanup effect for timeouts
     useEffect(() => {

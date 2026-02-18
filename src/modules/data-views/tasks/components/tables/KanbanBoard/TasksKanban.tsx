@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useEffect, useRef, useCallback, useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   DndContext,
@@ -36,6 +36,7 @@ import styles from './TasksKanban.module.scss';
 
 // Kanban status columns definition
 const statusColumns = KANBAN_COLUMNS;
+const EMPTY_TASKS: Task[] = [];
 
 interface Client {
   id: string;
@@ -306,6 +307,21 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
     [getClientName]
   );
 
+  // Stable undo handlers
+  const handleUndoClick = useCallback(() => {
+    handleUndo(centralizedUndoStack[centralizedUndoStack.length - 1]);
+  }, [handleUndo, centralizedUndoStack]);
+
+  const handleUndoMouseEnter = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+    e.currentTarget.style.transform = 'scale(1.05)';
+  }, []);
+
+  const handleUndoMouseLeave = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+    e.currentTarget.style.transform = 'scale(1)';
+  }, []);
+
   // Loading state
   if (isLoadingTasks) {
     return (
@@ -402,7 +418,7 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
               key={column.id}
               columnId={column.id}
               title={column.label}
-              tasks={groupedTasks[column.id] || []}
+              tasks={groupedTasks[column.id] || EMPTY_TASKS}
               isAdmin={isAdmin}
               userId={userId}
               onEditTaskOpen={onEditTaskOpen}
@@ -468,7 +484,7 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
             </span>
           </div>
           <button
-            onClick={() => handleUndo(centralizedUndoStack[centralizedUndoStack.length - 1])}
+            onClick={handleUndoClick}
             style={{
               backgroundColor: 'rgba(255, 255, 255, 0.2)',
               border: 'none',
@@ -481,14 +497,8 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
               transition: 'all 0.2s ease',
               whiteSpace: 'nowrap',
             }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
-              e.currentTarget.style.transform = 'scale(1.05)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
-              e.currentTarget.style.transform = 'scale(1)';
-            }}
+            onMouseEnter={handleUndoMouseEnter}
+            onMouseLeave={handleUndoMouseLeave}
           >
             Deshacer
           </button>

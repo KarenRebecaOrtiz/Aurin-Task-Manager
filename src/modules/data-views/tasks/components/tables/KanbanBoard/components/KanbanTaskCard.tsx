@@ -1,5 +1,6 @@
 'use client';
 
+import { memo, useCallback, useMemo } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import ActionMenu from '@/modules/data-views/components/ui/ActionMenu';
 import { AvatarGroup } from '@/modules/shared/components/atoms/Avatar';
@@ -81,7 +82,7 @@ const getPriorityVariant = (priority: string): BadgeVariant => {
   return priorityMap[priority] || 'default';
 };
 
-export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
+export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = memo(({
   task,
   isAdmin,
   userId,
@@ -104,14 +105,36 @@ export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
   // ✅ Use centralized clientsDataStore - O(1) access instead of O(n) array.find()
   const client = useClientData(task.clientId);
 
-  const style = {
+  const style = useMemo(() => ({
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
     transition,
     zIndex: isDragging ? 10000 : 'auto',
     boxShadow: isDragging ? '0 8px 25px rgba(0, 0, 0, 0.15)' : 'none',
     cursor: isAdmin ? 'grab' : 'pointer',
     touchAction: isAdmin ? 'none' : 'manipulation',
-  };
+  }), [transform, transition, isDragging, isAdmin]);
+
+  // Stable callback refs to avoid inline arrow functions
+  const handleEdit = useCallback(() => onEditTaskOpen(task.id), [onEditTaskOpen, task.id]);
+  const handleDelete = useCallback(() => onDeleteTaskOpen(task.id), [onDeleteTaskOpen, task.id]);
+  const handleArchive = useCallback(async () => {
+    try {
+      await onArchiveTask(task);
+    } catch (error) {
+      console.error('[KanbanTaskCard] Error archiving task:', error);
+    }
+  }, [onArchiveTask, task]);
+  const handleEditClient = useMemo(() => {
+    return task.clientId && onEditClient ? () => onEditClient(task.clientId) : undefined;
+  }, [task.clientId, onEditClient]);
+  const handleActionButtonRef = useCallback((el: HTMLButtonElement | null) => {
+    if (el) {
+      actionButtonRefs.current.set(task.id, el);
+    } else {
+      actionButtonRefs.current.delete(task.id);
+    }
+  }, [actionButtonRefs, task.id]);
+  const handleCardClick = useCallback(() => onCardClick(task), [onCardClick, task]);
 
   return (
     <div
@@ -120,7 +143,7 @@ export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
       {...attributes}
       {...(isAdmin ? listeners : {})}
       className={`${styles.taskCard} ${isDragging ? styles.dragging : ''} ${isAdmin && isTouchDevice ? styles.touchDraggable : ''}`}
-      onClick={() => onCardClick(task)}
+      onClick={handleCardClick}
     >
       {/* Primera fila: Cliente + Nombre + Action Button */}
       <div className={styles.taskHeader}>
@@ -134,33 +157,17 @@ export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
         <div className={styles.taskNameWrapper}>
           <span className={styles.taskName}>{task.name}</span>
         </div>
-        {/* El ActionMenu maneja internamente los permisos:
-            - Usuarios involucrados pueden ver el menú y fijar
-            - Solo Admin o Creator pueden editar/archivar/eliminar
-            - Solo Admin puede editar la cuenta del cliente */}
         <ActionMenu
           task={task}
           userId={userId}
-          onEdit={() => onEditTaskOpen(task.id)}
-          onDelete={() => onDeleteTaskOpen(task.id)}
-          onArchive={async () => {
-            try {
-              await onArchiveTask(task);
-            } catch (error) {
-              console.error('[KanbanTaskCard] Error archiving task:', error);
-            }
-          }}
-          onEditClient={task.clientId && onEditClient ? () => onEditClient(task.clientId) : undefined}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onArchive={handleArchive}
+          onEditClient={handleEditClient}
           showPinOption={true}
           animateClick={animateClick}
           actionMenuRef={actionMenuRef}
-          actionButtonRef={(el) => {
-            if (el) {
-              actionButtonRefs.current.set(task.id, el);
-            } else {
-              actionButtonRefs.current.delete(task.id);
-            }
-          }}
+          actionButtonRef={handleActionButtonRef}
         />
       </div>
 
@@ -192,6 +199,24 @@ export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
       )}
     </div>
   );
-};
+}, (prev, next) => {
+  return (
+    prev.task.id === next.task.id &&
+    prev.task.status === next.task.status &&
+    prev.task.priority === next.task.priority &&
+    prev.task.name === next.task.name &&
+    prev.task.clientId === next.task.clientId &&
+    prev.task.shared === next.task.shared &&
+    prev.task.archived === next.task.archived &&
+    prev.isAdmin === next.isAdmin &&
+    prev.userId === next.userId &&
+    prev.isTouchDevice === next.isTouchDevice &&
+    prev.onEditTaskOpen === next.onEditTaskOpen &&
+    prev.onDeleteTaskOpen === next.onDeleteTaskOpen &&
+    prev.onArchiveTask === next.onArchiveTask &&
+    prev.onEditClient === next.onEditClient &&
+    prev.onCardClick === next.onCardClick
+  );
+});
 
 KanbanTaskCard.displayName = 'KanbanTaskCard';
