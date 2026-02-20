@@ -16,25 +16,31 @@ export const markdownToHtml = (markdown: string): string => {
     .replace(/^### (.*$)/gim, '<h3>$1</h3>')
     .replace(/^## (.*$)/gim, '<h2>$1</h2>')
     .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-    
+
     // Negritas y cursivas
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    
+
+    // Links: markdown [text](url)
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="chat-link">$1</a>')
+
+    // Links: URLs sueltas (que no estén ya dentro de un href o tag)
+    .replace(/(?<!["\w/])(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" class="chat-link">$1</a>')
+
     // Listas
     .replace(/^• (.*$)/gim, '<li>$1</li>')
     .replace(/^\- (.*$)/gim, '<li>$1</li>')
-    
+
     // Envolver listas en <ul>
     .replace(/(<li>.*<\/li>)/g, '<ul>$1</ul>')
-    
+
     // Saltos de línea
     .replace(/\n/g, '<br/>')
-    
+
     // Párrafos
     .replace(/(<br\/>)+/g, '</p><p>')
     .replace(/^(.*)$/gm, '<p>$1</p>')
-    
+
     // Limpiar párrafos vacíos
     .replace(/<p><\/p>/g, '')
     .replace(/<p><br\/><\/p>/g, '');

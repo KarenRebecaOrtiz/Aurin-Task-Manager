@@ -237,8 +237,10 @@ export const MessageItem = memo(
                 className={styles.messageText}
                 dangerouslySetInnerHTML={{
                   __html: sanitizeHtml(markdownToHtml(message.text), {
-                    allowedTags: ["b", "strong", "em", "i", "ul", "li", "br", "h1", "h2", "h3", "p"],
-                    allowedAttributes: {},
+                    allowedTags: ["b", "strong", "em", "i", "ul", "li", "br", "h1", "h2", "h3", "p", "a"],
+                    allowedAttributes: {
+                      a: ["href", "target", "rel", "class"],
+                    },
                   }),
                 }}
               />

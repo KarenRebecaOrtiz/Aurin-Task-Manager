@@ -195,6 +195,32 @@
     p {
       margin: $spacing-xs 0;
     }
+
+    a:global(.chat-link) {
+      color: $blue-500;
+      text-decoration: none;
+      font-weight: $font-weight-medium;
+      background: rgba($blue-500, 0.08);
+      padding: 1px 4px;
+      border-radius: $radius-xs;
+      transition: $transition-fast;
+
+      &:hover {
+        color: $blue-600;
+        background: rgba($blue-500, 0.15);
+        text-decoration: underline;
+      }
+    }
+
+    :global(body.dark) & a:global(.chat-link) {
+      color: $sky-400;
+      background: rgba($sky-400, 0.12);
+
+      &:hover {
+        color: lighten($sky-400, 10%);
+        background: rgba($sky-400, 0.2);
+      }
+    }
   }
 }
 
