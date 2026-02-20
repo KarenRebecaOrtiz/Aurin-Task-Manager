@@ -370,7 +370,7 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
           setSearchQuery={setSearchQuery}
           searchCategory={searchCategory}
           setSearchCategory={setSearchCategory}
-          onPriorityFiltersChange={setPriorityFilters}
+
           currentView="kanban"
         />
 
@@ -389,7 +389,6 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
         setSearchQuery={setSearchQuery}
         searchCategory={searchCategory}
         setSearchCategory={setSearchCategory}
-        onPriorityFiltersChange={setPriorityFilters}
         currentView="kanban"
       />
       {/* View Toggle - Below header */}
