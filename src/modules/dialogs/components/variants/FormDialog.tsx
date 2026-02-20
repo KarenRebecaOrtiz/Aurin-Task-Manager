@@ -62,8 +62,12 @@ export function FormDialog({ config, onClose }: FormDialogProps) {
     onClose();
   }, [onCancel, onClose]);
 
+  const handleOpenChange = useCallback((open: boolean) => {
+    if (!open) handleCancel();
+  }, [handleCancel]);
+
   return (
-    <ResponsiveDialog open={true} onOpenChange={(open) => !open && handleCancel()}>
+    <ResponsiveDialog open={true} onOpenChange={handleOpenChange}>
       <ResponsiveDialogContent
         size={size}
         closeOnOverlayClick={closeOnOverlayClick}

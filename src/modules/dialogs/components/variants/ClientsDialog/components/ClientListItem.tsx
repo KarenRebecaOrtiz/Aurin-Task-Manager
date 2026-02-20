@@ -7,7 +7,7 @@
 
 'use client';
 
-import { memo } from 'react';
+import { memo, useCallback } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Building2, Mail, Globe, Briefcase, MoreHorizontal } from 'lucide-react';
@@ -85,6 +85,11 @@ export const ClientListItem = memo(function ClientListItem({
     );
   };
 
+  const handleActionClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    onMenuOpen(client, e.currentTarget);
+  }, [onMenuOpen, client]);
+
   return (
     <motion.div
       className={styles.userItem}
@@ -114,10 +119,7 @@ export const ClientListItem = memo(function ClientListItem({
       <button
         ref={buttonRef}
         className={clientStyles.actionButton}
-        onClick={(e) => {
-          e.stopPropagation();
-          onMenuOpen(client, e.currentTarget);
-        }}
+        onClick={handleActionClick}
         disabled={isDeleting}
         aria-label={`Acciones para ${client.name}`}
       >

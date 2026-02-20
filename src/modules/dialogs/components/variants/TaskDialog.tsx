@@ -239,13 +239,13 @@ export function TaskDialog({
   }, [isSubmitting, isEditMode])
 
   // Footer personalizado con FormFooter
-  const customFooter = (
+  const customFooter = useMemo(() => (
     <FormFooter
       onCancel={handleCancel}
       isLoading={isSubmitting}
       submitText={isEditMode ? "Actualizar" : "Crear Tarea"}
     />
-  )
+  ), [handleCancel, isSubmitting, isEditMode])
 
   return (
     <>

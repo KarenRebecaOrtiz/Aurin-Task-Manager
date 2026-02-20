@@ -5,7 +5,7 @@ let dialogCounter = 0;
 
 const generateId = (): string => {
   dialogCounter += 1;
-  return `dialog-${dialogCounter}-${Date.now()}`;
+  return `dialog-${dialogCounter}`;
 };
 
 export const useDialogStore = create<DialogStore>((set, get) => ({
@@ -66,10 +66,9 @@ export const useDialogStore = create<DialogStore>((set, get) => ({
 
 // Selector hooks for optimized re-renders
 export const useDialogs = () => useDialogStore((state) => state.dialogs);
-export const useDialogActions = () =>
-  useDialogStore((state) => ({
-    open: state.open,
-    close: state.close,
-    closeAll: state.closeAll,
-    update: state.update,
-  }));
+
+// Individual selectors to avoid new object reference on every call
+export const useDialogOpen = () => useDialogStore((state) => state.open);
+export const useDialogClose = () => useDialogStore((state) => state.close);
+export const useDialogCloseAll = () => useDialogStore((state) => state.closeAll);
+export const useDialogUpdate = () => useDialogStore((state) => state.update);

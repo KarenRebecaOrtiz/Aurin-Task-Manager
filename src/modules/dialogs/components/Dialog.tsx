@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
@@ -53,11 +53,15 @@ export function Dialog({
     };
   }, [open]);
 
+  // Stable ref for onClose to avoid effect re-fires when parent re-renders
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
   // Handle ESC key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && closeOnEscape) {
-        onClose();
+        onCloseRef.current();
       }
     };
 
@@ -68,13 +72,13 @@ export function Dialog({
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [open, closeOnEscape, onClose]);
+  }, [open, closeOnEscape]);
 
   const handleBackdropClick = useCallback(() => {
     if (closeOnOverlayClick) {
-      onClose();
+      onCloseRef.current();
     }
-  }, [closeOnOverlayClick, onClose]);
+  }, [closeOnOverlayClick]);
 
   const handlePanelClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();

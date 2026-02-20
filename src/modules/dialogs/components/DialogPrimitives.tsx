@@ -471,6 +471,18 @@ Dialog.Title = DialogTitle;
 Dialog.Description = DialogDescription;
 
 // ============================================================================
+// Shared constants
+// ============================================================================
+
+const mobileBodyStyle: React.CSSProperties = {
+  flex: 1,
+  minHeight: 0,
+  overflowY: 'auto',
+  overflowX: 'hidden',
+  WebkitOverflowScrolling: 'touch',
+};
+
+// ============================================================================
 // ResponsiveDialog - Automatically switches between Dialog and Drawer
 // ============================================================================
 
@@ -639,13 +651,7 @@ export const ResponsiveDialogBody = forwardRef<HTMLDivElement, DialogBodyProps>(
         <div
           ref={ref}
           className={className}
-          style={{
-            flex: 1,
-            minHeight: 0,
-            overflowY: 'auto',
-            overflowX: 'hidden',
-            WebkitOverflowScrolling: 'touch', // Smooth scrolling on iOS
-          }}
+          style={mobileBodyStyle}
         >
           {children}
         </div>

@@ -312,6 +312,24 @@ export function ManageProjectsDialog({
     setIsDrawerOpen(false);
   }, [projects]);
 
+  // Stable callbacks for action menu actions
+  const handleEditActive = useCallback(() => {
+    if (activeMenuIndex !== null) handleStartEdit(activeMenuIndex);
+  }, [activeMenuIndex, handleStartEdit]);
+
+  const handleDeleteActive = useCallback(() => {
+    if (activeMenuIndex !== null) handleDeleteClick(activeMenuIndex);
+  }, [activeMenuIndex, handleDeleteClick]);
+
+  // Stable callbacks for drawer actions
+  const handleDrawerEdit = useCallback(() => {
+    if (selectedProject) handleStartEdit(selectedProject.index);
+  }, [selectedProject, handleStartEdit]);
+
+  const handleDrawerDelete = useCallback(() => {
+    if (selectedProject) handleDeleteClick(selectedProject.index);
+  }, [selectedProject, handleDeleteClick]);
+
   const handleConfirmDelete = useCallback(async () => {
     if (!projectToDelete) return;
 
@@ -563,8 +581,8 @@ export function ManageProjectsDialog({
       {activeMenuIndex !== null && menuPosition && (
         <ProjectActionMenu
           position={menuPosition}
-          onEdit={() => handleStartEdit(activeMenuIndex)}
-          onDelete={() => handleDeleteClick(activeMenuIndex)}
+          onEdit={handleEditActive}
+          onDelete={handleDeleteActive}
           onClose={handleCloseMenu}
         />
       )}
@@ -578,14 +596,14 @@ export function ManageProjectsDialog({
           <div className={styles.drawerBody}>
             <button
               className={styles.drawerItem}
-              onClick={() => selectedProject && handleStartEdit(selectedProject.index)}
+              onClick={handleDrawerEdit}
             >
               <Pencil size={20} />
               Editar nombre
             </button>
             <button
               className={`${styles.drawerItem} ${styles.drawerItemDanger}`}
-              onClick={() => selectedProject && handleDeleteClick(selectedProject.index)}
+              onClick={handleDrawerDelete}
             >
               <Trash2 size={20} />
               Eliminar proyecto

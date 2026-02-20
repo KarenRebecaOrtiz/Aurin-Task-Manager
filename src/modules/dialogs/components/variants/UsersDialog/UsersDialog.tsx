@@ -146,6 +146,11 @@ export function UsersDialog({ isOpen, onOpenChange }: UsersDialogProps) {
     onOpenChange(false);
   }, [onOpenChange]);
 
+  // Open create dialog
+  const handleOpenCreateDialog = useCallback(() => {
+    setIsCreateDialogOpen(true);
+  }, []);
+
   // Render user list
   const renderUserList = () => {
     if (users.length === 0) {
@@ -284,7 +289,7 @@ export function UsersDialog({ isOpen, onOpenChange }: UsersDialogProps) {
               <ResponsiveDialogFooter>
                 <button
                   className={styles.createButton}
-                  onClick={() => setIsCreateDialogOpen(true)}
+                  onClick={handleOpenCreateDialog}
                 >
                   <Plus size={18} />
                   Crear nuevo usuario
@@ -292,6 +297,7 @@ export function UsersDialog({ isOpen, onOpenChange }: UsersDialogProps) {
               </ResponsiveDialogFooter>
             </>
           ) : (
+
             // Desktop layout
             <AnimatePresence mode="wait">
               {isOpen && (
@@ -331,7 +337,7 @@ export function UsersDialog({ isOpen, onOpenChange }: UsersDialogProps) {
                   <DialogFooter>
                     <button
                       className={styles.createButton}
-                      onClick={() => setIsCreateDialogOpen(true)}
+                      onClick={handleOpenCreateDialog}
                     >
                       <Plus size={18} />
                       Crear nuevo usuario

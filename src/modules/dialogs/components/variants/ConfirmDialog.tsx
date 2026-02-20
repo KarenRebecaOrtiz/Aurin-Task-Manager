@@ -59,6 +59,10 @@ export function ConfirmDialog({ config, onClose }: ConfirmDialogProps) {
     onClose();
   }, [onCancel, onClose]);
 
+  const handleOpenChange = useCallback((open: boolean) => {
+    if (!open) handleCancel();
+  }, [handleCancel]);
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !isLoading) {
       e.preventDefault();
@@ -77,7 +81,7 @@ export function ConfirmDialog({ config, onClose }: ConfirmDialogProps) {
   };
 
   return (
-    <ResponsiveDialog open={true} onOpenChange={(open) => !open && handleCancel()}>
+    <ResponsiveDialog open={true} onOpenChange={handleOpenChange}>
       <ResponsiveDialogContent
         size={size}
         compact={true}

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Send,
   MoreHorizontal,
@@ -94,41 +94,41 @@ export function ChatDialog({ task, token }: ChatDialogProps) {
   }, [messages, isMounted]);
 
   // Manejar configuración de nombre de invitado
-  const handleSetGuestName = () => {
+  const handleSetGuestName = useCallback(() => {
     if (!guestName.trim()) return;
 
     localStorage.setItem(`guest_name_${task.id}`, guestName.trim());
     setGuestNameSet(true);
-  };
+  }, [guestName, task.id]);
 
   // Enviar mensaje (autenticado o invitado)
-  const handleSendMessage = async () => {
+  const handleSendMessage = useCallback(async () => {
     if (!messageInput.trim() || isSending) return;
 
     // Si hay usuario autenticado, usar su nombre
     if (user && isUserLoaded) {
       const userName = user.fullName || user.firstName || 'Usuario';
-      const success = await sendMessage(userName, messageInput);
-      if (success) {
+      const result = await sendMessage(userName, messageInput);
+      if (result) {
         setMessageInput('');
       }
     } else {
       // Si es invitado, verificar que tenga nombre configurado
       if (!guestNameSet) return;
-      const success = await sendMessage(guestName, messageInput);
-      if (success) {
+      const result = await sendMessage(guestName, messageInput);
+      if (result) {
         setMessageInput('');
       }
     }
-  };
+  }, [messageInput, isSending, user, isUserLoaded, sendMessage, guestNameSet, guestName]);
 
   // Manejar Enter en input
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
     }
-  };
+  }, [handleSendMessage]);
 
   // Mostrar loading durante la hidratación y mientras carga el usuario (debe estar DESPUÉS de todos los hooks)
   if (!isMounted || !isUserLoaded) {

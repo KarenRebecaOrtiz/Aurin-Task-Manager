@@ -6,4 +6,4 @@ export const FEEDBACK_MESSAGES = {
 } as const;
 
 export const APP_VERSION = 'v1.1.1';
-export const FOOTER_TEXT = 'Hecho con cariño para facilitarte el día';
+export const FOOTER_TEXT = 'Hecho en Aurin';

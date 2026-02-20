@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { CrudDialog } from '../organisms/CrudDialog';
 import { Button } from '@/components/ui/buttons';
 import { CrystalInput } from '@/components/ui/inputs/crystal-input';
@@ -54,7 +54,7 @@ export function AddNoteDialog({ isOpen, onOpenChange, onNoteAdded }: AddNoteDial
   }, [onOpenChange]);
 
   // Custom footer with buttons
-  const customFooter = (
+  const customFooter = useMemo(() => (
     <div className="flex justify-end gap-2">
       <Button
         intent="secondary"
@@ -73,7 +73,7 @@ export function AddNoteDialog({ isOpen, onOpenChange, onNoteAdded }: AddNoteDial
         {isSubmitting ? 'Creando...' : 'Crear Nota'}
       </Button>
     </div>
-  );
+  ), [handleCancel, handleSubmit, isSubmitting, noteContent]);
 
   return (
     <CrudDialog

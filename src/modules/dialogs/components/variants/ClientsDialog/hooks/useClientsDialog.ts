@@ -132,13 +132,13 @@ export function useClientsDialog(isOpen: boolean): UseClientsDialogReturn {
         setDrawer({ isOpen: true, selectedClient: client });
       } else {
         const rect = buttonEl.getBoundingClientRect();
-        setActionMenu({
-          openMenuId: actionMenu.openMenuId === client.id ? null : client.id,
+        setActionMenu((prev) => ({
+          openMenuId: prev.openMenuId === client.id ? null : client.id,
           position: { top: rect.bottom + 8, left: rect.right - 160 },
-        });
+        }));
       }
     },
-    [isMobile, actionMenu.openMenuId]
+    [isMobile]
   );
 
   const handleMenuClose = useCallback(() => {

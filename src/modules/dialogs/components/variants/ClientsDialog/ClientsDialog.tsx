@@ -39,6 +39,7 @@ import {
 
 // Hook with all logic
 import { useClientsDialog } from './hooks';
+import { useCallback } from 'react';
 
 // Types
 import { ClientsDialogProps } from './types';
@@ -81,6 +82,43 @@ export function ClientsDialog({ isOpen, onOpenChange }: ClientsDialogProps) {
     menuRef,
     setButtonRef,
   } = useClientsDialog(isOpen);
+
+  // Stable callbacks for onOpenChange
+  const handleDrawerOpenChange = useCallback((open: boolean) => {
+    if (!open) handleMenuClose();
+  }, [handleMenuClose]);
+
+  const handleDeleteOpenChange = useCallback((open: boolean) => {
+    if (!open) handleCloseDeleteConfirm();
+  }, [handleCloseDeleteConfirm]);
+
+  // Stable callbacks for action menu/drawer actions
+  const handleEditSelected = useCallback(() => {
+    if (drawer.selectedClient) handleEditClient(drawer.selectedClient);
+  }, [drawer.selectedClient, handleEditClient]);
+
+  const handleManageProjectsSelected = useCallback(() => {
+    if (drawer.selectedClient) handleManageProjects(drawer.selectedClient);
+  }, [drawer.selectedClient, handleManageProjects]);
+
+  const handleDeleteSelected = useCallback(() => {
+    if (drawer.selectedClient) handleDeleteClick(drawer.selectedClient);
+  }, [drawer.selectedClient, handleDeleteClick]);
+
+  const handleEditFromMenu = useCallback(() => {
+    const client = clients.find((c) => c.id === actionMenu.openMenuId);
+    if (client) handleEditClient(client);
+  }, [clients, actionMenu.openMenuId, handleEditClient]);
+
+  const handleManageProjectsFromMenu = useCallback(() => {
+    const client = clients.find((c) => c.id === actionMenu.openMenuId);
+    if (client) handleManageProjects(client);
+  }, [clients, actionMenu.openMenuId, handleManageProjects]);
+
+  const handleDeleteFromMenu = useCallback(() => {
+    const client = clients.find((c) => c.id === actionMenu.openMenuId);
+    if (client) handleDeleteClick(client);
+  }, [clients, actionMenu.openMenuId, handleDeleteClick]);
 
   // Loading state
   if (isLoading && isOpen) {
@@ -212,9 +250,9 @@ export function ClientsDialog({ isOpen, onOpenChange }: ClientsDialogProps) {
           ref={menuRef}
           client={selectedClientForMenu}
           position={actionMenu.position}
-          onEdit={() => handleEditClient(selectedClientForMenu)}
-          onManageProjects={() => handleManageProjects(selectedClientForMenu)}
-          onDelete={() => handleDeleteClick(selectedClientForMenu)}
+          onEdit={handleEditFromMenu}
+          onManageProjects={handleManageProjectsFromMenu}
+          onDelete={handleDeleteFromMenu}
           onClose={handleMenuClose}
         />
       )}
@@ -222,23 +260,17 @@ export function ClientsDialog({ isOpen, onOpenChange }: ClientsDialogProps) {
       {/* Mobile Action Drawer */}
       <ClientActionDrawer
         isOpen={drawer.isOpen}
-        onOpenChange={(open) => !open && handleMenuClose()}
+        onOpenChange={handleDrawerOpenChange}
         client={drawer.selectedClient}
-        onEdit={() =>
-          drawer.selectedClient && handleEditClient(drawer.selectedClient)
-        }
-        onManageProjects={() =>
-          drawer.selectedClient && handleManageProjects(drawer.selectedClient)
-        }
-        onDelete={() =>
-          drawer.selectedClient && handleDeleteClick(drawer.selectedClient)
-        }
+        onEdit={handleEditSelected}
+        onManageProjects={handleManageProjectsSelected}
+        onDelete={handleDeleteSelected}
       />
 
       {/* Delete Confirmation */}
       <DestructiveConfirmDialog
         open={deleteConfirm.show}
-        onOpenChange={(open) => !open && handleCloseDeleteConfirm()}
+        onOpenChange={handleDeleteOpenChange}
         title="Eliminar Cuenta"
         itemName={deleteConfirm.client?.name || ''}
         warningMessage="Esta acción eliminará permanentemente la cuenta. Las tareas asociadas perderán su referencia de cliente."

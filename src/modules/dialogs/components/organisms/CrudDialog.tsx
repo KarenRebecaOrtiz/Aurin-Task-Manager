@@ -16,6 +16,7 @@ import { ScrollableContent, DialogFooter, DialogActions } from '../molecules';
 import { panelVariants } from '../../config/animations';
 import { CrudDialogProps } from '../../types/crud-dialog.types';
 import { cn } from '@/lib/utils';
+import { useCallback } from 'react';
 import styles from '../../styles/Dialog.module.scss';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 
@@ -60,21 +61,26 @@ export function CrudDialog({
   const isReadOnly = mode === 'view';
 
   // Handle close
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     if (onClose) {
       onClose();
     }
     onOpenChange(false);
-  };
+  }, [onClose, onOpenChange]);
 
   // Handle cancel
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
     if (onCancel) {
       onCancel();
     } else {
       handleClose();
     }
-  };
+  }, [onCancel, handleClose]);
+
+  // Stable handlers for overlay/interact outside
+  const handlePreventClose = useCallback((e: Event) => {
+    if (!closeOnOverlayClick) e.preventDefault();
+  }, [closeOnOverlayClick]);
 
   // Render loading state
   if (isLoading) {
@@ -82,8 +88,8 @@ export function CrudDialog({
       <ResponsiveDialog open={isOpen} onOpenChange={onOpenChange}>
         <ResponsiveDialogContent
           className={cn(styles.dialogContent, className)}
-          onPointerDownOutside={(e) => !closeOnOverlayClick && e.preventDefault()}
-          onInteractOutside={(e) => !closeOnOverlayClick && e.preventDefault()}
+          onPointerDownOutside={handlePreventClose}
+          onInteractOutside={handlePreventClose}
         >
           <VisuallyHidden>
             <ResponsiveDialogTitle>{title || 'Cargando'}</ResponsiveDialogTitle>
@@ -101,8 +107,8 @@ export function CrudDialog({
       <ResponsiveDialog open={isOpen} onOpenChange={onOpenChange}>
         <ResponsiveDialogContent
           className={cn(styles.dialogContent, className)}
-          onPointerDownOutside={(e) => !closeOnOverlayClick && e.preventDefault()}
-          onInteractOutside={(e) => !closeOnOverlayClick && e.preventDefault()}
+          onPointerDownOutside={handlePreventClose}
+          onInteractOutside={handlePreventClose}
         >
           <VisuallyHidden>
             <ResponsiveDialogTitle>Error</ResponsiveDialogTitle>

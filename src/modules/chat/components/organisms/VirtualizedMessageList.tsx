@@ -47,7 +47,6 @@ export const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = ({
 }) => {
   const virtuosoRef = useRef<GroupedVirtuosoHandle>(null);
   const hasInitializedRef = useRef(false);
-  const lastMessageIdRef = useRef<string | null>(null); // Track last message
   const isUserAtBottomRef = useRef(true); // Track user scroll position
 
   // ============================================================================
@@ -60,29 +59,6 @@ export const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = ({
       onInitialLoad();
     }
   }, [onInitialLoad]);
-
-  // ============================================================================
-  // SCROLL TO BOTTOM ON NEW MESSAGES (FIXED)
-  // ============================================================================
-
-  useEffect(() => {
-    if (messages.length === 0) return;
-
-    const lastMessage = messages[messages.length - 1];
-    const isNewMessage = lastMessage && lastMessage.id !== lastMessageIdRef.current;
-
-    // Solo scroll si:
-    // 1. Es un mensaje NUEVO (no carga de mensajes antiguos)
-    // 2. El usuario está al final del chat
-    if (isNewMessage && isUserAtBottomRef.current && virtuosoRef.current) {
-      virtuosoRef.current.scrollToIndex({
-        index: messages.length - 1,
-        align: "end",
-        behavior: "smooth",
-      });
-      lastMessageIdRef.current = lastMessage.id;
-    }
-  }, [messages]);
 
   // ============================================================================
   // SCROLL TO REPLY (FEATURE 4)

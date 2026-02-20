@@ -7,7 +7,7 @@
 
 'use client';
 
-import { forwardRef } from 'react';
+import { forwardRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Pencil, FolderPlus, Trash2 } from 'lucide-react';
@@ -19,6 +19,10 @@ export const ClientActionMenu = forwardRef<HTMLDivElement, ClientActionMenuProps
     { client, position, onEdit, onManageProjects, onDelete, onClose },
     ref
   ) {
+    const handleStopPropagation = useCallback((e: React.MouseEvent) => {
+      e.stopPropagation();
+    }, []);
+
     // Only render in browser
     if (typeof window === 'undefined') return null;
 
@@ -32,7 +36,7 @@ export const ClientActionMenu = forwardRef<HTMLDivElement, ClientActionMenuProps
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: -4 }}
           transition={{ duration: 0.15 }}
-          onClick={(e) => e.stopPropagation()}
+          onClick={handleStopPropagation}
         >
           <button className={clientStyles.menuItem} onClick={onEdit}>
             <Pencil size={16} />

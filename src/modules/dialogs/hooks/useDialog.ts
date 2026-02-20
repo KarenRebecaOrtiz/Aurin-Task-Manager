@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { useDialogStore } from '../stores/dialogStore';
+import { useDialogOpen, useDialogClose, useDialogCloseAll } from '../stores/dialogStore';
 import {
   UseDialogReturn,
   ConfirmDialogOptions,
@@ -9,9 +9,9 @@ import {
 } from '../types/dialog.types';
 
 export function useDialog(): UseDialogReturn {
-  const open = useDialogStore((state) => state.open);
-  const close = useDialogStore((state) => state.close);
-  const closeAll = useDialogStore((state) => state.closeAll);
+  const open = useDialogOpen();
+  const close = useDialogClose();
+  const closeAll = useDialogCloseAll();
 
   const openConfirm = useCallback(
     (options: ConfirmDialogOptions): string => {

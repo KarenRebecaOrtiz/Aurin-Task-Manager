@@ -80,7 +80,7 @@ export { useDialog } from './hooks/useDialog';
 export { useMediaQuery } from './hooks/useMediaQuery';
 
 // Store
-export { useDialogStore, useDialogs, useDialogActions } from './stores/dialogStore';
+export { useDialogStore, useDialogs, useDialogOpen, useDialogClose, useDialogCloseAll, useDialogUpdate } from './stores/dialogStore';
 
 // Animations
 export {

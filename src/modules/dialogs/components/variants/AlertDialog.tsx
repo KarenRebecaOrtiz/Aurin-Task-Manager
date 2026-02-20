@@ -42,6 +42,10 @@ export function AlertDialog({ config, onClose }: AlertDialogProps) {
     onClose();
   }, [onConfirm, onClose]);
 
+  const handleOpenChange = useCallback((open: boolean) => {
+    if (!open) handleConfirm();
+  }, [handleConfirm]);
+
   // Auto-close functionality
   useEffect(() => {
     if (!autoClose) return;
@@ -54,7 +58,7 @@ export function AlertDialog({ config, onClose }: AlertDialogProps) {
   }, [autoClose, autoCloseDelay, handleConfirm]);
 
   return (
-    <ResponsiveDialog open={true} onOpenChange={(open) => !open && handleConfirm()}>
+    <ResponsiveDialog open={true} onOpenChange={handleOpenChange}>
       <ResponsiveDialogContent
         size={size}
         closeOnOverlayClick={closeOnOverlayClick}
