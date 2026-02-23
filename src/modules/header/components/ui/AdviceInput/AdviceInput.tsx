@@ -8,7 +8,7 @@ declare module 'react' {
 }
 
 import { useState, useEffect, useRef } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useUser } from '@/lib/demo/clerk-mock';
 import { doc, setDoc, collection, Timestamp, query, where, getDocs, runTransaction } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import styles from './AdviceInput.module.scss';

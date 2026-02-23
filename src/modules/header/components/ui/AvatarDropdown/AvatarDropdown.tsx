@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useUser, useClerk } from '@clerk/nextjs';
+import { useUser, useClerk } from '@/lib/demo/clerk-mock';
 import Image from 'next/image';
 import {
   useUserDisplayName,

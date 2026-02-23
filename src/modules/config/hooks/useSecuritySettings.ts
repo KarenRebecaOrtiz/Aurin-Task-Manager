@@ -4,7 +4,7 @@
  */
 
 import { useCallback, useEffect } from 'react';
-import { useUser, useSession, useReverification } from '@clerk/nextjs';
+import { useUser, useSession, useReverification } from '@/lib/demo/clerk-mock';
 import { useSecurityStore } from '../stores';
 import { Session } from '../types';
 import { calculatePasswordStrength } from '../utils';

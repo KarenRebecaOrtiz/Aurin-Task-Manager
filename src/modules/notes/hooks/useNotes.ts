@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useUser } from '@/lib/demo/clerk-mock';
 import {
   collection,
   onSnapshot,

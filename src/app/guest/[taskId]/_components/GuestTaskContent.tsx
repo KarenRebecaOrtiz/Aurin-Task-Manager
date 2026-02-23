@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useUser } from '@/lib/demo/clerk-mock';
 import { useGuestAuth } from '@/contexts/GuestAuthContext';
 import { TokenAuthForm } from './TokenAuthForm';
 import { PublicTaskView } from '@/app/p/[token]/_components/PublicTaskView';

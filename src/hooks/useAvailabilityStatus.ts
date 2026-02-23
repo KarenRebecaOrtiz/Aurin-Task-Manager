@@ -13,7 +13,7 @@
  * Mejoras: Usa lista de conexiones en RTDB para multi-tab, computa online basado en child count.
  */
 
-import { useUser } from '@clerk/nextjs';
+import { useUser } from '@/lib/demo/clerk-mock';
 import { useState, useEffect, useCallback } from 'react';
 import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';

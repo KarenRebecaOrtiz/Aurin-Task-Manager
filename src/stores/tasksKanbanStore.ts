@@ -27,6 +27,7 @@ type TasksKanbanState = {
   searchCategory: 'task' | 'project' | 'member' | null;
   priorityFilter: string;
   priorityFilters: string[]; // New array for multiple priority filters
+  statusFilters: string[]; // Array for multiple status filters
   clientFilter: string;
   userFilter: string;
   actionMenuOpenId: string | null;
@@ -44,6 +45,7 @@ type TasksKanbanActions = {
   setSearchCategory: (category: 'task' | 'project' | 'member' | null) => void;
   setPriorityFilter: (filter: string) => void;
   setPriorityFilters: (filters: string[]) => void; // New action for multiple priorities
+  setStatusFilters: (filters: string[]) => void; // New action for multiple statuses
   setClientFilter: (filter: string) => void;
   setUserFilter: (filter: string) => void;
   setActionMenuOpenId: (id: string | null) => void;
@@ -63,6 +65,7 @@ export const tasksKanbanStore = createStore<TasksKanbanStore>()((set) => ({
   searchCategory: null,
   priorityFilter: '',
   priorityFilters: [], // Initialize empty array for multiple priorities
+  statusFilters: [], // Initialize empty array for multiple statuses
   clientFilter: '',
   userFilter: '',
   actionMenuOpenId: null,
@@ -77,6 +80,7 @@ export const tasksKanbanStore = createStore<TasksKanbanStore>()((set) => ({
   setSearchCategory: (category) => set({ searchCategory: category }),
   setPriorityFilter: (filter) => set({ priorityFilter: filter }),
   setPriorityFilters: (filters) => set({ priorityFilters: filters }), // New setter for multiple priorities
+  setStatusFilters: (filters) => set({ statusFilters: filters }), // New setter for multiple statuses
   setClientFilter: (filter) => set({ clientFilter: filter }),
   setUserFilter: (filter) => set({ userFilter: filter }),
   setActionMenuOpenId: (id) => set({ actionMenuOpenId: id }),

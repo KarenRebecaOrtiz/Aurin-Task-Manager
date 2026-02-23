@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { useUser } from '@clerk/nextjs';
+import { useUser } from '@/lib/demo/clerk-mock';
 import { UserAvatar } from '@/modules/shared/components/atoms/Avatar/UserAvatar';
 import Badge from '@/components/Badge';
 import { ActionButton } from '../../atoms/ActionButton/ActionButton';

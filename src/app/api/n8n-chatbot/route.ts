@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
+import { auth } from '@/lib/demo/clerk-mock'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'

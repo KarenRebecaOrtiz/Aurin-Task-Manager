@@ -1,7 +1,7 @@
 // src/modules/shareTask/actions/share.actions.ts
 'use server';
 
-import { auth } from '@clerk/nextjs/server';
+import { auth } from '@/lib/demo/clerk-mock';
 import {
   enableTaskSharing,
   disableTaskSharing,

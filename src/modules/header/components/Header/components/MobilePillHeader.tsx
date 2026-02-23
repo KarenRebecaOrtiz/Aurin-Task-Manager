@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { useUser } from '@clerk/nextjs';
+import { useUser } from '@/lib/demo/clerk-mock';
 import { Cog } from '@/components/animate-ui/icons';
 import { useFirestoreUser } from '../../../hooks';
 import { SettingsDrawer } from '@/modules/header/components/ui/AvatarDropdown';

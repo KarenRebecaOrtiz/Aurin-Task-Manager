@@ -5,8 +5,9 @@
  * Follows Clerk 2025 best practices with defense-in-depth approach.
  */
 
-import { auth } from '@clerk/nextjs/server';
+import { auth } from '@/lib/demo/clerk-mock';
 import { NextResponse } from 'next/server';
+import { DEMO_MODE, DEMO_USER } from '@/lib/demo/constants';
 
 /**
  * Authentication result interface
@@ -37,6 +38,10 @@ export interface AuthResult {
  * ```
  */
 export async function requireAuth(): Promise<AuthResult> {
+  if (DEMO_MODE) {
+    return { error: null, userId: DEMO_USER.userId };
+  }
+
   const { userId } = await auth();
 
   if (!userId) {
@@ -115,6 +120,10 @@ export function withAuth<T = unknown>(
  * ```
  */
 export async function optionalAuth(): Promise<string | null> {
+  if (DEMO_MODE) {
+    return DEMO_USER.userId;
+  }
+
   const { userId } = await auth();
   return userId || null;
 }

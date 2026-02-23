@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useMemo, useCallback, useEffect, useState } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useUser } from '@/lib/demo/clerk-mock';
 import { useRouter } from 'next/navigation';
 import { House } from 'lucide-react';
 

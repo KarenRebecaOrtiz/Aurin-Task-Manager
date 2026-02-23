@@ -7,7 +7,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useUser } from '@/lib/demo/clerk-mock';
 import { CrudDialog } from '../organisms/CrudDialog';
 import { useToast } from '@/modules/toast';
 import { clientService } from '@/modules/client-crud/services/clientService';

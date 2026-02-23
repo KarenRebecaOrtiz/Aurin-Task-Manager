@@ -91,46 +91,53 @@ export function CommandList({
   // Agrupar items por tipo para mostrar secciones (memoizado)
   const sections = useMemo(() => groupItemsBySection(items, level), [items, level]);
 
+  // Key que cambia cuando los items cambian, forzando re-animation
+  const contentKey = sections.map((s) => `${s.id}:${s.items.length}`).join('|');
+
   return (
     <div className={styles.content}>
       <AnimatePresence mode="wait">
-        {sections.map((section) => (
-          <motion.div
-            key={section.id}
-            className={styles.section}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.1 }}
-          >
-            {/* Section header */}
-            <div className={styles.sectionHeader}>
-              <span className={styles.sectionTitle}>
-                {section.icon}
-                {section.title}
-              </span>
-              <span className={styles.sectionCount}>
-                {section.items.length}
-              </span>
+        <motion.div
+          key={contentKey}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -6 }}
+          transition={{ duration: 0.1 }}
+        >
+          {sections.map((section) => (
+            <div
+              key={section.id}
+              className={styles.section}
+            >
+              {/* Section header */}
+              <div className={styles.sectionHeader}>
+                <span className={styles.sectionTitle}>
+                  {section.icon}
+                  {section.title}
+                </span>
+                <span className={styles.sectionCount}>
+                  {section.items.length}
+                </span>
+              </div>
+
+              {/* Section items */}
+              {section.items.map((item) => {
+                // Encontrar el índice global del item
+                const globalIndex = items.findIndex((i) => i.id === item.id);
+
+                return (
+                  <CommandItem
+                    key={item.id}
+                    item={item}
+                    index={globalIndex}
+                    isSelected={selectedIndex === globalIndex}
+                    onClick={() => onItemClick(item, globalIndex)}
+                  />
+                );
+              })}
             </div>
-
-            {/* Section items */}
-            {section.items.map((item) => {
-              // Encontrar el índice global del item
-              const globalIndex = items.findIndex((i) => i.id === item.id);
-
-              return (
-                <CommandItem
-                  key={item.id}
-                  item={item}
-                  index={globalIndex}
-                  isSelected={selectedIndex === globalIndex}
-                  onClick={() => onItemClick(item, globalIndex)}
-                />
-              );
-            })}
-          </motion.div>
-        ))}
+          ))}
+        </motion.div>
       </AnimatePresence>
     </div>
   );

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth, clerkClient } from '@clerk/nextjs/server'
+import { auth, clerkClient } from '@/lib/demo/clerk-mock'
 import { enhancedChat } from '@/modules/n8n-chatbot/ai'
 import { extractPdfText } from '@/modules/n8n-chatbot/lib/documents/analyze-document'
 import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions'
+import { DEMO_MODE, DEMO_USER } from '@/lib/demo/constants'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -29,7 +30,14 @@ interface ChatRequest {
 export async function POST(request: NextRequest) {
   try {
     // Authenticate user
-    const { userId } = await auth()
+    let userId: string | null = null
+
+    if (DEMO_MODE) {
+      userId = DEMO_USER.userId
+    } else {
+      const authResult = await auth()
+      userId = authResult.userId
+    }
 
     if (!userId) {
       return NextResponse.json(
@@ -41,7 +49,11 @@ export async function POST(request: NextRequest) {
     // Get user info for personalization and admin status
     let userName = 'Usuario'
     let isAdmin = false
-    try {
+
+    if (DEMO_MODE) {
+      userName = DEMO_USER.firstName
+      isAdmin = true
+    } else try {
       const clerk = await clerkClient()
       const user = await clerk.users.getUser(userId)
       userName = user.firstName || user.username || 'Usuario'

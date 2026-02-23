@@ -13,7 +13,7 @@
  */
 
 import { useEffect, useRef, useCallback } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useUser } from '@/lib/demo/clerk-mock';
 import { doc, updateDoc, onSnapshot } from 'firebase/firestore';
 import { ref, set, serverTimestamp } from 'firebase/database';
 import { db, rtdb } from '@/lib/firebase';

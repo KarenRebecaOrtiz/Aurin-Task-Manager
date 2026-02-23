@@ -52,6 +52,7 @@ yarn-error.log*
 .firebase/
 functions/node_modules/
 functions/.eslintrc.js
+*-firebase-adminsdk-*.json
 
 # Cache and temporary files
 *.cache

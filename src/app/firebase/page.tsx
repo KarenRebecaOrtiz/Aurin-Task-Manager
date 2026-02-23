@@ -1,5 +1,5 @@
 'use client';
-import { useAuth } from '@clerk/nextjs';
+import { useAuth } from '@/lib/demo/clerk-mock';
 import { doc, getDoc, collection, getDocs } from 'firebase/firestore';
 import { db } from '../../lib/firebase'; // ✅ Usando configuración centralizada optimizada para Safari
 import { useState } from 'react';

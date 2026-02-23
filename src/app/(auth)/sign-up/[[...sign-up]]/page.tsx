@@ -1,5 +1,5 @@
 // src/app/(auth)/sign-up/[[...sign-up]]/page.tsx
-import { SignUp } from '@clerk/nextjs';
+import { SignUp } from '@/lib/demo/clerk-mock';
 import styles from '../../sign-in/[[...sign-in]]/SignIn.module.scss';
 
 export default function SignUpPage() {

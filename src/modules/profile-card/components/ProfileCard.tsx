@@ -7,7 +7,7 @@
 'use client';
 
 import React, { useCallback } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useUser } from '@/lib/demo/clerk-mock';
 import { useSidebarStateStore } from '@/stores/sidebarStateStore';
 import { useProfile } from '../hooks/useProfile';
 import { useProfileScroll } from '../hooks/useProfileScroll';

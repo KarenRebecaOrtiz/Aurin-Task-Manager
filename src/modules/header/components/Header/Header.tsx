@@ -1,6 +1,6 @@
 'use client';
 
-import { useUser } from '@clerk/nextjs';
+import { useUser } from '@/lib/demo/clerk-mock';
 import { useRef } from 'react';
 import { HeaderProps } from '../../types';
 import { useSubtitleContent, useHeaderNavigation, useFirestoreUser } from '../../hooks';

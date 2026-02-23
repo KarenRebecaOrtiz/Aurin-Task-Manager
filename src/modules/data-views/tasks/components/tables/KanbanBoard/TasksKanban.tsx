@@ -114,6 +114,7 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
   const searchCategory = useStore(tasksTableStore, useShallow((state) => state.searchCategory));
   const priorityFilter = useStore(tasksTableStore, useShallow((state) => state.priorityFilter));
   const priorityFilters = useStore(tasksTableStore, useShallow((state) => state.priorityFilters));
+  const statusFilters = useStore(tasksTableStore, useShallow((state) => state.statusFilters));
   const clientFilter = useStore(tasksTableStore, useShallow((state) => state.clientFilter));
   const userFilter = useStore(tasksTableStore, useShallow((state) => state.userFilter));
   const setSearchQuery = useStore(tasksTableStore, useShallow((state) => state.setSearchQuery));
@@ -166,6 +167,7 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
     searchCategory,
     priorityFilter,
     priorityFilters,
+    statusFilters,
     clientFilter,
     userFilter,
   });

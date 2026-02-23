@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useMemo } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useUser } from '@/lib/demo/clerk-mock';
 import { useWorkspacesStore, ALL_WORKSPACES_ID } from '@/stores/workspacesStore';
 import { useDataStore, type Team } from '@/stores/dataStore';
 import { useShallow } from 'zustand/react/shallow';

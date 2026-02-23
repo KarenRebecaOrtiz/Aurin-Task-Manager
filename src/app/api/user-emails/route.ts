@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { clerkClient } from '@clerk/nextjs/server';
-import { auth } from '@clerk/nextjs/server';
+import { clerkClient } from '@/lib/demo/clerk-mock';
+import { auth } from '@/lib/demo/clerk-mock';
+import { DEMO_MODE, DEMO_USER, DEMO_USERS } from '@/lib/demo/constants';
 
 /**
  * API Route para obtener emails de usuarios
@@ -11,8 +12,15 @@ import { auth } from '@clerk/nextjs/server';
 export async function POST(request: NextRequest) {
   try {
     // Verificar autenticación
-    const { userId } = await auth();
-    if (!userId) {
+    let currentUserId: string | null = null;
+    if (DEMO_MODE) {
+      currentUserId = DEMO_USER.userId;
+    } else {
+      const { userId } = await auth();
+      currentUserId = userId;
+    }
+
+    if (!currentUserId) {
       return NextResponse.json(
         { error: 'No autorizado' },
         { status: 401 }
@@ -21,7 +29,7 @@ export async function POST(request: NextRequest) {
 
     // Obtener userIds del body
     const { userIds } = await request.json();
-    
+
     if (!userIds || !Array.isArray(userIds)) {
       return NextResponse.json(
         { error: 'userIds debe ser un array' },
@@ -39,19 +47,39 @@ export async function POST(request: NextRequest) {
 
     console.log(`[API] Obteniendo emails para ${userIds.length} usuarios`);
 
+    // Demo mode: return mock emails
+    if (DEMO_MODE) {
+      const userEmails = userIds.map((uid: string) => {
+        const demoUser = DEMO_USERS.find(u => u.id === uid);
+        return {
+          userId: uid,
+          email: demoUser?.emailAddresses[0]?.emailAddress || null,
+          firstName: demoUser?.firstName || null,
+          lastName: demoUser?.lastName || null,
+          fullName: demoUser?.fullName || null,
+        };
+      });
+      return NextResponse.json({
+        success: true,
+        data: userEmails,
+        validCount: userEmails.filter((u: { email: string | null }) => u.email).length,
+        totalCount: userIds.length,
+      });
+    }
+
     // Obtener emails y nombres de los usuarios desde Clerk
     const client = await clerkClient();
     const userEmails = await Promise.all(
-      userIds.map(async (userId) => {
+      userIds.map(async (userId: string) => {
         try {
           const user = await client.users.getUser(userId);
           const email = user.emailAddresses?.[0]?.emailAddress || null;
           const firstName = user.firstName || null;
           const lastName = user.lastName || null;
           const fullName = user.fullName || null;
-          
-          return { 
-            userId, 
+
+          return {
+            userId,
             email,
             firstName,
             lastName,
@@ -59,8 +87,8 @@ export async function POST(request: NextRequest) {
           };
         } catch (error) {
           console.error(`[API] Error obteniendo usuario ${userId}:`, error);
-          return { 
-            userId, 
+          return {
+            userId,
             email: null,
             firstName: null,
             lastName: null,
@@ -72,7 +100,7 @@ export async function POST(request: NextRequest) {
 
     // Filtrar usuarios con email válido
     const validEmails = userEmails.filter(user => user.email !== null);
-    
+
     console.log(`[API] Emails obtenidos: ${validEmails.length}/${userIds.length} válidos`);
 
     return NextResponse.json({
@@ -85,7 +113,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('[API] Error obteniendo emails de usuarios:', error);
     return NextResponse.json(
-      { 
+      {
         error: 'Error interno del servidor',
         details: error instanceof Error ? error.message : 'Unknown error'
       },

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useUser } from '@/lib/demo/clerk-mock';
 import { useDataStore } from '@/stores/dataStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useTasksTableActionsStore } from '../../stores/tasksTableActionsStore';

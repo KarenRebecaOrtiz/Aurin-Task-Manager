@@ -12,7 +12,7 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import Image from 'next/image';
-import { useUser } from '@clerk/nextjs';
+import { useUser } from '@/lib/demo/clerk-mock';
 import { cn } from '@/lib/utils';
 import { usePublicMessages } from '@/modules/chat/hooks/usePublicMessages';
 import { ReactionChip } from '@/components/ui/reaction-chip';

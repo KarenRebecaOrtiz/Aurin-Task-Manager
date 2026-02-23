@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter, usePathname } from 'next/navigation';
-import { useUser } from '@clerk/nextjs';
+import { useUser } from '@/lib/demo/clerk-mock';
 import clsx from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { CirclePlus, Bot, ClipboardList, Users, CircleUserRound } from 'lucide-react';

@@ -1,7 +1,6 @@
 // src/app/dashboard/layout.tsx
 'use client';
 
-import { useAuth, useUser } from '@clerk/nextjs';
 import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Header } from '@/modules/header';
@@ -27,12 +26,30 @@ import { ChatbotWidget } from '@/modules/n8n-chatbot';
 import { MobileApp } from '@/modules/mobile-swipe';
 import { PushNotificationDialog } from '@/modules/push-notifications/client/components/PushNotificationDialog';
 import { useAuth as useAuthContext } from '@/contexts/AuthContext';
+import { DEMO_MODE, DEMO_USER } from '@/lib/demo/constants';
+
+/**
+ * Hook that returns auth info for the dashboard layout.
+ * In demo mode, uses mock data. In prod, uses Clerk hooks from the mock module
+ * (which are aliased via direct import replacement on the DEMO branch).
+ */
+function useDashboardAuth() {
+  return {
+    userId: DEMO_USER.userId,
+    isLoaded: true,
+    user: {
+      id: DEMO_USER.userId,
+      firstName: DEMO_USER.firstName,
+      lastName: DEMO_USER.lastName,
+      imageUrl: DEMO_USER.imageUrl,
+    },
+  };
+}
 
 function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { userId, isLoaded } = useAuth();
-  const { user } = useUser();
+  const { userId, isLoaded, user } = useDashboardAuth();
   const { isAdmin } = useAuthContext(); // Get admin status from context
   const [mounted, setMounted] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -90,9 +107,9 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
     }
   }, [mounted, router]);
 
-  // Client-side redirect if not authenticated
+  // Client-side redirect if not authenticated (skip in demo mode)
   useEffect(() => {
-    if (mounted && isLoaded && !userId) {
+    if (!DEMO_MODE && mounted && isLoaded && !userId) {
       router.push('/sign-in');
     }
   }, [mounted, isLoaded, userId, router]);
@@ -155,7 +172,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
       {isMobile && <MobileApp />}
 
       {/* Desktop push notification opt-in dialog */}
-      {!isMobile && <PushNotificationDialog />}
+      {!isMobile && !DEMO_MODE && <PushNotificationDialog />}
 
       {/* AI Chatbot - Only visible for admins */}
       {isAdmin && <ChatbotWidget controlled={isMobile} />}

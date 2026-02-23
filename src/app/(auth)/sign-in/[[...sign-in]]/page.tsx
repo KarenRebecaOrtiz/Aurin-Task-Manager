@@ -1,5 +1,5 @@
 'use client';
-import { SignIn } from '@clerk/nextjs';
+import { SignIn } from '@/lib/demo/clerk-mock';
 import { useState, useEffect } from 'react';
 import styles from './SignIn.module.scss';
 

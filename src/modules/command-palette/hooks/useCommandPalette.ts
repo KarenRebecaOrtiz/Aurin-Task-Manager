@@ -45,6 +45,8 @@ export interface UseCommandPaletteProps {
   onShareTask?: (taskId: string) => void;
   /** Callback para editar un cliente/cuenta */
   onEditClient?: (clientId: string) => void;
+  /** Callback cuando cambian los filtros (status/priority) */
+  onFiltersChange?: (filters: { statuses: string[]; priorities: string[] }) => void;
 }
 
 // ============================================================================
@@ -55,6 +57,7 @@ export function useCommandPalette(props: UseCommandPaletteProps = {}) {
   const {
     onProjectSelect,
     onTeamSelect,
+    onFiltersChange,
   } = props;
 
   // ============================================================================
@@ -72,6 +75,11 @@ export function useCommandPalette(props: UseCommandPaletteProps = {}) {
     statuses: [],
     searchQuery: '',
   });
+
+  // Sincronizar filtros con componentes externos (data-views)
+  useEffect(() => {
+    onFiltersChange?.({ statuses: activeFilters.statuses, priorities: activeFilters.priorities });
+  }, [activeFilters.statuses, activeFilters.priorities, onFiltersChange]);
 
   // Obtener el workspace seleccionado globalmente
   const selectedWorkspace = useSelectedWorkspace();
@@ -175,12 +183,12 @@ export function useCommandPalette(props: UseCommandPaletteProps = {}) {
     setSearchQuery('');
     setSelectedIndex(0);
     setShowAIPrompt(false);
-    setActiveFilters({
+    // Keep status/priority filters active after closing (they sync to data-views)
+    setActiveFilters((prev) => ({
+      ...prev,
       category: null,
-      priorities: [],
-      statuses: [],
       searchQuery: '',
-    });
+    }));
   }, []);
 
   const toggle = useCallback(() => {

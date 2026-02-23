@@ -1,7 +1,7 @@
 'use client';
 
 import { ConfigPage } from '@/modules/config';
-import { useUser } from '@clerk/nextjs';
+import { useUser } from '@/lib/demo/clerk-mock';
 import { useTasksPageStore } from '@/stores/tasksPageStore';
 import { useCallback } from 'react';
 import { useRouter } from 'next/navigation';

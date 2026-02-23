@@ -3,7 +3,7 @@ import { useTasksPageStore } from '@/stores/tasksPageStore';
 import { useShallow } from 'zustand/react/shallow';
 import { doc, deleteDoc, addDoc, updateDoc, collection } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { useUser } from '@clerk/nextjs';
+import { useUser } from '@/lib/demo/clerk-mock';
 import { useDataStore } from '@/stores/dataStore';
 import { useDialog, TaskDialog } from '@/modules/dialogs';
 import { useToast } from '@/modules/toast';

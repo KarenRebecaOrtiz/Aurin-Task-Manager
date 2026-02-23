@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import Image from 'next/image'
 import gsap from 'gsap'
-import { useUser } from '@clerk/nextjs'
+import { useUser } from '@/lib/demo/clerk-mock'
 import { Cog } from '@/components/animate-ui/icons'
 import { SettingsDrawer } from '@/modules/header/components/ui/AvatarDropdown'
 import { ConfigDialog } from '@/modules/config/components/ConfigModal/ConfigDialog'

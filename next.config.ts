@@ -1,6 +1,5 @@
 import {withSentryConfig} from '@sentry/nextjs';
 import type { NextConfig } from 'next';
-
 /** @type {import('next').NextConfig} */
 const nextConfig: NextConfig = {
   eslint: {

@@ -12,7 +12,8 @@
     "lint:detailed": "eslint src --ext .ts,.tsx,.js,.jsx --format=compact",
     "lint:check": "eslint src --ext .ts,.tsx,.js,.jsx --max-warnings 0",
     "test:notifications": "ts-node src/scripts/test-notification-system.ts",
-    "test:email-templates": "ts-node src/scripts/test-email-templates.ts"
+    "test:email-templates": "ts-node src/scripts/test-email-templates.ts",
+    "seed:demo": "tsx scripts/seed-demo.ts"
   },
   "dependencies": {
     "@clerk/backend": "^2.1.0",

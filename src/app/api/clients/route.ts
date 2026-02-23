@@ -13,13 +13,14 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { withAuth } from '@/lib/api/auth';
 import { apiSuccess, apiCreated, apiBadRequest, apiForbidden, handleApiError } from '@/lib/api/response';
 import { createClientSchema, clientQuerySchema } from '@/lib/validations/client.schema';
-import { clerkClient } from '@clerk/nextjs/server';
+import { clerkClient } from '@/lib/demo/clerk-mock';
+import { DEMO_MODE } from '@/lib/demo/constants';
 
 /**
  * Helper to check if user is admin
- * Note: Checks both 'access' and 'role' fields from Clerk publicMetadata for compatibility
  */
 async function isAdmin(userId: string): Promise<boolean> {
+  if (DEMO_MODE) return true;
   try {
     const client = await clerkClient();
     const user = await client.users.getUser(userId);

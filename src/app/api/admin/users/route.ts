@@ -7,14 +7,19 @@
  * Requires admin authentication
  */
 
-import { clerkClient, auth } from '@clerk/nextjs/server';
+import { clerkClient, auth } from '@/lib/demo/clerk-mock';
 import { NextRequest, NextResponse } from 'next/server';
 import { apiSuccess, apiError, apiForbidden, apiBadRequest } from '@/lib/api/response';
+import { DEMO_MODE, DEMO_USER } from '@/lib/demo/constants';
 
 /**
  * Verify that the current user is an admin
  */
 async function verifyAdmin(): Promise<{ isAdmin: boolean; userId: string | null; error?: NextResponse }> {
+  if (DEMO_MODE) {
+    return { isAdmin: true, userId: DEMO_USER.userId };
+  }
+
   const { userId } = await auth();
 
   if (!userId) {

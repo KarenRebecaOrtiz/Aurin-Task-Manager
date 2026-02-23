@@ -1,6 +1,6 @@
 'use client';
 
-import { useUser } from '@clerk/nextjs';
+import { useUser } from '@/lib/demo/clerk-mock';
 import { useGuestTeamAuth } from '@/contexts/GuestTeamAuthContext';
 import { TokenAuthFormTeam } from './TokenAuthFormTeam';
 import { PublicTeamView } from './PublicTeamView';

@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useCallback } from "react"
-import { useUser } from "@clerk/nextjs"
+import { useUser } from '@/lib/demo/clerk-mock'
 import { useToast } from "@/modules/toast"
 import { CrudDialog, DialogActions } from "@/modules/dialogs"
 import { useConfigPageStore } from "../../stores"

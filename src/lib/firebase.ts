@@ -7,6 +7,7 @@ import { initializeAppCheck, ReCaptchaV3Provider, AppCheck } from "firebase/app-
 import { getMessaging, isSupported } from "firebase/messaging";
 import { getDatabase } from "firebase/database";
 import { firebaseConfig } from "./firebaseConfig";
+import { DEMO_MODE } from "./demo/constants";
 
 // Helper function for conditional logging (only in development)
 const debugLog = (message: string, ...args: unknown[]) => {
@@ -22,7 +23,7 @@ const app = initializeApp(firebaseConfig);
 let appCheck: AppCheck | null = null;
 let messaging: ReturnType<typeof getMessaging> | null = null;
 
-if (typeof window !== "undefined") {
+if (typeof window !== "undefined" && !DEMO_MODE) {
   // Esperar a que reCAPTCHA esté disponible antes de inicializar App Check
   const initializeAppCheckSafely = () => {
     try {

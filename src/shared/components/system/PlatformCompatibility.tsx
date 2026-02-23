@@ -1,6 +1,6 @@
 'use client';
 
-import { useAuth as useClerkAuth, useUser } from '@clerk/nextjs';
+import { useAuth as useClerkAuth, useUser } from '@/lib/demo/clerk-mock';
 import { useEffect, useState } from 'react';
 import { auth } from '@/lib/firebase';
 import { signInWithCustomToken } from 'firebase/auth';

@@ -1,4 +1,4 @@
-import { ClerkProvider } from "@clerk/nextjs";
+import { ClerkProvider } from '@/lib/demo/clerk-mock';
 import Script from "next/script";
 import { Urbanist } from "next/font/google";
 import "./globals.scss";
@@ -8,6 +8,7 @@ import { SileoToaster } from "@/modules/toast";
 import { InteractiveBackground } from "@/components/ui/InteractiveBackground";
 import { LightRaysWrapper } from "@/components/ui/LightRaysWrapper";
 import { ServiceWorkerProvider } from "@/modules/push-notifications/client/ServiceWorkerProvider";
+import { DEMO_MODE } from "@/lib/demo/constants";
 
 const urbanist = Urbanist({
   subsets: ["latin"],
@@ -21,13 +22,20 @@ export const metadata = {
   description: "Gestión de proyectos para tu equipo",
 };
 
+function AuthWrapper({ children }: { children: React.ReactNode }) {
+  if (DEMO_MODE) {
+    return <>{children}</>;
+  }
+  return <ClerkProvider>{children}</ClerkProvider>;
+}
+
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <ClerkProvider>
+    <AuthWrapper>
       <ThemeProvider>
         <html lang="es">
           <head>
@@ -72,10 +80,12 @@ export default function RootLayout({
             <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
             <meta name="application-name" content="Aurin Task Manager" />
             <meta name="msapplication-TileImage" content="/aurin.jpg" />
-            <Script
-              src={`https://www.google.com/recaptcha/api.js?render=6Lcxe2UrAAAAAANiSWaLO_46zSm09wRhuYOEHfeb`}
-              strategy="beforeInteractive"
-            />
+            {!DEMO_MODE && (
+              <Script
+                src={`https://www.google.com/recaptcha/api.js?render=6Lcxe2UrAAAAAANiSWaLO_46zSm09wRhuYOEHfeb`}
+                strategy="beforeInteractive"
+              />
+            )}
           </head>
           <body className={`${urbanist.className} ${urbanist.variable}`}>
             <InteractiveBackground />
@@ -118,6 +128,6 @@ export default function RootLayout({
           </body>
         </html>
       </ThemeProvider>
-    </ClerkProvider>
+    </AuthWrapper>
   );
 }

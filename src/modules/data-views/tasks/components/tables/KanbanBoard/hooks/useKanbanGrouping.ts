@@ -56,6 +56,7 @@ interface UseKanbanGroupingProps {
   searchCategory: 'task' | 'project' | 'member' | null;
   priorityFilter: string;
   priorityFilters: string[]; // New array for multiple priority filters
+  statusFilters: string[]; // New array for multiple status filters
   clientFilter: string;
   userFilter: string;
 }
@@ -73,6 +74,7 @@ export const useKanbanGrouping = ({
   searchCategory,
   priorityFilter,
   priorityFilters,
+  statusFilters,
   clientFilter,
   userFilter,
 }: UseKanbanGroupingProps) => {
@@ -144,6 +146,12 @@ export const useKanbanGrouping = ({
           matchesPriority = priorityFilters.includes(task.priority);
         }
 
+        // Apply status filters
+        let matchesStatus = true;
+        if (statusFilters.length > 0) {
+          matchesStatus = statusFilters.includes(task.status);
+        }
+
         const matchesClient = !clientFilter || task.clientId === clientFilter;
 
         let matchesUser = true;
@@ -155,7 +163,7 @@ export const useKanbanGrouping = ({
           matchesUser = involvedUserIds.includes(userFilter);
         }
 
-        if (matchesPriority && matchesClient && matchesUser) {
+        if (matchesPriority && matchesStatus && matchesClient && matchesUser) {
           if (groups[targetColumn]) {
             groups[targetColumn].push(task as Task);
           }
@@ -183,6 +191,7 @@ export const useKanbanGrouping = ({
     selectedWorkspaceId,
     priorityFilter,
     priorityFilters,
+    statusFilters,
     clientFilter,
     userFilter,
   ]);

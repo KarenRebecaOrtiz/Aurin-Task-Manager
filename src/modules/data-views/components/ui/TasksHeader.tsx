@@ -8,6 +8,8 @@ import { ClientDialog } from '@/modules/client-crud/components/ClientDialog';
 import ProfileCard from '@/modules/profile-card/components/ProfileCard';
 import { useTasksPageStore } from '@/stores/tasksPageStore';
 import { useSidebarStateStore } from '@/stores/sidebarStateStore';
+import { tasksKanbanStore } from '@/stores/tasksKanbanStore';
+import { tasksTableStore } from '@/modules/data-views/tasks/stores/tasksTableStore';
 import {
   useWorkspacesStore,
   ALL_WORKSPACES_ID,
@@ -175,6 +177,17 @@ export const TasksHeader: React.FC<TasksHeaderProps> = ({
     setSelectedMemberId(undefined);
   }, []);
 
+  // Handle filter changes from CommandPalette - Sync to table/kanban stores
+  const handleFiltersChange = useCallback((filters: { statuses: string[]; priorities: string[] }) => {
+    console.log('[FILTER-SYNC] syncing filters to stores:', filters);
+    // Sync to table store
+    tasksTableStore.getState().setStatusFilters(filters.statuses);
+    tasksTableStore.getState().setPriorityFilters(filters.priorities);
+    // Sync to kanban store
+    tasksKanbanStore.getState().setStatusFilters(filters.statuses);
+    tasksKanbanStore.getState().setPriorityFilters(filters.priorities);
+  }, []);
+
   // Handle team selection from CommandPalette - Abre el chat del equipo
   const handleTeamSelect = useCallback((teamId: string) => {
     const team = teams.find((t) => t.id === teamId);
@@ -211,6 +224,7 @@ export const TasksHeader: React.FC<TasksHeaderProps> = ({
               onDeleteTask={handleDeleteTask}
               onEditClient={isAdmin ? handleEditClientFromPalette : undefined}
               onTeamSelect={handleTeamSelect}
+              onFiltersChange={handleFiltersChange}
               placeholder="Buscar proyectos, tareas o miembros..."
             />
           </div>

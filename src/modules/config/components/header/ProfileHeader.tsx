@@ -3,7 +3,7 @@
 import React, { memo } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { useUser } from '@clerk/nextjs';
+import { useUser } from '@/lib/demo/clerk-mock';
 import { useImageUpload } from '../../hooks';
 import { useProfileFormStore } from '../../stores';
 import styles from './ProfileHeader.module.scss';

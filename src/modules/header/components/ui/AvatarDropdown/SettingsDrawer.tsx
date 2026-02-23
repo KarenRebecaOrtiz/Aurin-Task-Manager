@@ -3,7 +3,7 @@
 import React, { useCallback } from 'react';
 import Image from 'next/image';
 import { motion, Variants, Easing } from 'framer-motion';
-import { useClerk } from '@clerk/nextjs';
+import { useClerk } from '@/lib/demo/clerk-mock';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { LogOut } from '@/components/animate-ui/icons';

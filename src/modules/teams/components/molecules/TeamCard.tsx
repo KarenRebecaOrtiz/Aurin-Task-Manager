@@ -3,7 +3,7 @@
 import { useMemo, useCallback, useState } from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
-import { useUser } from '@clerk/nextjs';
+import { useUser } from '@/lib/demo/clerk-mock';
 import { useDataStore } from '@/stores/dataStore';
 import { useSidebarStateStore } from '@/stores/sidebarStateStore';
 import { useShallow } from 'zustand/react/shallow';

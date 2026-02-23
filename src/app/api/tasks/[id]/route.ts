@@ -16,13 +16,15 @@ import { withAuth } from '@/lib/api/auth';
 import { apiSuccess, apiNoContent, apiBadRequest, apiNotFound, apiForbidden, handleApiError } from '@/lib/api/response';
 import { updateTaskSchema, patchTaskSchema, Task } from '@/lib/validations/task.schema';
 import { notifier } from '@/modules/notifications';
-import { clerkClient } from '@clerk/nextjs/server';
+import { clerkClient } from '@/lib/demo/clerk-mock';
+import { DEMO_MODE } from '@/lib/demo/constants';
 
 /**
  * Helper to check if user is admin
  * Note: Uses 'access' field from Clerk publicMetadata (matching AuthContext)
  */
 async function isAdmin(userId: string): Promise<boolean> {
+  if (DEMO_MODE) return true;
   try {
     const client = await clerkClient();
     const user = await client.users.getUser(userId);

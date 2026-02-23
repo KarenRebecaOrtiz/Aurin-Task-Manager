@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useMemo, memo, useCallback, useState } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useUser } from '@/lib/demo/clerk-mock';
 import Image from 'next/image';
 import Table from '@/modules/data-views/components/shared/table/Table';
 import ActionMenu from '@/modules/data-views/components/ui/ActionMenu';
